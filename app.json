@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "Soul Night",
-    "slug": "soul-night",
+    "name": "Bantay",
+    "slug": "bantay",
     "version": "1.0.0",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0c0820",
+    "backgroundColor": "#0a181e",
     "ios": {
       "supportsTablet": true
     },
     "android": {
-      "package": "com.rylsherdamz.soulnight",
+      "package": "com.rylsherdamz.bantay",
       "adaptiveIcon": {
-        "backgroundColor": "#28184a",
+        "backgroundColor": "#102e38",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

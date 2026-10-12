@@ -1,4 +1,4 @@
-import { PressStart2P_400Regular, useFonts } from '@expo-google-fonts/press-start-2p';
+import { PixelifySans_500Medium, PixelifySans_700Bold, useFonts } from '@expo-google-fonts/pixelify-sans';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -15,7 +15,7 @@ type Screen =
   | { name: 'result'; stats: RunStats };
 
 export default function App() {
-  const [fontsLoaded] = useFonts({ PressStart2P_400Regular });
+  const [fontsLoaded] = useFonts({ PixelifySans_500Medium, PixelifySans_700Bold });
   const [screen, setScreen] = useState<Screen>({ name: 'title' });
   const [run, setRun] = useState(0);
 
@@ -64,5 +64,5 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0c0820' },
+  root: { flex: 1, backgroundColor: '#0a181e' },
 });

@@ -1,7 +1,7 @@
 import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { HeroId } from '../game/data';
-import { COLORS, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
+import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
 export interface RunStats {
   hero: HeroId;
@@ -29,24 +29,19 @@ export default function ResultScreen({
 }) {
   const { width, height } = useWindowDimensions();
   const t = useTicker(200);
-  const textW = Math.min(width * 0.55, 440);
+  const textW = Math.min(width * 0.5, 400);
   const rows: [ImgKey, string, string][] = [
-    ['ui_star', 'STAGE', stats.stage],
-    ['ui_skull', 'KILLS', `${stats.kills}`],
-    ['items_coin', 'COINS', `${stats.coins}`],
+    ['ui_moon', 'REACHED', stats.stage],
+    ['ui_skull', 'BANISHED', `${stats.kills}`],
+    ['items_coin', 'BARYA', `${stats.coins}`],
     ['ui_gem', 'TIME', fmtTime(stats.time)],
   ];
   return (
     <View style={styles.root}>
-      <Image
-        source={stats.victory ? IMG.screen_victory_bg : IMG.screen_gameover_bg}
-        style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-        fadeDuration={0}
-      />
+      <CoverImage name={stats.victory ? 'screen_victory_bg' : 'screen_gameover_bg'} />
       <Image
         source={stats.victory ? IMG.screen_victory_text : IMG.screen_gameover_text}
-        style={{ width: textW, height: textW * (24 / (stats.victory ? 146 : 164)), marginTop: height * 0.06 }}
+        style={{ width: textW, height: textW / 6.8, marginTop: height * 0.06 }}
         resizeMode="stretch"
         fadeDuration={0}
       />
@@ -69,7 +64,7 @@ export default function ResultScreen({
         </Panel>
       </View>
       <View style={styles.footer}>
-        <PixelButton label="MENU" onPress={onMenu} color="#6c6488" size={10} />
+        <PixelButton label="MENU" onPress={onMenu} color="#4a7a78" size={10} />
         <PixelButton label={stats.victory ? 'PLAY AGAIN' : 'RETRY'} onPress={onRetry} color={COLORS.gold} style={{ marginLeft: 16 }} />
       </View>
     </View>
@@ -81,6 +76,6 @@ const styles = StyleSheet.create({
   middle: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   panel: { marginLeft: 24, minWidth: 220 },
   row: { flexDirection: 'row', alignItems: 'center', marginVertical: 3 },
-  label: { marginLeft: 10, width: 80 },
+  label: { marginLeft: 10, width: 96 },
   footer: { flexDirection: 'row' },
 });

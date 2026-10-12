@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { HEROES, HeroId, WEAPONS } from '../game/data';
-import { COLORS, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
+import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
 function StatRow({ icon, value, color }: { icon: ImgKey; value: number; color: string }) {
   return (
@@ -17,7 +17,7 @@ function StatRow({ icon, value, color }: { icon: ImgKey; value: number; color: s
 
 export default function SelectScreen({ onBack, onPick }: { onBack: () => void; onPick: (id: HeroId) => void }) {
   const { width, height } = useWindowDimensions();
-  const [sel, setSel] = useState<HeroId>('knight');
+  const [sel, setSel] = useState<HeroId>('kidlat');
   const t = useTicker(180);
   const hero = HEROES.find((h) => h.id === sel)!;
   const cardW = Math.min(130, (width * 0.55) / 4);
@@ -25,9 +25,9 @@ export default function SelectScreen({ onBack, onPick }: { onBack: () => void; o
 
   return (
     <View style={styles.root}>
-      <Image source={IMG.screen_select_bg} style={StyleSheet.absoluteFill} resizeMode="cover" fadeDuration={0} />
+      <CoverImage name="screen_select_bg" />
       <PixelText size={14} color={COLORS.gold} style={styles.heading}>
-        CHOOSE YOUR HERO
+        CHOOSE YOUR BANTAY
       </PixelText>
       <View style={styles.body}>
         <View style={styles.cards}>
@@ -36,7 +36,7 @@ export default function SelectScreen({ onBack, onPick }: { onBack: () => void; o
             return (
               <Pressable key={h.id} onPress={() => setSel(h.id)}>
                 <Panel
-                  color={active ? h.color : '#3c3458'}
+                  color={active ? h.color : COLORS.edge}
                   style={[styles.card, { width: cardW }, active && { transform: [{ translateY: -6 }] }]}
                 >
                   <Sprite name={`heroes_${h.id}_${active ? t % 2 : 0}` as ImgKey} size={spriteSize} />
@@ -52,13 +52,16 @@ export default function SelectScreen({ onBack, onPick }: { onBack: () => void; o
           <PixelText size={12} color={hero.color}>
             {hero.name.toUpperCase()}
           </PixelText>
-          <PixelText size={7} color={COLORS.dim} style={{ marginBottom: 8 }}>
+          <PixelText size={7} color={COLORS.dim}>
             {hero.title}
           </PixelText>
+          <PixelText size={6} color={COLORS.text} shadow={false} style={{ marginBottom: 8, opacity: 0.85 }}>
+            {hero.lore}
+          </PixelText>
           <View style={styles.statLine}>
-            <StatRow icon="ui_heart" value={hero.hp} color="#ff7a7a" />
+            <StatRow icon="ui_heart" value={hero.hp} color="#ff8a7a" />
             <StatRow icon="ui_shield" value={hero.armor} color={COLORS.armor} />
-            <StatRow icon="ui_energy" value={hero.energy} color="#78b4ff" />
+            <StatRow icon="ui_energy" value={hero.energy} color={COLORS.light} />
           </View>
           <View style={styles.skill}>
             <Sprite name="ui_star" size={14} />
@@ -84,8 +87,8 @@ export default function SelectScreen({ onBack, onPick }: { onBack: () => void; o
         </Panel>
       </View>
       <View style={styles.footer}>
-        <PixelButton label="BACK" onPress={onBack} color="#6c6488" size={10} />
-        <PixelButton label="START RUN" onPress={() => onPick(sel)} color={hero.color} style={{ marginLeft: 16 }} />
+        <PixelButton label="BACK" onPress={onBack} color="#4a7a78" size={10} />
+        <PixelButton label="BEGIN THE WATCH" onPress={() => onPick(sel)} color={hero.color} style={{ marginLeft: 16 }} />
       </View>
     </View>
   );

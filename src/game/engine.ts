@@ -138,9 +138,9 @@ function shuffle<T>(a: T[]): T[] {
 }
 
 export function stageLabel(g: Game) {
-  if (g.room === 'start') return '1-0';
-  if (g.room === 'boss') return '1-BOSS';
-  return `1-${g.stage}`;
+  if (g.room === 'start') return 'PLAZA';
+  if (g.room === 'boss') return 'SHORE';
+  return `PUROK ${g.stage}`;
 }
 
 export function newGame(heroId: HeroId): Game {
@@ -210,15 +210,15 @@ function enterRoom(g: Game, stage: number) {
   if (g.room === 'start') {
     g.waves = 0;
     g.portal = { ...CENTER };
-    g.banner = { text: 'ENTER THE PORTAL', t: 3 };
+    g.banner = { text: 'STEP INTO THE SPIRIT GATE', t: 3 };
   } else if (g.room === 'boss') {
     g.waves = 1;
-    g.banner = { text: 'SHADOW LORD', t: 2.5 };
-    spawnEnemy(g, 'boss', 17.5 * TILE, 7 * TILE);
+    g.banner = { text: 'THE BAKUNAWA RISES', t: 2.5 };
+    spawnEnemy(g, 'bakunawa', 17.5 * TILE, 7 * TILE);
     g.wave = 1;
   } else {
     g.waves = 2;
-    g.banner = { text: `STAGE ${stageLabel(g)}`, t: 2 };
+    g.banner = { text: stageLabel(g), t: 2 };
     spawnWave(g);
   }
 }
@@ -273,7 +273,7 @@ function randomFloor(g: Game, minDistFromHero: number) {
 function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
   const def = ENEMIES[type];
   const scale = 1 + (g.stage - 1) * 0.15;
-  const hp = type === 'boss' ? def.hp : Math.round(def.hp * scale);
+  const hp = type === 'bakunawa' ? def.hp : Math.round(def.hp * scale);
   g.enemies.push({
     id: g.nextId++,
     type,
@@ -283,7 +283,7 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
     maxHp: hp,
     cd: rand(0.8, 2),
     t: Math.random() * 10,
-    spawn: type === 'boss' ? 1.2 : 0.7,
+    spawn: type === 'bakunawa' ? 1.2 : 0.7,
     flash: 0,
     facing: -1,
   });
@@ -292,7 +292,9 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
 function spawnWave(g: Game) {
   g.wave++;
   const pool: EnemyType[] =
-    g.stage <= 1 ? ['slime', 'slime', 'bat', 'goblin'] : ['slime', 'bat', 'goblin', 'goblin', 'skeleton'];
+    g.stage <= 1
+      ? ['duwende', 'duwende', 'manananggal', 'tikbalang']
+      : ['duwende', 'manananggal', 'tikbalang', 'tikbalang', 'kapre'];
   const n = 3 + g.stage + (g.wave - 1);
   for (let i = 0; i < n; i++) {
     const p = randomFloor(g, 90);
@@ -358,7 +360,7 @@ function killEnemy(g: Game, e: Enemy) {
   g.kills++;
   const def = ENEMIES[e.type];
   for (let i = 0; i < def.coins; i++) dropPickup(g, 'coin', e.x, e.y);
-  const orbs = e.type === 'boss' ? 10 : 1 + Math.floor(Math.random() * 3);
+  const orbs = e.type === 'bakunawa' ? 10 : 1 + Math.floor(Math.random() * 3);
   for (let i = 0; i < orbs; i++) dropPickup(g, 'energy_orb', e.x, e.y);
   if (Math.random() < 0.06) dropPickup(g, 'potion_health', e.x, e.y);
 }
@@ -392,7 +394,7 @@ export function update(g: Game, input: Input, dt: number) {
       g.portal = { ...CENTER };
       const cx = CENTER.x + 2.5 * TILE;
       g.chest = { x: solidAt(g, cx, CENTER.y) ? CENTER.x : cx, y: solidAt(g, cx, CENTER.y) ? CENTER.y + TILE : CENTER.y, open: false };
-      g.banner = { text: 'ROOM CLEARED', t: 1.6 };
+      g.banner = { text: 'PUROK SAFE', t: 1.6 };
     }
   }
   if (g.portal && dist(g.hero.x, g.hero.y, g.portal.x, g.portal.y) < 8) {
@@ -499,9 +501,9 @@ function updateHero(g: Game, input: Input, dt: number) {
       const free = h.weapons.findIndex((id) => WEAPONS[id].energy === 0);
       if (free >= 0) {
         h.cur = free;
-        addText(g, h.x, h.y - 12, 'LOW ENERGY', '#78b4ff');
+        addText(g, h.x, h.y - 12, 'LOW LIGHT', '#ffba48');
       } else {
-        addText(g, h.x, h.y - 12, 'NO ENERGY', '#78b4ff');
+        addText(g, h.x, h.y - 12, 'NO LIGHT', '#ffba48');
       }
     }
   }
@@ -511,11 +513,11 @@ function useSkill(g: Game, mx: number, my: number) {
   const h = g.hero;
   h.skillCd = h.def.skill.cooldown;
   switch (h.def.id) {
-    case 'knight':
+    case 'kidlat':
       h.buff = 5;
-      addText(g, h.x, h.y - 14, 'DUAL WIELD!', '#78b4ff');
+      addText(g, h.x, h.y - 14, 'LIGHTNING!', '#ffe882');
       break;
-    case 'rogue': {
+    case 'liksi': {
       const m = Math.hypot(mx, my);
       h.dashDx = m > 0.1 ? mx / m : Math.cos(h.aim);
       h.dashDy = m > 0.1 ? my / m : Math.sin(h.aim);
@@ -523,13 +525,13 @@ function useSkill(g: Game, mx: number, my: number) {
       h.invuln = 0.4;
       break;
     }
-    case 'wizard':
+    case 'mayumi':
       for (let i = 0; i < 16; i++) {
-        shoot(g, h.x, h.y + 2, (i / 16) * Math.PI * 2, 150, 5, true, 'bullet_magic', 4, true);
+        shoot(g, h.x, h.y + 2, (i / 16) * Math.PI * 2, 150, 5, true, 'shot_spirit', 4, true);
       }
       g.shake = 0.15;
       break;
-    case 'priestess':
+    case 'amihan':
       h.hp = Math.min(h.def.hp, h.hp + 2);
       h.armor = h.def.armor;
       addText(g, h.x, h.y - 14, '+2 HP', '#62cc5c');
@@ -537,8 +539,61 @@ function useSkill(g: Game, mx: number, my: number) {
   }
 }
 
+/** BFS distance (in tiles) from the hero's tile to every open tile. */
+function flowField(g: Game) {
+  const H = g.grid.length;
+  const W = g.grid[0].length;
+  const field = new Array<number>(W * H).fill(Infinity);
+  const sx = Math.floor(g.hero.x / TILE);
+  const sy = Math.floor((g.hero.y + 3) / TILE);
+  if (g.grid[sy]?.[sx] !== 0) return field;
+  const queue = [sy * W + sx];
+  field[queue[0]] = 0;
+  for (let i = 0; i < queue.length; i++) {
+    const c = queue[i];
+    const cx = c % W;
+    const cy = (c - cx) / W;
+    for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = cx + ox;
+      const ny = cy + oy;
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H || g.grid[ny][nx] !== 0) continue;
+      const n = ny * W + nx;
+      if (field[n] !== Infinity) continue;
+      field[n] = field[c] + 1;
+      queue.push(n);
+    }
+  }
+  return field;
+}
+
+/** Unit vector an enemy should walk: straight at the hero when in sight, else down the flow field. */
+function chaseDir(g: Game, e: Enemy, field: number[], ux: number, uy: number): [number, number] {
+  if (lineOfSight(g, e.x, e.y + 3, g.hero.x, g.hero.y + 3)) return [ux, uy];
+  const W = g.grid[0].length;
+  const tx = Math.floor(e.x / TILE);
+  const ty = Math.floor((e.y + 3) / TILE);
+  let best = field[ty * W + tx] ?? Infinity;
+  let bx = 0;
+  let by = 0;
+  for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const v = field[(ty + oy) * W + (tx + ox)];
+    if (v !== undefined && v < best) {
+      best = v;
+      bx = ox;
+      by = oy;
+    }
+  }
+  if (bx === 0 && by === 0) return [ux, uy];
+  // aim for the centre of the next tile so bodies don't scrape corners
+  const cx = (tx + bx + 0.5) * TILE - e.x;
+  const cy = (ty + by + 0.5) * TILE - (e.y + 3);
+  const m = Math.hypot(cx, cy) || 1;
+  return [cx / m, cy / m];
+}
+
 function updateEnemies(g: Game, dt: number) {
   const h = g.hero;
+  const field = flowField(g);
   for (const e of g.enemies) {
     e.flash = Math.max(0, e.flash - dt);
     if (e.spawn > 0) {
@@ -551,44 +606,43 @@ function updateEnemies(g: Game, dt: number) {
     const dx = h.x - e.x;
     const dy = h.y - e.y;
     const d = Math.hypot(dx, dy) || 1;
-    const ux = dx / d;
-    const uy = dy / d;
+    const [ux, uy] = chaseDir(g, e, field, dx / d, dy / d);
     e.facing = dx < 0 ? -1 : 1;
     const hw = def.radius - 1;
     const aim = Math.atan2(dy, dx);
 
     switch (e.type) {
-      case 'slime': {
+      case 'duwende': {
         // hop toward the hero
         const hop = Math.max(0, Math.sin(e.t * 5));
         moveBody(g, e, ux * def.speed * 1.8 * hop * dt, uy * def.speed * 1.8 * hop * dt, hw);
         break;
       }
-      case 'bat': {
+      case 'manananggal': {
         const wob = Math.sin(e.t * 6) * 0.9;
         moveBody(g, e, (ux - uy * wob) * def.speed * dt, (uy + ux * wob) * def.speed * dt, hw);
         break;
       }
-      case 'goblin': {
+      case 'tikbalang': {
         const want = d > 80 ? 1 : d < 55 ? -1 : 0;
         const side = Math.sin(e.t * 1.3);
         moveBody(g, e, (ux * want - uy * side * 0.6) * def.speed * dt, (uy * want + ux * side * 0.6) * def.speed * dt, hw);
         if (e.cd <= 0 && d < 200 && lineOfSight(g, e.x, e.y, h.x, h.y)) {
-          shoot(g, e.x, e.y + 2, aim + rand(-0.1, 0.1), 85, 1, false, 'bullet_enemy');
+          shoot(g, e.x, e.y + 2, aim + rand(-0.1, 0.1), 85, 1, false, 'shot_enemy');
           e.cd = rand(1.4, 2.0);
         }
         break;
       }
-      case 'skeleton': {
+      case 'kapre': {
         const want = d > 100 ? 1 : d < 60 ? -1 : 0;
         moveBody(g, e, ux * want * def.speed * dt, uy * want * def.speed * dt, hw);
         if (e.cd <= 0 && d < 220 && lineOfSight(g, e.x, e.y, h.x, h.y)) {
-          for (const off of [-0.25, 0, 0.25]) shoot(g, e.x, e.y + 2, aim + off, 75, 1, false, 'bullet_enemy');
+          for (const off of [-0.25, 0, 0.25]) shoot(g, e.x, e.y + 2, aim + off, 75, 1, false, 'shot_enemy');
           e.cd = rand(2, 2.6);
         }
         break;
       }
-      case 'boss':
+      case 'bakunawa':
         updateBoss(g, e, ux, uy, d, aim, dt);
         break;
     }
@@ -599,7 +653,7 @@ function updateEnemies(g: Game, dt: number) {
 }
 
 function updateBoss(g: Game, e: Enemy, ux: number, uy: number, d: number, aim: number, dt: number) {
-  const def = ENEMIES.boss;
+  const def = ENEMIES.bakunawa;
   const enraged = e.hp < e.maxHp / 2;
   const want = d > 90 ? 1 : d < 50 ? -0.6 : 0.2;
   const side = Math.sin(e.t * 0.8);
@@ -610,16 +664,16 @@ function updateBoss(g: Game, e: Enemy, ux: number, uy: number, d: number, aim: n
     // radial burst
     const n = enraged ? 18 : 12;
     const rot = e.t;
-    for (let i = 0; i < n; i++) shoot(g, e.x, e.y, rot + (i / n) * Math.PI * 2, 70, 1, false, 'bullet_enemy', 3);
+    for (let i = 0; i < n; i++) shoot(g, e.x, e.y, rot + (i / n) * Math.PI * 2, 70, 1, false, 'shot_enemy', 3);
     e.cd = enraged ? 1.1 : 1.6;
   } else if (pattern === 1) {
     // aimed fan
-    for (let i = -2; i <= 2; i++) shoot(g, e.x, e.y, aim + i * 0.18, 105, 1, false, 'bullet_enemy', 3);
+    for (let i = -2; i <= 2; i++) shoot(g, e.x, e.y, aim + i * 0.18, 105, 1, false, 'shot_enemy', 3);
     e.cd = enraged ? 0.6 : 0.9;
   } else {
     // summon bats
     if (g.enemies.length < (enraged ? 7 : 5)) {
-      for (let i = 0; i < 2; i++) spawnEnemy(g, 'bat', e.x + rand(-20, 20), e.y + rand(-10, 10));
+      for (let i = 0; i < 2; i++) spawnEnemy(g, 'manananggal', e.x + rand(-20, 20), e.y + rand(-10, 10));
     }
     e.cd = 2.2;
   }
@@ -702,7 +756,7 @@ function updatePickups(g: Game, dt: number) {
           break;
         case 'potion_energy':
           h.energy = Math.min(h.def.energy, h.energy + 80);
-          addText(g, h.x, h.y - 12, '+80 MP', '#78b4ff');
+          addText(g, h.x, h.y - 12, '+80 LIGHT', '#ffba48');
           break;
       }
       continue;

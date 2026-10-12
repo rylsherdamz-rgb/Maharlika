@@ -1,9 +1,9 @@
 {
-  "name": "soul-night",
+  "name": "bantay",
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
-    "@expo-google-fonts/press-start-2p": "^0.4.1",
+    "@expo-google-fonts/pixelify-sans": "^0.4.2",
     "expo": "~57.0.28",
     "expo-font": "~57.0.4",
     "expo-status-bar": "~57.0.1",

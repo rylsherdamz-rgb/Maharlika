@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { GestureResponderEvent, Image, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
-import { ENEMIES, HeroId, WEAPONS, WeaponId } from '../game/data';
+import { BOSS_NAME, ENEMIES, HeroId, WEAPONS, WeaponId } from '../game/data';
 import { Game, Input, newGame, ROOM_H, ROOM_W, stageLabel, update } from '../game/engine';
 import { COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
 import { RunStats } from './ResultScreen';
@@ -262,13 +262,13 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
     layers.push({
       y: p.y - 4,
       node: [
-        sprite(isWeapon ? `weapons_${p.kind}` : `items_${p.kind}`, p.x, p.y + bob, 16, isWeapon && g.nearWeapon === p ? { tintColor: '#fcd854' } : undefined, `p${p.id}`),
+        sprite(isWeapon ? `weapons_${p.kind}` : `items_${p.kind}`, p.x, p.y + bob, 16, isWeapon && g.nearWeapon === p ? { tintColor: '#ffe882' } : undefined, `p${p.id}`),
       ],
     });
   }
   layers.sort((a, b) => a.y - b.y);
 
-  const boss = g.enemies.find((e) => e.type === 'boss');
+  const boss = g.enemies.find((e) => e.type === 'bakunawa');
   const weapon = WEAPONS[h.weapons[h.cur] as WeaponId];
 
   return (
@@ -276,7 +276,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
       {/* world */}
       <View pointerEvents="none" style={{ position: 'absolute', left: ox, top: oy, width: ROOM_W * s, height: ROOM_H * s, overflow: 'hidden' }}>
         <Image source={IMG[`rooms_${g.room}` as ImgKey]} style={{ width: ROOM_W * s, height: ROOM_H * s }} resizeMode="stretch" fadeDuration={0} />
-        {g.portal && sprite(`items_portal_${Math.floor(g.time * 8) % 4}`, g.portal.x, g.portal.y, 20, undefined, 'portal')}
+        {g.portal && sprite(`items_gate_${Math.floor(g.time * 8) % 4}`, g.portal.x, g.portal.y, 20, undefined, 'portal')}
         {layers.map((l) => l.node)}
         {g.bullets.map((b) =>
           sprite(`projectiles_${b.sprite}`, b.x, b.y, b.r > 3 ? 10 : 7, undefined, `b${b.id}`),
@@ -303,10 +303,10 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
       )}
 
       {/* HUD */}
-      <Panel style={styles.hud} color="#3c3458">
+      <Panel style={styles.hud} color={COLORS.edge}>
         <Bar icon="ui_heart" value={h.hp} max={h.def.hp} color={COLORS.red} />
         <Bar icon="ui_shield" value={h.armor} max={h.def.armor} color={COLORS.armor} />
-        <Bar icon="ui_energy" value={h.energy} max={h.def.energy} color={COLORS.blue} />
+        <Bar icon="ui_energy" value={h.energy} max={h.def.energy} color={COLORS.light} />
       </Panel>
       <View style={styles.topRight} pointerEvents="none">
         <Sprite name="items_coin" size={20} />
@@ -321,8 +321,8 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
 
       {boss && (
         <View pointerEvents="none" style={[styles.bossBar, { left: W * 0.3, width: W * 0.4 }]}>
-          <PixelText size={8} color="#ff7a7a">
-            SHADOW LORD
+          <PixelText size={8} color="#ff8a7a">
+            {BOSS_NAME}
           </PixelText>
           <View style={styles.bossTrack}>
             <View style={[styles.barFill, { width: `${(boss.hp / boss.maxHp) * 100}%`, backgroundColor: COLORS.red }]} />
@@ -346,7 +346,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
       {sprite2('ui_btn_swap', swapBtn)}
       <View pointerEvents="none" style={[styles.abs, { left: swapBtn.x - 86, top: swapBtn.y - 22, alignItems: 'center', width: 60 }]}>
         <Sprite name={`weapons_${weapon.id}` as ImgKey} size={36} />
-        <PixelText size={7} color={weapon.energy > h.energy ? COLORS.red : '#78b4ff'}>
+        <PixelText size={7} color={weapon.energy > h.energy ? COLORS.red : COLORS.light}>
           {weapon.energy > 0 ? `${weapon.energy}` : '0'}
         </PixelText>
       </View>
@@ -371,7 +371,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
               PAUSED
             </PixelText>
             <PixelButton label="RESUME" onPress={() => setPause(false)} style={{ marginBottom: 10, width: 180 }} />
-            <PixelButton label="QUIT RUN" onPress={onQuit} color="#6c6488" style={{ width: 180 }} />
+            <PixelButton label="ABANDON WATCH" onPress={onQuit} color="#4a7a78" style={{ width: 180 }} />
           </Panel>
         </View>
       )}
@@ -391,17 +391,17 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#07050f' },
+  root: { flex: 1, backgroundColor: '#050c10' },
   abs: { position: 'absolute' },
   banner: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   hud: { position: 'absolute', left: 8, top: 8, padding: 6, width: 150 },
   barRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 2 },
-  barTrack: { flex: 1, height: 12, marginLeft: 6, backgroundColor: '#140f20', borderWidth: 1, borderColor: '#4a4066', justifyContent: 'center' },
+  barTrack: { flex: 1, height: 12, marginLeft: 6, backgroundColor: '#0c161c', borderWidth: 1, borderColor: '#2c4a50', justifyContent: 'center' },
   barFill: { position: 'absolute', left: 0, top: 0, bottom: 0 },
   barText: { textAlign: 'center', fontSize: 7, lineHeight: 10 },
   topRight: { position: 'absolute', right: 8, top: 16, flexDirection: 'row', alignItems: 'center' },
   bossBar: { position: 'absolute', top: 10, alignItems: 'center' },
-  bossTrack: { height: 10, alignSelf: 'stretch', backgroundColor: '#140f20', borderWidth: 2, borderColor: '#6c2030', marginTop: 2 },
+  bossTrack: { height: 10, alignSelf: 'stretch', backgroundColor: '#0c161c', borderWidth: 2, borderColor: '#7e1e22', marginTop: 2 },
   hint: { position: 'absolute', alignItems: 'center' },
-  pause: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(7,5,15,0.7)', alignItems: 'center', justifyContent: 'center' },
+  pause: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(5,12,16,0.72)', alignItems: 'center', justifyContent: 'center' },
 });
