@@ -1,9 +1,9 @@
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { HEROES } from '../game/data';
-import { CoverImage, PixelText, Sprite, useTicker } from '../ui';
+import { CoverImage, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
-export default function TitleScreen({ onStart }: { onStart: () => void }) {
+export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: () => void; onStory: () => void; onCodex: () => void }) {
   const { width, height } = useWindowDimensions();
   const t = useTicker(120);
   const logoW = Math.min(width * 0.5, 440);
@@ -19,6 +19,10 @@ export default function TitleScreen({ onStart }: { onStart: () => void }) {
         <PixelText size={7} color="#9fbcb4" shadow={false} style={{ marginTop: 4, textAlign: 'center' }}>
           The Bakunawa rises to swallow the moon. Hold the night until dawn.
         </PixelText>
+      </View>
+      <View style={styles.menu}>
+        <PixelButton label="STORY" onPress={onStory} color="#4a7a78" size={8} />
+        <PixelButton label="KWENTO" onPress={onCodex} color="#4a7a78" size={8} />
       </View>
       {/* heroes marching across the bottom */}
       <View style={[styles.parade, { bottom: height * 0.11 }]}>
@@ -43,4 +47,5 @@ const styles = StyleSheet.create({
   logoWrap: { position: 'absolute', left: 24, width: '55%', alignItems: 'center' },
   parade: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', justifyContent: 'center' },
   tap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  menu: { position: 'absolute', left: 24, bottom: 16, flexDirection: 'row', gap: 8 },
 });

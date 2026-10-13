@@ -3,21 +3,28 @@ import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { HeroId } from './src/game/data';
+import { ENDING, EPILOGUE, INTRO } from './src/game/story';
+import CodexScreen from './src/screens/CodexScreen';
 import GameScreen from './src/screens/GameScreen';
 import ResultScreen, { RunStats } from './src/screens/ResultScreen';
 import SelectScreen from './src/screens/SelectScreen';
+import StoryScreen from './src/screens/StoryScreen';
 import TitleScreen from './src/screens/TitleScreen';
 
 type Screen =
   | { name: 'title' }
   | { name: 'select' }
   | { name: 'game'; hero: HeroId; run: number }
-  | { name: 'result'; stats: RunStats };
+  | { name: 'result'; stats: RunStats }
+  | { name: 'intro'; then: 'select' | 'title' }
+  | { name: 'ending'; stats: RunStats }
+  | { name: 'codex'; entry?: string; back: Screen };
 
 export default function App() {
   const [fontsLoaded] = useFonts({ PixelifySans_500Medium, PixelifySans_700Bold });
   const [screen, setScreen] = useState<Screen>({ name: 'title' });
   const [run, setRun] = useState(0);
+  const [seenIntro, setSeenIntro] = useState(false);
 
   const start = (hero: HeroId) => {
     setRun((r) => r + 1);
@@ -28,17 +35,50 @@ export default function App() {
   if (fontsLoaded) {
     switch (screen.name) {
       case 'title':
-        content = <TitleScreen onStart={() => setScreen({ name: 'select' })} />;
+        content = (
+          <TitleScreen
+            onStart={() => setScreen(seenIntro ? { name: 'select' } : { name: 'intro', then: 'select' })}
+            onStory={() => setScreen({ name: 'intro', then: 'title' })}
+            onCodex={() => setScreen({ name: 'codex', back: { name: 'title' } })}
+          />
+        );
+        break;
+      case 'intro':
+        content = (
+          <StoryScreen
+            panels={INTRO}
+            doneLabel={screen.then === 'select' ? 'CHOOSE A GUARDIAN' : 'RETURN'}
+            onDone={() => {
+              setSeenIntro(true);
+              setScreen(screen.then === 'select' ? { name: 'select' } : { name: 'title' });
+            }}
+          />
+        );
+        break;
+      case 'ending': {
+        const stats = screen.stats;
+        const panels = [...ENDING, { art: ENDING[ENDING.length - 1].art, title: 'Epilogue', text: EPILOGUE[stats.hero] }];
+        content = <StoryScreen panels={panels} doneLabel="SEE THE WATCH" onDone={() => setScreen({ name: 'result', stats })} />;
+        break;
+      }
+      case 'codex':
+        content = <CodexScreen initial={screen.entry} onBack={() => setScreen(screen.back)} />;
         break;
       case 'select':
-        content = <SelectScreen onBack={() => setScreen({ name: 'title' })} onPick={start} />;
+        content = (
+          <SelectScreen
+            onBack={() => setScreen({ name: 'title' })}
+            onPick={start}
+            onStory={(id) => setScreen({ name: 'codex', entry: id, back: { name: 'select' } })}
+          />
+        );
         break;
       case 'game':
         content = (
           <GameScreen
             key={screen.run}
             heroId={screen.hero}
-            onEnd={(stats) => setScreen({ name: 'result', stats })}
+            onEnd={(stats) => setScreen(stats.victory ? { name: 'ending', stats } : { name: 'result', stats })}
             onQuit={() => setScreen({ name: 'title' })}
           />
         );

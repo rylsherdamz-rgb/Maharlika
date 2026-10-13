@@ -37,7 +37,7 @@ html, body { height: 100%; }
 body { margin: 0; background: var(--void); color: var(--ink); overflow: hidden; }
 #root { display: flex; height: 100%; flex: 1; }
 .hint {
-  position: fixed; left: 50%; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  position: fixed; left: 50%; top: calc(8px + env(safe-area-inset-top, 0px));
   transform: translateX(-50%);
   max-width: calc(100% - 32px);
   display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center;
@@ -75,6 +75,7 @@ body { margin: 0; background: var(--void); color: var(--ink); overflow: hidden; 
 (function () {
   var hint = document.getElementById('hint');
   setTimeout(function () { hint.classList.add('gone'); }, 9000);
+  window.addEventListener('keydown', function () { hint.classList.add('gone'); }, { once: true });
   document.getElementById('portrait-ok').addEventListener('click', function () { document.body.classList.add('portrait-ok'); });
   window.addEventListener('pointerdown', function () { window.focus(); });
 })();

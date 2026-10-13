@@ -9,6 +9,7 @@ import {
   WEAPONS,
   WeaponId,
 } from './data';
+import { APO_LINES, bossDialogue, DialogueLine, PLAZA, SHORE, STAGES } from './story';
 
 export const TILE = roomData.tile;
 export const ROOM_W = roomData.width * TILE;
@@ -119,7 +120,9 @@ export interface Game {
   kills: number;
   time: number;
   shake: number;
-  banner: { text: string; t: number } | null;
+  banner: { text: string; sub?: string; t: number } | null;
+  dialog: { lines: DialogueLine[]; i: number } | null;
+  npc: { x: number; y: number; talking: boolean; line: string } | null;
   result: 'dead' | 'victory' | null;
   nearWeapon: Pickup | null;
   nextId: number;
@@ -187,6 +190,8 @@ export function newGame(heroId: HeroId): Game {
     time: 0,
     shake: 0,
     banner: null,
+    dialog: null,
+    npc: null,
     result: null,
     nearWeapon: null,
     nextId: 1,
@@ -207,18 +212,22 @@ function enterRoom(g: Game, stage: number) {
   g.hero.x = ENTRY.x;
   g.hero.y = ENTRY.y;
   g.wave = 0;
+  g.npc = null;
   if (g.room === 'start') {
     g.waves = 0;
     g.portal = { ...CENTER };
-    g.banner = { text: 'STEP INTO THE SPIRIT GATE', t: 3 };
+    g.banner = { text: PLAZA.title, sub: PLAZA.line, t: 3 };
+    g.npc = { x: 5.5 * TILE, y: 5.5 * TILE, talking: false, line: APO_LINES[0] };
   } else if (g.room === 'boss') {
     g.waves = 1;
-    g.banner = { text: 'THE BAKUNAWA RISES', t: 2.5 };
+    g.banner = { text: SHORE.title, sub: SHORE.line, t: 3 };
+    g.dialog = { lines: bossDialogue(g.hero.def.id), i: 0 };
     spawnEnemy(g, 'bakunawa', 17.5 * TILE, 7 * TILE);
     g.wave = 1;
   } else {
     g.waves = 2;
-    g.banner = { text: stageLabel(g), t: 2 };
+    const info = STAGES[stage - 1];
+    g.banner = { text: info.title, sub: info.line, t: 3.2 };
     spawnWave(g);
   }
 }
@@ -291,10 +300,7 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
 
 function spawnWave(g: Game) {
   g.wave++;
-  const pool: EnemyType[] =
-    g.stage <= 1
-      ? ['duwende', 'duwende', 'manananggal', 'tikbalang']
-      : ['duwende', 'manananggal', 'tikbalang', 'tikbalang', 'kapre'];
+  const pool: EnemyType[] = STAGES[Math.min(g.stage, STAGES.length) - 1].pool;
   const n = 3 + g.stage + (g.wave - 1);
   for (let i = 0; i < n; i++) {
     const p = randomFloor(g, 90);
@@ -366,8 +372,19 @@ function killEnemy(g: Game, e: Enemy) {
 }
 
 // ---------------------------------------------------------------- update
+/** Moves the open dialogue on by one line; closes it after the last. */
+export function advanceDialog(g: Game) {
+  if (!g.dialog) return;
+  g.dialog.i++;
+  if (g.dialog.i >= g.dialog.lines.length) g.dialog = null;
+}
+
 export function update(g: Game, input: Input, dt: number) {
   if (g.result) return;
+  if (g.dialog) {
+    input.skill = input.swap = false;
+    return;
+  }
   g.time += dt;
   g.shake = Math.max(0, g.shake - dt);
   if (g.banner) {
@@ -378,6 +395,10 @@ export function update(g: Game, input: Input, dt: number) {
   updateEnemies(g, dt);
   updateBullets(g, dt);
   updatePickups(g, dt);
+  if (g.npc) {
+    g.npc.talking = dist(g.hero.x, g.hero.y, g.npc.x, g.npc.y) < 36;
+    if (g.npc.talking) g.npc.line = APO_LINES[Math.floor(g.time / 4) % APO_LINES.length];
+  }
   for (const t of g.texts) {
     t.t -= dt;
     t.y -= 18 * dt;

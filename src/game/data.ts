@@ -50,7 +50,7 @@ export const HEROES: HeroDef[] = [
     title: 'The Babaylan',
     lore: 'Speaks with the anito and carries their light.',
     hp: 5,
-    armor: 3,
+    armor: 4,
     energy: 260,
     speed: 70,
     weapons: ['agimat', 'tirador'],

@@ -1,6 +1,7 @@
 import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { HeroId } from '../game/data';
+import { DEFEAT_LINES } from '../game/story';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
 export interface RunStats {
@@ -63,6 +64,19 @@ export default function ResultScreen({
           ))}
         </Panel>
       </View>
+      {!stats.victory && (
+        <View style={styles.apo}>
+          <Image source={IMG.portraits_apo} fadeDuration={0} resizeMode="stretch" style={styles.apoPortrait} />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <PixelText size={8} color={COLORS.light}>
+              APO DALISAY
+            </PixelText>
+            <PixelText size={8} shadow={false}>
+              {DEFEAT_LINES[Math.floor(stats.time) % DEFEAT_LINES.length]}
+            </PixelText>
+          </View>
+        </View>
+      )}
       <View style={styles.footer}>
         <PixelButton label="MENU" onPress={onMenu} color="#4a7a78" size={10} />
         <PixelButton label={stats.victory ? 'PLAY AGAIN' : 'RETRY'} onPress={onRetry} color={COLORS.gold} style={{ marginLeft: 16 }} />
@@ -78,4 +92,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', marginVertical: 3 },
   label: { marginLeft: 10, width: 96 },
   footer: { flexDirection: 'row' },
+  apo: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, padding: 8, maxWidth: 460, backgroundColor: 'rgba(8,18,24,0.88)', borderWidth: 2, borderColor: COLORS.edge },
+  apoPortrait: { width: 44, height: 44 },
 });

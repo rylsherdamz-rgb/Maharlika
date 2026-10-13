@@ -14,6 +14,8 @@ Outputs:
     assets/screens/**    title / select / defeat / dawn backgrounds, logo, titles
     assets/rooms/**      pre-rendered purok (village zone) maps
     assets/brand/**      brand sheet: logo, palette, cast lineup
+    assets/story/**      illustrated story panels (intro + ending)
+    assets/portraits/**  32x32 dialogue portraits
     assets/icon.png ...  app icon, adaptive icon layers, splash
     src/game/rooms.json  collision grids matching the rendered rooms
     src/assets.ts        typed require() registry for every PNG
@@ -1127,6 +1129,8 @@ def render_room(g, seed, kind):
     fx = Image.new("RGBA", img.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(fx)
     d.rectangle([16, 32, ROOM_W * 16 - 17, 34], fill=(0, 0, 0, 80))
+    if kind == "boss":  # the cracked agung hangs over the shore fence
+        img.alpha_composite(up(rows_to_img(AGUNG), 2), (ROOM_W * 16 - 72, 0))
     if kind == "boss":  # moonlight pool + shoreline water at the boss lair
         d.ellipse([110, 70, 250, 170], fill=(150, 230, 220, 26))
         d.rectangle([16, ROOM_H * 16 - 30, ROOM_W * 16 - 17, ROOM_H * 16 - 17], fill=(40, 120, 140, 70))
@@ -1173,6 +1177,381 @@ def brand_sheet():
     return img
 
 
+
+# ---------------------------------------------------------------- story cast: NPC, portraits, props
+APO = [
+    "",
+    "",
+    "......hhhh......",
+    ".....hhhhhh.....",
+    "....MrMMMMMr....",
+    "....hFFFFFFh....",
+    "....FEFFFEFf....",
+    "....FFFFFFFf....",
+    ".....wwwwww.....",
+    "......wwww......",
+    "...wwWWWWWWn....",
+    "..FwWWWWWWwn....",
+    "...wWWWWWWwn....",
+    "....kkkkkkkn....",
+    "....kk..kk.n....",
+]
+
+AGUNG = [
+    "",
+    ".QQQQQQQQQQQQQQ.",
+    ".Q.....nn.....Q.",
+    ".Q....yyyy....Q.",
+    ".Q...yAAAAy...Q.",
+    ".Q..yAAyKAAy..Q.",
+    ".Q..yAyAKyAy..Q.",
+    ".Q..yAyAAKAy..Q.",
+    ".Q..yAAyyAKy..Q.",
+    ".Q...yAAAAK...Q.",
+    ".Q....yyyy....Q.",
+    ".Q............Q.",
+    ".q............q.",
+    ".q............q.",
+    ".qq..........qq.",
+]
+
+
+def portrait(skin, shade, hair, outfit, style, extras=()):
+    """32x32 dialogue bust built from a few shared parts so the cast stays consistent."""
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    # shoulders + neck
+    d.ellipse([3, 23, 28, 44], fill=outfit)
+    d.rectangle([13, 19, 18, 24], fill=shade)
+    if style == "long":
+        d.rectangle([7, 6, 10, 27], fill=hair)
+        d.rectangle([21, 6, 24, 27], fill=hair)
+    # head
+    d.rounded_rectangle([9, 5, 22, 21], radius=4, fill=skin)
+    d.line([(22, 9), (22, 18)], fill=shade)
+    d.line([(12, 21), (19, 21)], fill=shade)
+    d.rectangle([8, 12, 8, 15], fill=skin)
+    d.rectangle([23, 12, 23, 15], fill=shade)
+    # hair
+    if style in ("short", "long", "bun"):
+        d.rounded_rectangle([8, 3, 23, 9], radius=3, fill=hair)
+        d.rectangle([8, 6, 9, 12], fill=hair)
+        d.rectangle([22, 6, 23, 12], fill=hair)
+        if style == "bun":
+            d.ellipse([9, -1, 22, 6], fill=hair)
+            d.ellipse([12, -2, 19, 3], fill=hair)
+    elif style == "elder":
+        d.rectangle([9, 4, 22, 6], fill=PAL["h"])
+        d.rectangle([8, 6, 9, 11], fill=PAL["h"])
+        d.rectangle([22, 6, 23, 11], fill=PAL["h"])
+    # face
+    for ex in (12, 18):
+        d.rectangle([ex, 13, ex + 1, 14], fill=PAL["E"])
+        d.point((ex, 13), fill=PAL["W"])
+        d.line([(ex, 11), (ex + 1, 11)], fill=hair if style != "elder" else PAL["h"])
+    d.line([(15, 18), (16, 18)], fill=PAL["r"])
+    if "blush" in extras:
+        d.point([(11, 16), (20, 16)], fill=PAL["M"])
+    if "streak" in extras:  # grey streaks of an older woman
+        d.line([(10, 4), (14, 1)], fill=PAL["h"])
+        d.line([(17, 3), (21, 5)], fill=PAL["h"])
+        d.point([(9, 8), (22, 8)], fill=PAL["h"])
+    if "earrings" in extras:
+        d.point([(8, 16), (23, 16)], fill=PAL["A"])
+    if "beard" in extras:
+        d.polygon([(11, 17), (20, 17), (19, 23), (15, 26), (12, 23)], fill=PAL["w"])
+        d.line([(14, 18), (17, 18)], fill=PAL["h"])
+    if "wrinkles" in extras:
+        d.point([(11, 15), (20, 15), (13, 9), (18, 9)], fill=shade)
+    # headgear / accessories
+    if "putong" in extras or "putong_faded" in extras:
+        c1, c2 = (PAL["R"], PAL["r"]) if "putong" in extras else (PAL["M"], PAL["r"])
+        d.rectangle([8, 7, 23, 9], fill=c1)
+        d.polygon([(8, 7), (2, 11), (3, 14), (8, 10)], fill=c2)
+    if "salakot" in extras:
+        d.polygon([(1, 10), (15, 0), (16, 0), (30, 10)], fill=PAL["Q"])
+        d.line([(1, 10), (30, 10)], fill=PAL["q"])
+        d.line([(15, 1), (15, 9)], fill=PAL["y"])
+    if "flower" in extras:
+        d.ellipse([20, 3, 25, 8], fill=PAL["M"])
+        d.point((22, 5), fill=PAL["Y"])
+    if "beads" in extras:
+        for i, x in enumerate(range(10, 23, 2)):
+            d.point((x, 25 + (1 if 12 < x < 20 else 0)), fill=PAL["A"] if i % 2 else PAL["R"])
+    if "vest" in extras:
+        d.rectangle([10, 26, 21, 31], fill=PAL["Q"])
+        d.line([(13, 26), (13, 31)], fill=PAL["W"])
+        d.line([(18, 26), (18, 31)], fill=PAL["W"])
+    if "leaf" in extras:
+        d.polygon([(5, 27), (15, 24), (26, 27), (28, 31), (3, 31)], fill=PAL["G"])
+        d.line([(15, 24), (15, 31)], fill=PAL["g"])
+    if "tapis" in extras:
+        for y in (28, 30):
+            d.line([(5, y), (26, y)], fill=PAL["O"])
+    if "cane" in extras:
+        d.line([(27, 18), (27, 31)], fill=PAL["n"])
+        d.line([(25, 18), (27, 18)], fill=PAL["n"])
+    add_outline(img)
+    return img
+
+
+def bakunawa_portrait():
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    T, t = PAL["T"], PAL["t"]
+    for x, y in ((4, 6), (9, 3), (14, 4)):  # crest fins
+        d.polygon([(x, y + 4), (x + 2, y - 3), (x + 5, y + 4)], fill=PAL["R"])
+    d.ellipse([1, 6, 23, 26], fill=T)
+    d.polygon([(16, 9), (31, 12), (31, 16), (17, 18)], fill=T)           # snout
+    d.polygon([(15, 19), (30, 19), (28, 26), (12, 26)], fill=t)          # lower jaw
+    d.polygon([(17, 17), (30, 17), (29, 21), (16, 21)], fill=PAL["r"])  # mouth
+    for x in (19, 23, 27):
+        d.point([(x, 17), (x + 1, 21)], fill=PAL["W"])
+    d.ellipse([9, 10, 15, 15], fill=PAL["Y"])
+    d.line([(12, 10), (12, 15)], fill=PAL["E"])
+    d.line([(7, 7), (2, 0)], fill=PAL["H"])
+    d.line([(29, 13), (31, 9)], fill=PAL["Y"])
+    for (x, y) in ((4, 15), (6, 20), (10, 22), (5, 11)):
+        d.point((x, y), fill=PAL["C"])
+    add_outline(img)
+    return img
+
+
+# ---------------------------------------------------------------- story panels (320x180)
+def bangka(d, x, y, hull=(30, 20, 18), trim=(140, 40, 34)):
+    d.polygon([(x, y), (x + 34, y), (x + 29, y + 6), (x + 5, y + 6)], fill=hull)
+    d.line([(x + 2, y), (x + 32, y)], fill=trim)
+    d.line([(x + 8, y - 1), (x + 4, y - 6)], fill=hull)
+    d.line([(x + 26, y - 1), (x + 30, y - 6)], fill=hull)
+    d.line([(x - 2, y - 6), (x + 36, y - 6)], fill=hull)
+
+
+def sea(img, y0, top, bottom, seed, glint=(200, 230, 230)):
+    dither_gradient(img, top, bottom, y0, img.height)
+    rnd = random.Random(seed)
+    d = ImageDraw.Draw(img)
+    for _ in range(70):
+        x, y = rnd.randrange(img.width), rnd.randrange(y0 + 2, img.height)
+        d.line([(x, y), (x + rnd.randrange(3, 9), y)], fill=glint)
+
+
+def moon_path(img, x, y0, color):
+    d = ImageDraw.Draw(img)
+    for i, y in enumerate(range(y0, img.height, 3)):
+        w = 4 + i // 2
+        d.line([(x - w + (i % 3), y), (x + w - (i % 2), y)], fill=color)
+
+
+def person(d, x, y, color, h=14):
+    """Tiny villager silhouette."""
+    d.ellipse([x - 2, y - h, x + 2, y - h + 4], fill=color)
+    d.rectangle([x - 2, y - h + 4, x + 2, y - 3], fill=color)
+    d.line([(x - 1, y - 3), (x - 2, y)], fill=color)
+    d.line([(x + 1, y - 3), (x + 2, y)], fill=color)
+
+
+def agung_big(img, cx, cy, r, cracked=True):
+    d = ImageDraw.Draw(img)
+    d.rectangle([cx - r - 12, cy - r - 16, cx - r - 8, cy + r + 30], fill=PAL["q"])
+    d.rectangle([cx + r + 8, cy - r - 16, cx + r + 12, cy + r + 30], fill=PAL["q"])
+    d.rectangle([cx - r - 16, cy - r - 18, cx + r + 16, cy - r - 14], fill=PAL["Q"])
+    d.line([(cx, cy - r - 14), (cx, cy - r)], fill=PAL["n"])
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=PAL["y"])
+    d.ellipse([cx - r + 3, cy - r + 3, cx + r - 3, cy + r - 3], fill=PAL["A"])
+    d.ellipse([cx - r // 2, cy - r // 2, cx + r // 2, cy + r // 2], fill=PAL["y"])
+    d.ellipse([cx - r // 4, cy - r // 4, cx + r // 4, cy + r // 4], fill=PAL["Y"])
+    d.arc([cx - r + 5, cy - r + 5, cx + r - 5, cy + r - 5], 200, 260, fill=PAL["W"])
+    if cracked:
+        pts = [(cx + 2, cy - r), (cx - 3, cy - r // 2), (cx + 4, cy), (cx - 2, cy + r // 2), (cx + 3, cy + r)]
+        d.line(pts, fill=PAL["K"], width=2)
+
+
+def sprite_at(img, rows_img, x, y, s):
+    img.alpha_composite(up(rows_img, s), (int(x), int(y)))
+
+
+def story_barrio():
+    img = Image.new("RGBA", (320, 180), (0, 0, 0, 255))
+    dither_gradient(img, (6, 18, 30), (26, 72, 90), 0, 120)
+    stars(img, 90, 31, 100)
+    moon(img, 240, 40, 16)
+    sea(img, 118, (18, 54, 70), (8, 26, 36), 32)
+    moon_path(img, 240, 120, (210, 220, 190))
+    d = ImageDraw.Draw(img)
+    d.polygon([(0, 132), (150, 140), (120, 180), (0, 180)], fill=(52, 50, 40))  # beach
+    d.rectangle([0, 150, 110, 180], fill=(12, 30, 26))
+    for px_, h, lean in ((14, 60, 1), (40, 70, -1), (120, 50, 1)):
+        palm(img, px_, 150, h, (8, 22, 26), lean)
+    nipa_hut(img, 54, 152, 32, (10, 26, 30), (255, 196, 90))
+    bangka(d, 112, 140)
+    bangka(d, 160, 128, hull=(16, 30, 36), trim=(60, 30, 30))
+    fireflies(img, 14, 33, 120, 170)
+    return img
+
+
+def story_legend():
+    img = Image.new("RGBA", (320, 180), (0, 0, 0, 255))
+    dither_gradient(img, (44, 28, 18), (112, 76, 42), 0, 180)
+    d = ImageDraw.Draw(img)
+    ink, pale = (40, 24, 14), (236, 206, 150)
+    # banig border
+    for x in range(0, 320, 8):
+        for y in (2, 172):
+            d.polygon([(x + 4, y), (x + 8, y + 3), (x + 4, y + 6), (x, y + 3)], fill=(150, 104, 56))
+    # the seven moons; six already swallowed (hollow)
+    for i in range(7):
+        cx, cy = 34 + i * 42, 46 + abs(i - 3) * 7
+        if i == 6:
+            glow_disc(img, cx, cy, 11, pale, ((6, 40), (3, 70)))
+            d.ellipse([cx - 11, cy - 11, cx + 11, cy + 11], fill=pale)
+        else:
+            d.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], outline=(170, 124, 70), width=2)
+    # serpent sweeping across the sky toward the last moon
+    hx, hy = serpent_arc(img, 150, 230, 175, 3.55, 5.55, 9, ink, (150, 54, 30))
+    d.polygon([(hx - 10, hy + 2), (hx + 16, hy - 10), (hx + 14, hy + 2), (hx + 2, hy + 10)], fill=ink)
+    d.polygon([(hx + 4, hy + 2), (hx + 18, hy + 6), (hx + 2, hy + 12)], fill=ink)
+    d.rectangle([hx + 2, hy - 4, hx + 3, hy - 3], fill=(230, 90, 50))
+    # carved people below, arms raised
+    for x in range(30, 300, 26):
+        person(d, x, 168, ink, 16)
+        d.line([(x - 2, 156), (x - 5, 150)], fill=ink)
+        d.line([(x + 2, 156), (x + 5, 150)], fill=ink)
+    return img
+
+
+def story_agung():
+    img = Image.new("RGBA", (320, 180), (0, 0, 0, 255))
+    dither_gradient(img, (8, 20, 32), (30, 70, 84), 0, 130)
+    stars(img, 70, 41, 90)
+    moon(img, 60, 36, 14)
+    sea(img, 126, (20, 56, 72), (8, 26, 36), 42)
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, 150, 320, 180], fill=(56, 52, 42))
+    agung_big(img, 160, 92, 30, cracked=False)
+    sil = (16, 22, 24)
+    for x, mallet in ((100, 1), (118, 1), (204, 1), (222, 0), (82, 0), (240, 0)):
+        person(d, x, 164, sil, 18)
+        if mallet:
+            d.line([(x + 2, 152), (x + 9 if x < 160 else x - 9, 144)], fill=sil, width=2)
+    return img
+
+
+def story_redtide():
+    img = Image.new("RGBA", (320, 180), (0, 0, 0, 255))
+    dither_gradient(img, (16, 4, 10), (92, 20, 26), 0, 124)
+    stars(img, 30, 51, 70)
+    glow_disc(img, 250, 34, 14, (190, 70, 60), ((6, 30), (3, 60)))
+    d = ImageDraw.Draw(img)
+    d.ellipse([236, 20, 264, 48], fill=(176, 92, 80))
+    d.ellipse([244, 20, 272, 48], fill=(26, 8, 14))   # being eaten
+    sea(img, 122, (120, 18, 28), (40, 6, 12), 52, glint=(200, 70, 60))
+    # serpent eye on the horizon
+    glow_disc(img, 210, 126, 10, (255, 90, 40), ((14, 20), (7, 40), (3, 80)))
+    d.ellipse([180, 120, 240, 132], fill=(255, 120, 50))
+    d.ellipse([206, 120, 214, 132], fill=(10, 4, 6))
+    # shore with the agung and a lightning strike
+    d.polygon([(0, 140), (120, 146), (90, 180), (0, 180)], fill=(30, 18, 20))
+    agung_big(img, 60, 120, 12, cracked=True)
+    bolt = [(78, 0), (70, 40), (84, 52), (64, 92), (70, 96), (58, 110)]
+    d.line(bolt, fill=PAL["W"], width=2)
+    d.line([(x + 2, y) for x, y in bolt], fill=(255, 220, 160))
+    return img
+
+
+def story_waking():
+    img = Image.new("RGBA", (320, 180), (0, 0, 0, 255))
+    dither_gradient(img, (6, 16, 24), (24, 56, 62), 0, 140)
+    stars(img, 60, 61, 90)
+    moon(img, 92, 44, 18)
+    d = ImageDraw.Draw(img)
+    # manananggal crossing the moon
+    d.polygon([(76, 42), (88, 36), (92, 44), (96, 36), (108, 42), (96, 46), (92, 52), (88, 46)], fill=(14, 10, 16))
+    # balete tree with a kapre's cigar ember
+    tree = (8, 18, 18)
+    d.rectangle([236, 60, 262, 160], fill=tree)
+    d.ellipse([196, 18, 316, 92], fill=tree)
+    for x in range(232, 268, 4):
+        d.line([(x, 80), (x + (x % 3) - 1, 150)], fill=(14, 28, 26))
+    d.point([(244, 86), (252, 86)], fill=PAL["X"])
+    d.line([(256, 92), (266, 90)], fill=PAL["w"])
+    d.point((267, 90), fill=PAL["O"])
+    for i in range(8):
+        d.point((268 + i * 2, 86 - i * 3 + (i % 2)), fill=(120, 130, 130))
+    # crossroads signpost with a tikbalang
+    d.rectangle([150, 108, 152, 150], fill=tree)
+    d.polygon([(152, 110), (172, 112), (152, 116)], fill=tree)
+    d.polygon([(166, 150), (170, 118), (178, 112), (186, 114), (182, 120), (176, 122), (178, 150)], fill=tree)
+    d.point((180, 116), fill=PAL["X"])
+    # grass with glowing eyes of duwende in the anthills
+    for x in range(320):
+        h = 18 + int(6 * math.sin(x * 0.2)) + (x * 7) % 5
+        d.line([(x, 180 - h - 12), (x, 180)], fill=(10, 30, 26))
+    for x in (24, 60, 112, 196, 290):
+        d.polygon([(x - 8, 166), (x, 152), (x + 8, 166)], fill=(40, 34, 26))
+        d.point([(x - 2, 160), (x + 2, 160)], fill=PAL["X"])
+        d.point((x, 151), fill=PAL["R"])
+    return img
+
+
+def story_apo():
+    img = Image.new("RGBA", (320, 180), (0, 0, 0, 255))
+    dither_gradient(img, (6, 18, 28), (20, 56, 66), 0, 140)
+    stars(img, 50, 71, 80)
+    for x, w in ((20, 40), (250, 44)):
+        nipa_hut(img, x, 138, w, (10, 26, 30), (255, 196, 90))
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, 136, 320, 180], fill=(40, 46, 40))
+    glow_disc(img, 112, 96, 18, (255, 170, 70), ((30, 24), (18, 40), (8, 60)))
+    sulo = tile_sulo(0)
+    sprite_at(img, sulo, 96, 70, 2)
+    sprite_at(img, rows_to_img(APO), 54, 92, 3)
+    for i, name in enumerate(HEROES):
+        sprite_at(img, hero_frame(name, 0), 140 + i * 42, 94, 3)
+    return img
+
+
+def story_sinking():
+    img = Image.new("RGBA", (320, 180), (0, 0, 0, 255))
+    dither_gradient(img, (20, 10, 24), (80, 40, 60), 0, 110)
+    stars(img, 50, 81, 80)
+    moon(img, 160, 46, 26)
+    sea(img, 108, (100, 30, 40), (30, 16, 30), 82, glint=(220, 140, 130))
+    body = (34, 104, 104)
+    serpent_arc(img, 90, 132, 26, 3.3, 6.1, 6, body, (190, 50, 40))
+    hx, hy = serpent_arc(img, 220, 138, 30, 3.1, 5.0, 7, body, (190, 50, 40))
+    d = ImageDraw.Draw(img)
+    d.polygon([(hx - 6, hy - 4), (hx + 14, hy - 12), (hx + 10, hy + 2)], fill=body)
+    d.point((hx + 4, hy - 6), fill=PAL["Y"])
+    water = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(water).rectangle([0, 134, 320, 180], fill=(60, 20, 34, 200))
+    img.alpha_composite(water)
+    rnd = random.Random(83)
+    for _ in range(26):
+        x, y = rnd.randrange(60, 270), rnd.randrange(112, 132)
+        d.point((x, y), fill=(220, 230, 220))
+    return img
+
+
+def story_dawn():
+    img = Image.new("RGBA", (320, 180), (0, 0, 0, 255))
+    dither_gradient(img, (54, 70, 120), (255, 176, 104), 0, 120)
+    glow_disc(img, 240, 118, 18, (255, 220, 140), ((20, 30), (10, 50), (4, 90)))
+    d = ImageDraw.Draw(img)
+    d.ellipse([222, 100, 258, 136], fill=(255, 236, 170))
+    d.ellipse([60, 20, 72, 32], fill=(240, 236, 220))   # pale morning moon, whole
+    sea(img, 118, (80, 140, 170), (40, 90, 120), 92, glint=(255, 220, 160))
+    moon_path(img, 240, 120, (255, 214, 140))
+    d.polygon([(0, 136), (200, 146), (180, 180), (0, 180)], fill=(196, 168, 112))
+    agung_big(img, 70, 110, 18, cracked=True)
+    for i, name in enumerate(HEROES):
+        sprite_at(img, hero_frame(name, 0), 100 + i * 24, 132, 2)
+    sprite_at(img, rows_to_img(APO), 34, 132, 2)
+    for x in (10, 22, 200, 214, 228):
+        person(d, x, 172, (90, 70, 60), 14)
+    palm(img, 290, 150, 60, (40, 70, 56), -1)
+    return img
+
+
 # ---------------------------------------------------------------- main
 def main():
     for name in HEROES:
@@ -1216,6 +1595,20 @@ def main():
     save(text_img("DEFEATED", 3, (255, 130, 110), (150, 24, 34)), "screens/gameover_text.png", 4)
     save(text_img("SUNRISE!", 3, (255, 248, 200), (240, 150, 50)), "screens/victory_text.png", 4)
     save(brand_sheet(), "brand/brand_sheet.png", 4)
+    # story cast + panels
+    for f in range(2):
+        save(rows_to_img(shift_up(APO, f)), f"sprites/npc/apo_{f}.png")
+    save(rows_to_img(AGUNG), "sprites/deco/agung.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["Q"], "short", ("putong", "vest")), "portraits/kidlat.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["G"], "short", ("salakot", "leaf", "blush")), "portraits/liksi.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["T"], "long", ("flower", "beads")), "portraits/mayumi.png")
+    save(portrait(PAL["F"], PAL["f"], (58, 48, 50), PAL["w"], "bun", ("tapis", "wrinkles", "streak", "earrings")), "portraits/amihan.png")
+    save(portrait(PAL["f"], (130, 80, 56), PAL["h"], PAL["W"], "elder", ("putong_faded", "beard", "wrinkles", "cane")), "portraits/apo.png")
+    save(bakunawa_portrait(), "portraits/bakunawa.png")
+    for name, fn in (("01_barrio", story_barrio), ("02_legend", story_legend), ("03_agung", story_agung),
+                     ("04_redtide", story_redtide), ("05_waking", story_waking), ("06_apo", story_apo),
+                     ("07_sinking", story_sinking), ("08_dawn", story_dawn)):
+        save(fn(), f"story/{name}.png", SCREEN_SCALE)
 
     layouts = {}
     plan = [("start", "start", 100), ("room_a", "combat", 211), ("room_b", "combat", 212),

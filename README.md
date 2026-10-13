@@ -9,13 +9,18 @@ Philippine barrio at night.
 
 ![Brand sheet](assets/brand/brand_sheet.png)
 
+**Story:** an illustrated 6-panel prologue and ending, named puroks with lore lines, Apo Dalisay
+in the plaza, a face-off with the Bakunawa in each guardian's own words, a personal epilogue
+per guardian, and the **Kwento** codex with full bios of every character, creature and place.
+The full story bible is in [`docs/STORY.md`](docs/STORY.md).
+
 ## The guardians
 
 | Guardian | Role | HP | Amulets | Light | Skill |
 |---|---|---|---|---|---|
 | **Kidlat** | The Barrio Watchman, red putong and bamboo vest | 7 | 5 | 180 | **Lightning Rush**: shoot twice as fast for 5s |
 | **Liksi** | The Rice-Field Scout, salakot and banana-leaf cloak | 5 | 4 | 200 | **Hop**: dash and dodge all damage |
-| **Mayumi** | The Babaylan, spirit priestess with sampaguita and beads | 5 | 3 | 260 | **Anito Ring**: ring of piercing spirit orbs |
+| **Mayumi** | The Babaylan, spirit priestess with sampaguita and beads | 5 | 4 | 260 | **Anito Ring**: ring of piercing spirit orbs |
 | **Amihan** | The Herbalist, striped tapis | 6 | 4 | 220 | **Hilot**: heal 2 HP and restore amulets |
 
 - **Amulets** (anting-anting) absorb hits first and recharge after 3s without damage.
@@ -44,8 +49,9 @@ Enemies path around obstacles using a flow field, so nothing gets stuck behind a
 
 ## A run
 
-The plaza, then 4 random puroks (village zones) with 2 waves each, getting harder as you go,
-then the shore where the Bakunawa waits. Making a purok safe opens a spirit gate and drops a
+The plaza, then the four puroks (village zones) in story order: Anthill Field, Banana Grove,
+The Crossroads and Balete Grove. Each has 2 waves of its own creatures and the map layouts are
+shuffled every run. Then comes the shore, where the Bakunawa waits. Making a purok safe opens a spirit gate and drops a
 baul (chest) with a new weapon or supplies.
 
 ## Controls
@@ -99,6 +105,8 @@ and rendered with nearest-neighbour upscaling. Edit a map and run
 - `assets/screens/`: title (Bakunawa and the moon), bahay kubo select room, eclipsed-moon
   defeat, dawn over the rice terraces, logo and titles
 - `assets/rooms/`: pre-rendered maps, with matching collision grids in `src/game/rooms.json`
+- `assets/story/`: 8 illustrated story panels; `assets/portraits/`: dialogue portraits
+- `assets/sprites/npc/`, `assets/sprites/deco/`: Apo Dalisay, the cracked agung
 - `assets/brand/brand_sheet.png`, app icon, adaptive icon layers, splash, `src/assets.ts`,
   `assets/preview.png`
 
@@ -107,8 +115,9 @@ and rendered with nearest-neighbour upscaling. Edit a map and run
 ```
 App.tsx                  screen state machine (title → select → game → result)
 src/game/data.ts         guardians, weapons, creature stats
+src/game/story.ts        all story text: panels, bios, stages, dialogue, epilogues
 src/game/engine.ts       simulation: movement, collision, flow-field AI, shots, pickups, run flow
-src/screens/             Title, Select, Game (renderer + multi-touch controls + HUD), Result
+src/screens/             Title, Story, Codex, Select, Game (renderer + controls + HUD + dialogue), Result
 src/ui.tsx               brand palette, pixel text, buttons, panels, sprite helper
 tools/generate_assets.py all art
 tools/build_web_single.py single-file web build

@@ -15,7 +15,15 @@ function StatRow({ icon, value, color }: { icon: ImgKey; value: number; color: s
   );
 }
 
-export default function SelectScreen({ onBack, onPick }: { onBack: () => void; onPick: (id: HeroId) => void }) {
+export default function SelectScreen({
+  onBack,
+  onPick,
+  onStory,
+}: {
+  onBack: () => void;
+  onPick: (id: HeroId) => void;
+  onStory: (id: HeroId) => void;
+}) {
   const { width, height } = useWindowDimensions();
   const [sel, setSel] = useState<HeroId>('kidlat');
   const t = useTicker(180);
@@ -88,6 +96,7 @@ export default function SelectScreen({ onBack, onPick }: { onBack: () => void; o
       </View>
       <View style={styles.footer}>
         <PixelButton label="BACK" onPress={onBack} color="#4a7a78" size={10} />
+        <PixelButton label={`${hero.name.toUpperCase()}'S STORY`} onPress={() => onStory(sel)} color="#4a7a78" size={10} style={{ marginLeft: 16 }} />
         <PixelButton label="BEGIN THE WATCH" onPress={() => onPick(sel)} color={hero.color} style={{ marginLeft: 16 }} />
       </View>
     </View>

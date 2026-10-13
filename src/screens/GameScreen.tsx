@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GestureResponderEvent, Image, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { BOSS_NAME, ENEMIES, HeroId, WEAPONS, WeaponId } from '../game/data';
-import { Game, Input, newGame, ROOM_H, ROOM_W, stageLabel, update } from '../game/engine';
+import { advanceDialog, Game, Input, newGame, ROOM_H, ROOM_W, stageLabel, update } from '../game/engine';
 import { COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
 import { RunStats } from './ResultScreen';
 
@@ -103,6 +103,11 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
     const kd = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       if (!down.has(k)) {
+        if (gameRef.current.dialog && !pausedRef.current && (k === ' ' || k === 'enter' || k === 'j')) {
+          advanceDialog(gameRef.current);
+          down.add(k);
+          return;
+        }
         if (k === 'k') input.skill = true;
         if (k === 'l' || k === 'q') input.swap = true;
         if (k === 'escape' || k === 'p') setPause(!pausedRef.current);
@@ -127,6 +132,10 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
 
   const onTouchStart = (e: GestureResponderEvent) => {
     if (pausedRef.current) return;
+    if (gameRef.current.dialog) {
+      advanceDialog(gameRef.current);
+      return;
+    }
     for (const t of e.nativeEvent.changedTouches) {
       const { pageX: x, pageY: y } = t;
       const id = Number(t.identifier);
@@ -266,6 +275,15 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
       ],
     });
   }
+  if (g.npc) {
+    layers.push({
+      y: g.npc.y,
+      node: [
+        shadow(g.npc.x, g.npc.y + 8, 10, 'npcs'),
+        sprite(`npc_apo_${Math.floor(g.time * 1.5) % 2}`, g.npc.x, g.npc.y, 16, { transform: [{ scaleX: h.x < g.npc.x ? -1 : 1 }] }, 'npc'),
+      ],
+    });
+  }
   layers.sort((a, b) => a.y - b.y);
 
   const boss = g.enemies.find((e) => e.type === 'bakunawa');
@@ -298,6 +316,26 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
         <View pointerEvents="none" style={[styles.banner, { top: H * 0.3 }]}>
           <PixelText size={16} color={COLORS.gold}>
             {g.banner.text}
+          </PixelText>
+          {g.banner.sub && (
+            <PixelText size={9} color={COLORS.text} style={{ marginTop: 4, maxWidth: W * 0.6, textAlign: 'center' }}>
+              {g.banner.sub}
+            </PixelText>
+          )}
+        </View>
+      )}
+
+      {/* Apo Dalisay's advice in the plaza */}
+      {g.npc?.talking && !g.dialog && (
+        <View
+          pointerEvents="none"
+          style={[styles.bubble, { left: ox + g.npc.x * s - 100, top: oy + (g.npc.y - 12) * s - 52, width: 200 }]}
+        >
+          <PixelText size={7} color={COLORS.light} shadow={false}>
+            APO DALISAY
+          </PixelText>
+          <PixelText size={7} shadow={false}>
+            {g.npc.line}
           </PixelText>
         </View>
       )}
@@ -364,6 +402,29 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
         </View>
       )}
 
+      {g.dialog && (() => {
+        const line = g.dialog.lines[g.dialog.i];
+        const left = line.side === 'left';
+        return (
+          <View pointerEvents="none" style={styles.dialogWrap}>
+            <View style={[styles.dialog, { flexDirection: left ? 'row' : 'row-reverse' }]}>
+              <Image source={IMG[line.portrait]} fadeDuration={0} resizeMode="stretch" style={styles.dialogPortrait} />
+              <View style={{ flex: 1, marginHorizontal: 12 }}>
+                <PixelText size={11} color={line.speaker === 'BAKUNAWA' ? '#ff8a7a' : COLORS.light} style={{ textAlign: left ? 'left' : 'right' }}>
+                  {line.speaker}
+                </PixelText>
+                <PixelText size={9} shadow={false} style={{ textAlign: left ? 'left' : 'right' }}>
+                  {line.text}
+                </PixelText>
+                <PixelText size={7} color={COLORS.dim} shadow={false} style={{ marginTop: 4, textAlign: left ? 'right' : 'left' }}>
+                  TAP ▸
+                </PixelText>
+              </View>
+            </View>
+          </View>
+        );
+      })()}
+
       {paused && (
         <View style={styles.pause}>
           <Panel style={{ alignItems: 'center', padding: 24 }}>
@@ -403,5 +464,9 @@ const styles = StyleSheet.create({
   bossBar: { position: 'absolute', top: 10, alignItems: 'center' },
   bossTrack: { height: 10, alignSelf: 'stretch', backgroundColor: '#0c161c', borderWidth: 2, borderColor: '#7e1e22', marginTop: 2 },
   hint: { position: 'absolute', alignItems: 'center' },
+  bubble: { position: 'absolute', padding: 6, backgroundColor: 'rgba(8,18,24,0.92)', borderWidth: 2, borderColor: '#ffba48' },
+  dialogWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, justifyContent: 'flex-end', padding: 16, backgroundColor: 'rgba(5,12,16,0.45)' },
+  dialog: { alignItems: 'center', padding: 12, backgroundColor: 'rgba(8,18,24,0.95)', borderWidth: 3, borderColor: '#ffba48' },
+  dialogPortrait: { width: 84, height: 84, borderWidth: 2, borderColor: '#2c4a50', backgroundColor: '#1c3a40' },
   pause: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(5,12,16,0.72)', alignItems: 'center', justifyContent: 'center' },
 });
