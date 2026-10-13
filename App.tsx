@@ -1,3 +1,4 @@
+import { NotoSansTagalog_400Regular } from '@expo-google-fonts/noto-sans-tagalog';
 import { PixelifySans_500Medium, PixelifySans_700Bold, useFonts } from '@expo-google-fonts/pixelify-sans';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
@@ -21,7 +22,7 @@ type Screen =
   | { name: 'codex'; entry?: string; back: Screen };
 
 export default function App() {
-  const [fontsLoaded] = useFonts({ PixelifySans_500Medium, PixelifySans_700Bold });
+  const [fontsLoaded] = useFonts({ PixelifySans_500Medium, PixelifySans_700Bold, NotoSansTagalog_400Regular });
   const [screen, setScreen] = useState<Screen>({ name: 'title' });
   const [run, setRun] = useState(0);
   const [seenIntro, setSeenIntro] = useState(false);
@@ -104,5 +105,5 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0a181e' },
+  root: { flex: 1, backgroundColor: '#0e0c1c' },
 });

@@ -1,124 +1,91 @@
-# BANTAY: Guardians of the Barrio
+# MAHARLIKA: Ang Gabi ng Bakunawa
 
-A pixel-art roguelike shooter for Android, built with React Native (Expo), set in a
-Philippine barrio at night.
+A pixel-art action roguelike for Android, built with React Native (Expo), set in a
+Philippines that was never colonized.
 
-> The Bakunawa, the great sea serpent, has risen to swallow the moon. While the
-> village sleeps, its *bantay* (guardians) hold the night against the creatures
-> that come with it, purok by purok, until dawn.
+> In 1521 Lapulapu turned back Magellan at Mactan, and in this history no one ever came back.
+> Five centuries later the free islands of **Maharlika** face the **Bakunawa**, the sea serpent
+> of Visayan myth that swallowed six of Bathala's seven moons and has risen for the last one.
+> Haliya, the masked Bicolano goddess of moonlight, calls four maharlika to sail the islands and
+> hold the serpent back while the people beat their gongs to drive it off.
 
 ![Brand sheet](assets/brand/brand_sheet.png)
 
-**Story:** an illustrated 6-panel prologue and ending, named puroks with lore lines, Apo Dalisay
-in the plaza, a face-off with the Bakunawa in each guardian's own words, a personal epilogue
-per guardian, and the **Kwento** codex with full bios of every character, creature and place.
-The full story bible is in [`docs/STORY.md`](docs/STORY.md).
+The myths, gods and creatures come from documented Philippine folklore (Visayan, Bicolano and
+Tagalog). The story bible in [`docs/STORY.md`](docs/STORY.md) lists every element and whether
+it is folklore, history or invented for the game.
 
-## The guardians
+## How it plays
 
-| Guardian | Role | HP | Amulets | Light | Skill |
-|---|---|---|---|---|---|
-| **Kidlat** | The Barrio Watchman, red putong and bamboo vest | 7 | 5 | 180 | **Lightning Rush**: shoot twice as fast for 5s |
-| **Liksi** | The Rice-Field Scout, salakot and banana-leaf cloak | 5 | 4 | 200 | **Hop**: dash and dodge all damage |
-| **Mayumi** | The Babaylan, spirit priestess with sampaguita and beads | 5 | 4 | 260 | **Anito Ring**: ring of piercing spirit orbs |
-| **Amihan** | The Herbalist, striped tapis | 6 | 4 | 220 | **Hilot**: heal 2 HP and restore amulets |
+- **Islands, not rooms:** each stage is an island in the sea. You walk on land, shots fly over water.
+  Clear the island, visit its **dambana** (shrine), then board the **balangay** to sail on.
+- **Blessings of the gods:** each dambana offers three of eight Tagalog deities (Apolaki, Mayari,
+  Tala, Anitun Tabu, Dumakulem, Lakapati, Aman Sinaya, Lakan Bakod). Pick one; they stack for the run.
+- **One signature weapon per hero:** kampilan (melee, cuts enemy shots), pana (bow), agimat rod
+  (piercing spirit orbs), sumpit (poison darts).
+- **Dodge roll** for everyone; **skills charge with light** from fighting and catching fireflies.
+- **Health beads and amulets:** amulets (anting-anting) absorb hits and recharge.
 
-- **Amulets** (anting-anting) absorb hits first and recharge after 3s without damage.
-- **Light** powers the stronger weapons. The tirador is free. Fireflies (alitaptap)
-  restore light; when it runs out the guardian switches to the tirador automatically.
+| Hero | From | Weapon | Skill |
+|---|---|---|---|
+| **Kidlat** | Mactan, maharlika warrior | Kampilan | Bagyo: blade whirl that clears shots |
+| **Liksi** | Butuan, navigator | Pana | Ulan ng Pana: arrow storm |
+| **Mayumi** | Panay, babaylan | Agimat rod | Anito Ring: spirit orbs |
+| **Amihan** | Siquijor, mananambal | Sumpit | Tambal: heal and restore amulets |
 
-## Weapons
-
-| Weapon | What it is | Cost |
-|---|---|---|
-| **Tirador** | Slingshot, steady pebbles | free |
-| **Sumpit** | Bamboo blowgun, rapid darts | 0.5 light |
-| **Lantaka** | Brass swivel cannon, 5-shot scatter | 2 light |
-| **Agimat Rod** | Amulet rod, piercing spirit orbs | 3 light |
-
-## The creatures
-
-- **Duwende**: hopping house-dwarf, rushes you.
-- **Manananggal**: flying half-body with leathery wings, fast and erratic.
-- **Tikbalang**: horse-headed trickster that keeps its distance and throws embers.
-- **Kapre**: cigar-smoking tree giant, fires a three-way spread.
-- **Bakunawa** (boss): fires rings of moon shards and aimed fans, summons manananggal,
-  and enrages at half health.
-
-Enemies path around obstacles using a flow field, so nothing gets stuck behind a pot.
-
-## A run
-
-The plaza, then the four puroks (village zones) in story order: Anthill Field, Banana Grove,
-The Crossroads and Balete Grove. Each has 2 waves of its own creatures and the map layouts are
-shuffled every run. Then comes the shore, where the Bakunawa waits. Making a purok safe opens a spirit gate and drops a
-baul (chest) with a new weapon or supplies.
+Route: Port of Tondo → Punso Fields → Siquijor → Mount Banahaw → Ibalong Forests → Shore of Albay
+(the Bakunawa). Illustrated prologue and ending, a dialogue before the boss, an epilogue per hero,
+and the **Kwento** codex (Maharlika · Creatures · The Gods · The World) with sources.
 
 ## Controls
 
 | Touch | Action |
 |---|---|
-| Left half of the screen | Floating joystick: move |
-| Amber diamond | Hold to shoot (auto-aims at the nearest creature in sight) |
-| Teal diamond | Guardian skill |
-| Swap | Switch weapons, or pick up the weapon you're standing on |
-| Pause (top right) | Pause / abandon the watch |
+| Left half | Floating joystick |
+| Crossed blades (big diamond) | Hold to attack (auto-aims) |
+| Wind (small diamond) | Dodge roll |
+| Sun | Skill, when your light is full |
+| Cards at a dambana | Choose a blessing |
 
-Web build: `WASD`/arrows move, `Space`/`J` shoot, `K` skill, `Q`/`L` swap, `Esc` pause.
-
-## Brand
-
-- **Name:** Bantay ("guard, watch" in Filipino). Tagline: *Guardians of the Barrio*.
-- **Palette:** moonlit teal night (`#0a181e`, `#185c68`, `#36a4a0`), spirit green (`#82eed6`),
-  lantern amber (`#ffba48`), flame (`#f08428`), putong red (`#d63a30`), bamboo (`#ccc466`),
-  leaf (`#62b24a`), narra wood (`#985e34`).
-- **Type:** Pixelify Sans for UI; a custom chunky extruded pixel face for the logo and titles.
-- **Signature image:** the Bakunawa coiling around the full moon over nipa huts and palms.
-- **Shapes:** diamond-cut buttons, after the woven banig mat motif.
+Web build: `WASD` move, `Space` attack, `Shift` dodge, `K` skill, `1-3` choose a blessing, `Esc` pause.
 
 ## Running it
 
 ```bash
 npm install
-npx expo start            # scan the QR code with Expo Go on Android
-npx expo start --android  # or launch on a connected device / emulator
+npx expo start              # scan the QR code with Expo Go on Android
 npx eas-cli@latest build -p android --profile preview   # installable APK
 ```
 
-Single-file web build (what the shareable preview page uses):
+Single-file web build:
 
 ```bash
 npx expo export --platform web --output-dir dist
-python3 tools/build_web_single.py dist bantay.html
+python3 tools/build_web_single.py dist maharlika.html
 ```
 
 ## Assets
 
-All art is drawn as pixel maps in [`tools/generate_assets.py`](tools/generate_assets.py)
-and rendered with nearest-neighbour upscaling. Edit a map and run
-`python3 tools/generate_assets.py` (needs Pillow) to regenerate:
+Everything is drawn in [`tools/generate_assets.py`](tools/generate_assets.py) as pixel maps or
+small procedural routines (Baybayin is rendered from Noto Sans Tagalog). Run
+`python3 tools/generate_assets.py` (needs Pillow and `npm install`) to regenerate:
 
-- `assets/sprites/`: guardians (2-frame walk), creatures and the Bakunawa, weapons, shots,
-  items (barya, alitaptap, herbs, gasera, baul), spirit gate, tiles (ground, bamboo fence,
-  hedge, palayok, balete stump, sulo)
-- `assets/ui/`: HUD icons and diamond touch controls
-- `assets/screens/`: title (Bakunawa and the moon), bahay kubo select room, eclipsed-moon
-  defeat, dawn over the rice terraces, logo and titles
-- `assets/rooms/`: pre-rendered maps, with matching collision grids in `src/game/rooms.json`
-- `assets/story/`: 8 illustrated story panels; `assets/portraits/`: dialogue portraits
-- `assets/sprites/npc/`, `assets/sprites/deco/`: Apo Dalisay, the cracked agung
-- `assets/brand/brand_sheet.png`, app icon, adaptive icon layers, splash, `src/assets.ts`,
-  `assets/preview.png`
+- heroes, creatures, the Bakunawa, Haliya, weapons, shots and the kampilan slash effect
+- island maps (sea, surf, sand, themed ground and props such as punso, banana, balete, rocks,
+  bronze lamp posts) with collision grids in `src/game/rooms.json`
+- balangay, dambana, agung; HUD medallion, bead pips, eight deity emblems, touch controls
+- title (Mayon, the eclipse, the Bakunawa and the fleet), select, defeat, dawn screens; logo
+  and Baybayin logo; 8 story panels; 6 dialogue portraits; brand sheet; app icons
 
 ## Project layout
 
 ```
-App.tsx                  screen state machine (title → select → game → result)
-src/game/data.ts         guardians, weapons, creature stats
-src/game/story.ts        all story text: panels, bios, stages, dialogue, epilogues
-src/game/engine.ts       simulation: movement, collision, flow-field AI, shots, pickups, run flow
-src/screens/             Title, Story, Codex, Select, Game (renderer + controls + HUD + dialogue), Result
-src/ui.tsx               brand palette, pixel text, buttons, panels, sprite helper
-tools/generate_assets.py all art
-tools/build_web_single.py single-file web build
+App.tsx                    screen flow: title → story → select → game → ending → result; codex
+src/game/data.ts           heroes, weapons, creatures, the gods' blessings
+src/game/story.ts          all story text, bios with sources, island names in Baybayin
+src/game/engine.ts         simulation: islands, melee and ranged combat, dodge, light, blessings, AI
+src/screens/               Title, Story, Codex, Select, Game, Result
+src/ui.tsx                 palette, pixel and Baybayin text, buttons, panels
+tools/generate_assets.py   all art
+docs/STORY.md              story bible and sources
 ```

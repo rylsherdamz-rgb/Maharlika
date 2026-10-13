@@ -4,21 +4,28 @@ import { IMG, ImgKey } from './assets';
 
 export const FONT = 'PixelifySans_500Medium';
 export const FONT_BOLD = 'PixelifySans_700Bold';
+export const FONT_BAYBAYIN = 'NotoSansTagalog_400Regular';
 
-// Bantay palette: moonlit teal night, lantern amber, bamboo, putong red.
+// Maharlika palette: eclipse-night indigo, bronze and gold, sea teal, putong red.
 export const COLORS = {
-  bg: '#0a181e',
-  panel: '#10262c',
-  panelLight: '#1c3a40',
-  border: '#ffba48',
-  text: '#fffcec',
-  dim: '#9fbcb4',
+  bg: '#0e0c1c',
+  panel: '#1a1630',
+  panelLight: '#2a2444',
+  border: '#d79a3c',
+  text: '#fff6e4',
+  dim: '#b2a8c4',
   gold: '#ffe882',
   red: '#d63a30',
   light: '#ffba48',
   armor: '#82eed6',
-  edge: '#2c4a50',
+  edge: '#3a3050',
+  sea: '#0c2c3e',
 };
+
+/** Baybayin script (Noto Sans Tagalog). */
+export function BaybayinText({ children, size = 14, color = COLORS.light, style }: { children: React.ReactNode; size?: number; color?: string; style?: StyleProp<TextStyle> }) {
+  return <Text style={[{ fontFamily: FONT_BAYBAYIN, fontSize: size, lineHeight: size * 1.6, color }, styles.shadow, style]}>{children}</Text>;
+}
 
 export function PixelText({
   children,
@@ -132,13 +139,13 @@ export function useTicker(ms: number) {
 
 const styles = StyleSheet.create({
   shadow: {
-    textShadowColor: '#0c161c',
+    textShadowColor: '#0a0814',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
   },
   btnOuter: {
     borderWidth: 3,
-    backgroundColor: '#0c161c',
+    backgroundColor: '#0a0814',
   },
   btnInner: {
     paddingHorizontal: 18,
@@ -151,7 +158,7 @@ const styles = StyleSheet.create({
   },
   pressed: { transform: [{ translateY: 2 }] },
   panel: {
-    backgroundColor: 'rgba(10,24,30,0.9)',
+    backgroundColor: 'rgba(18,14,32,0.9)',
     borderWidth: 3,
     padding: 10,
   },

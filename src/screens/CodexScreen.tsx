@@ -1,15 +1,28 @@
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { IMG } from '../assets';
-import { HEROES } from '../game/data';
-import { APO_BIO, Bio, CREATURE_BIOS, GUARDIAN_BIOS, WORLD_BIOS } from '../game/story';
-import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite } from '../ui';
+import { BOONS, HEROES } from '../game/data';
+import { Bio, CREATURE_BIOS, DEITY_SOURCE, GUARDIAN_BIOS, HALIYA_BIO, WORLD_BIOS } from '../game/story';
+import { BaybayinText, COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite } from '../ui';
 
-type Tab = 'guardians' | 'creatures' | 'world';
+const BAYBAYIN = /[\u1700-\u171f]/;
+
+type Tab = 'guardians' | 'creatures' | 'gods' | 'world';
+
+const DEITY_BIOS: Bio[] = Object.values(BOONS).map((b) => ({
+  id: b.id,
+  name: b.deity,
+  epithet: b.domain,
+  sprite: `ui_boon_${b.id}` as Bio['sprite'],
+  facts: [['Blessing', b.name], ['Effect', b.desc]],
+  story: [`${b.deity}: ${b.domain.toLowerCase()} in the Tagalog pantheon. At a dambana you may receive the blessing ${b.name}.`],
+  source: DEITY_SOURCE,
+}));
 
 const TABS: { id: Tab; label: string; entries: Bio[] }[] = [
-  { id: 'guardians', label: 'GUARDIANS', entries: [...HEROES.map((h) => GUARDIAN_BIOS[h.id]), APO_BIO] },
+  { id: 'guardians', label: 'MAHARLIKA', entries: [...HEROES.map((h) => GUARDIAN_BIOS[h.id]), HALIYA_BIO] },
   { id: 'creatures', label: 'CREATURES', entries: Object.values(CREATURE_BIOS) },
+  { id: 'gods', label: 'THE GODS', entries: DEITY_BIOS },
   { id: 'world', label: 'THE WORLD', entries: WORLD_BIOS },
 ];
 
@@ -49,7 +62,7 @@ export default function CodexScreen({ initial, onBack }: { initial?: string; onB
             </Pressable>
           ))}
         </View>
-        <PixelButton label="BACK" onPress={onBack} color="#4a7a78" size={8} />
+        <PixelButton label="BACK" onPress={onBack} color="#5a4a78" size={8} />
       </View>
 
       <View style={styles.body}>
@@ -91,9 +104,15 @@ export default function CodexScreen({ initial, onBack }: { initial?: string; onB
                     <PixelText size={7} color={COLORS.dim} shadow={false} style={styles.factKey}>
                       {k.toUpperCase()}
                     </PixelText>
-                    <PixelText size={7} shadow={false} style={{ flex: 1 }}>
-                      {v}
-                    </PixelText>
+                    {BAYBAYIN.test(v) ? (
+                      <BaybayinText size={14} style={{ flex: 1 }}>
+                        {v.replace(/[^\u1700-\u171f ]/g, '').trim()}
+                      </BaybayinText>
+                    ) : (
+                      <PixelText size={7} shadow={false} style={{ flex: 1 }}>
+                        {v}
+                      </PixelText>
+                    )}
                   </View>
                 ))}
               </View>
@@ -103,6 +122,11 @@ export default function CodexScreen({ initial, onBack }: { initial?: string; onB
                 {p}
               </PixelText>
             ))}
+            {bio.source && (
+              <PixelText size={7} color={COLORS.armor} shadow={false} style={{ marginTop: 8 }}>
+                {`From: ${bio.source}`}
+              </PixelText>
+            )}
             {bio.quote && (
               <PixelText size={8} color={COLORS.light} shadow={false} style={styles.quote}>
                 “{bio.quote}”

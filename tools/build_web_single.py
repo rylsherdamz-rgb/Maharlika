@@ -2,7 +2,7 @@
 """Pack `npx expo export --platform web` output into one self-contained HTML page.
 
     npx expo export --platform web --output-dir dist
-    python3 tools/build_web_single.py dist bantay.html
+    python3 tools/build_web_single.py dist maharlika.html
 """
 import base64, glob, os, re, sys
 dist, out = sys.argv[1], sys.argv[2]
@@ -20,8 +20,8 @@ def repl(m):
 js = re.sub(r'"(/assets/[^"]+\.(?:png|ttf))"', repl, js)
 assert '"/assets/' not in js, 'unreplaced asset path'
 js = js.replace('</script', '<\\/script')
-html = '''<title>Bantay</title>
-<meta name="description" content="Guardians of the Barrio: a pixel folklore roguelike">
+html = '''<title>Maharlika</title>
+<meta name="description" content="Ang Gabi ng Bakunawa: a pixel roguelike of an uncolonized Philippines">
 <style>
 /* Layout: the game fills the frame edge to edge; one controls hint floats bottom-center. Single dark arcade look by choice. */
 :root {
@@ -65,10 +65,10 @@ body { margin: 0; background: var(--void); color: var(--ink); overflow: hidden; 
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&display=swap">
 <div id="root"></div>
-<div class="hint keys" id="hint"><span><b>WASD</b> move</span><span><b>SPACE</b> shoot</span><span><b>K</b> skill</span><span><b>Q</b> swap / pick up</span><span><b>ESC</b> pause</span></div>
+<div class="hint keys" id="hint"><span><b>WASD</b> move</span><span><b>SPACE</b> attack</span><span><b>SHIFT</b> dodge</span><span><b>K</b> skill</span><span><b>1-3</b> blessing</span><span><b>ESC</b> pause</span></div>
 <div class="rotate" role="dialog" aria-label="Rotate your phone">
   <b>ROTATE YOUR PHONE</b>
-  <span>Bantay plays in landscape.</span>
+  <span>Maharlika plays in landscape.</span>
   <button type="button" id="portrait-ok">PLAY ANYWAY</button>
 </div>
 <script>

@@ -2,13 +2,18 @@ import type { ImgKey } from '../assets';
 import type { EnemyType, HeroId } from './data';
 
 /*
- * BANTAY — story bible.
+ * MAHARLIKA: story text.
  *
- * Barrio Hiraya sits where the rice fields meet the sea. Long ago Bathala hung
- * seven moons in the sky and the Bakunawa, a sea serpent, swallowed six. The
- * people saved the last one by beating the great bronze agung until the serpent
- * spat it out. Every thirty-three years, on the Night of the Red Tide, the
- * serpent rises again and the agung must sing. Tonight a storm has cracked it.
+ * Alternate history: Lapulapu's victory at Mactan (27 April 1521) is the end of
+ * it. No conqueror follows. Five centuries later the islands are Maharlika, a
+ * free league of rajahnates, sultanates and barangays bound by the sea.
+ *
+ * The myths are real and kept close to their sources (see docs/STORY.md):
+ * the Bakunawa and the seven moons (Visayan), Haliya the masked moon goddess
+ * who fights the Bakunawa (Bicolano), the Tagalog deities who grant blessings,
+ * and the creature lore of duwende, manananggal, tikbalang and kapre.
+ * What is invented: the four heroes, Haliya calling them, and the route of
+ * the journey that ties the myths together.
  */
 
 export interface StoryPanel {
@@ -19,60 +24,59 @@ export interface StoryPanel {
 
 export const INTRO: StoryPanel[] = [
   {
-    art: 'story_01_barrio',
-    title: 'Barrio Hiraya',
-    text: 'Barrio Hiraya sits where the rice fields meet the sea. Its people fish by day, farm by dusk, and sleep under a single moon.',
+    art: 'story_01_mactan',
+    title: 'Mactan, 27 April 1521',
+    text: 'In the shallows of Mactan, Lapulapu and his warriors met the foreign ships and turned them back. Their captain, Magellan, fell in the surf. In our history, others came after. In this one, no one ever did.',
   },
   {
-    art: 'story_02_legend',
+    art: 'story_02_maharlika',
+    title: 'Maharlika',
+    text: 'Five hundred years on, the islands are Maharlika: a free league of rajahnates, sultanates and barangays. Baybayin is written on every sign in Tondo, the balangay still sail between the islands, and the babaylan still keep the old rites.',
+  },
+  {
+    art: 'story_03_legend',
     title: 'The Seven Moons',
-    text: 'The elders say Bathala once hung seven moons in the sky. Then the Bakunawa, a serpent as long as the coast, rose from the deep and swallowed six of them.',
+    text: 'The Visayan elders tell it this way: Bathala hung seven moons in the sky. The Bakunawa, a sea serpent with a mouth as wide as a lake, rose from the deep and swallowed them one by one, until only one was left.',
   },
   {
-    art: 'story_03_agung',
-    title: 'The Agung',
-    text: 'The last moon was saved when the people beat the great bronze agung until the serpent, deafened, spat it out. Ever since, the agung has hung on the shore, and the serpent has slept.',
+    art: 'story_04_haliya',
+    title: 'Haliya',
+    text: 'In Bicol they tell of Haliya, the masked goddess of moonlight, sworn enemy of the Bakunawa and guardian of Bulan, the moon. Whenever the serpent rises, the people bang their gongs and pots so the noise drives it back, and Haliya fights beside them.',
   },
   {
-    art: 'story_04_redtide',
-    title: 'The Red Tide',
-    text: 'Every thirty-three years comes the Night of the Red Tide. Tonight lightning struck the agung and split it. Its voice is gone, and the sea has turned the color of blood.',
+    art: 'story_05_eclipse',
+    title: 'The Moon Bleeds',
+    text: 'Tonight the moon is turning red: the Bakunawa is rising for the last one. The creatures of the night have come out with it, duwende from their punso, manananggal from the groves, tikbalang from the mountains, kapre from the balete trees, and they are keeping the people from gathering on the shore.',
   },
   {
-    art: 'story_05_waking',
-    title: 'The Night Wakes',
-    text: 'With the agung silent, the creatures of the night are waking: duwende in the anthill fields, manananggal in the banana groves, tikbalang at the crossroads, kapre in the balete trees.',
-  },
-  {
-    art: 'story_06_apo',
-    title: 'The Four Bantay',
-    text: 'Apo Dalisay held the watch at the last Red Tide. He is too old to hold it again, so he has called four guardians. Cross the four puroks. Reach the shore. Make the agung sing before the moon is gone.',
+    art: 'story_06_call',
+    title: 'Four Maharlika',
+    text: 'On the docks of Tondo, Haliya calls four warriors. Sail the islands, clear the way, and reach the shore of Albay beneath Mayon. Hold back the serpent while the people make their noise, before the last moon is gone.',
   },
 ];
 
 export const ENDING: StoryPanel[] = [
   {
-    art: 'story_07_sinking',
-    title: 'The Serpent Falls Back',
-    text: 'Wounded and spilling moonlight, the Bakunawa sinks into the red water. But it has not let go of the sky. Only the agung can make it do that.',
+    art: 'story_07_noise',
+    title: 'The Noise',
+    text: 'With the creatures driven off, the people pour onto the shore of Albay. Gongs, pots, drums and voices: the whole coast roars. Deafened and wounded, the Bakunawa opens its jaws and lets the moon go.',
   },
   {
     art: 'story_08_dawn',
-    title: 'Dawn over Hiraya',
-    text: 'The guardians strike the cracked agung together. Its broken voice rolls across the sea, the serpent lets go of the moon, and the tide turns blue again.',
+    title: 'Dawn over Mayon',
+    text: 'The moon climbs back into the sky, whole. By dawn the balangay are sailing home past Mayon, and Haliya, they say, has gone back to the moon to keep watch.',
   },
 ];
 
-/** Shown on the dawn panel after the ending, one per guardian. */
 export const EPILOGUE: Record<HeroId, string> = {
   kidlat:
-    'Kidlat struck the agung his grandfather once struck. Apo Dalisay said nothing. He only handed Kidlat the old sulo and told him to keep it lit for the next one.',
+    'Kidlat cleaned his kampilan in the surf of Albay as his ancestors did at Mactan. He has decided the old songs need a new verse, and he intends to be in it.',
   liksi:
-    'Liksi ran every dike in the barrio before sunrise, shouting that the moon was safe. People at the crossroads swear a tall horse-headed shadow ran beside her, laughing.',
+    'Liksi steered the lead balangay home by the stars, the way the old navigators of Butuan did, with a whole fleet following her lamp.',
   mayumi:
-    'Mayumi stayed on the shore until morning, singing to the water. She says the Bakunawa never wanted to destroy the moons. It loved them, and it did not want to be alone.',
+    'Mayumi stayed on the shore until morning, singing to the water. The old songs say the Bakunawa loved the moons. She thinks they are right, and that it is lonely down there.',
   amihan:
-    'Amihan set three broken bones, brewed salabat for the whole barrio, and then, for the first time in thirty-three years, slept straight through the dawn.',
+    'Amihan went home to Siquijor with her pouch empty and a hundred wounds mended. She slept for two days, and the island let her.',
 };
 
 export interface Bio {
@@ -84,149 +88,148 @@ export interface Bio {
   facts: [string, string][];
   story: string[];
   quote?: string;
+  source?: string;
 }
 
 export const GUARDIAN_BIOS: Record<HeroId, Bio> = {
   kidlat: {
     id: 'kidlat',
-    name: 'Kidlat Dalisay',
-    epithet: 'The Barrio Watchman',
+    name: 'Kidlat',
+    epithet: 'Maharlika of Mactan',
     sprite: 'heroes_kidlat_0',
     portrait: 'portraits_kidlat',
     facts: [
       ['Age', '19'],
-      ['From', 'Purok Dagat, by the boats'],
-      ['Carries', "His grandfather's sumpit"],
-      ['Fears', 'Being only the grandson of a legend'],
+      ['Home', 'Mactan, off Sugbu'],
+      ['Weapon', 'Kampilan'],
+      ['Class', 'Maharlika, the warrior freemen'],
     ],
     story: [
-      'Kidlat grew up on the story of the last Red Tide: how his grandfather, Apo Dalisay, held the bamboo fence alone until dawn. He has heard it so many times he can tell it better than the old man can.',
-      'Every night for six years he has walked the fence line with a sumpit, hoping for a monster and finding only stray dogs. He ties the red putong the way his grandfather does and pretends not to care when the fishermen laugh.',
-      'He is brave, impatient and a little too loud. Tonight is the first night the monsters are real.',
+      'In Maharlika, the warriors of Mactan still train in the shallows where Lapulapu stood. Kidlat is the youngest ever sworn to that line, and he wears the red putong, the headcloth that marks a proven warrior, a little earlier than the elders would like.',
+      'His weapon is the kampilan, the long single-edged sword of the south. In the hands of a careful fighter it can cut an arrow out of the air. Kidlat is not a careful fighter yet.',
+      'He is brave, quick to laugh and quicker to charge. He has never faced anything that was not human.',
     ],
-    quote: 'My lolo turned you back once. Tonight it is my turn.',
+    quote: 'Mactan turned back the ships. We can turn back a fish.',
   },
   liksi: {
     id: 'liksi',
     name: 'Liksi',
-    epithet: 'The Rice-Field Scout',
+    epithet: 'Navigator of Butuan',
     sprite: 'heroes_liksi_0',
     portrait: 'portraits_liksi',
     facts: [
       ['Age', '16'],
-      ['From', 'The paddies of Purok Palay'],
-      ['Carries', 'A lantaka from the old watchtower'],
+      ['Home', 'Butuan, on the Agusan river'],
+      ['Weapon', 'Pana (bow)'],
       ['Known for', 'Never once getting lost'],
     ],
     story: [
-      'Liksi carries messages between the puroks, barefoot along the paddy dikes. She is the fastest runner in Hiraya and the only person the carabao will follow.',
-      'When she was seven, a tikbalang led her in circles through the rice for three days. The barrio held a wake. On the fourth morning she walked home laughing, with a braid of coarse black mane in her hand. She has never told anyone what happened.',
-      'She wears her shirt inside out at night, just in case, and she knows every shortcut between the fields and the sea.',
+      'Butuan was building plank boats, the balangay, more than a thousand years before Mactan, and its navigators still steer by stars, swells and birds. Liksi learned all three before she learned to read baybayin.',
+      'She is the fastest archer in the river towns and the least patient sailor. She wears a salakot against sun and rain, and her shirt inside out on land at night, because everyone knows that is how you keep a tikbalang from leading you astray.',
     ],
-    quote: 'Big talk for a fish. Catch me if you can.',
+    quote: 'Big talk for something that lives in a puddle. Catch me if you can.',
   },
   mayumi: {
     id: 'mayumi',
     name: 'Mayumi',
-    epithet: 'The Babaylan',
+    epithet: 'Babaylan of Panay',
     sprite: 'heroes_mayumi_0',
     portrait: 'portraits_mayumi',
     facts: [
       ['Age', '24'],
-      ['From', 'The hut under the great balete'],
-      ['Carries', 'An agimat rod of balete root'],
-      ['Speaks with', 'The anito, the spirits of place'],
+      ['Home', 'Panay'],
+      ['Weapon', 'Agimat rod'],
+      ['Role', 'Babaylan, healer and spirit-medium'],
     ],
     story: [
-      'Mayumi was the apprentice of Ina Hilaya, the old babaylan, who died last monsoon. She inherited the beads, the rod and the sampaguita that never wilts, but not the old woman\'s certainty.',
-      'For a month now she has dreamed of a voice under the sea, enormous and sad, counting moons. She has told no one, because she is afraid of what it means that she understands it.',
-      'Her spirit orbs pierce through anything that walks at night. She would rather not have to use them.',
+      'The babaylan of the Visayas were healers, spirit-mediums and keepers of ritual, and in Maharlika they still sit on the councils. Mayumi was trained in Panay to speak with the anito, the spirits of ancestors and places.',
+      'For a month she has dreamed of a vast voice under the sea, counting moons. The old songs say the Bakunawa did not swallow the moons out of hunger, but because it loved them. She has begun to believe it.',
     ],
     quote: 'I hear you in my dreams, old one. You are not hungry. You are lonely.',
   },
   amihan: {
     id: 'amihan',
-    name: 'Amihan Salazar',
-    epithet: 'The Herbalist',
+    name: 'Amihan',
+    epithet: 'Mananambal of Siquijor',
     sprite: 'heroes_amihan_0',
     portrait: 'portraits_amihan',
     facts: [
       ['Age', '52'],
-      ['From', 'The house with the herb garden'],
-      ['Carries', 'A tirador and a pouch of lagundi'],
-      ['Named for', 'The cool northeast wind'],
+      ['Home', 'Siquijor'],
+      ['Weapon', 'Sumpit (blowgun)'],
+      ['Role', 'Mananambal, folk healer'],
     ],
     story: [
-      'Amihan has set every broken bone in Hiraya and rubbed every sore back. She is a manghihilot, a healer of hands and herbs, and the widow of a fisherman who did not come home.',
-      'She was nineteen at the last Red Tide. She remembers a young Dalisay bleeding on the fence and a girl who ran out with nothing but a cloth and a pot of hot water. She was that girl.',
-      'She joins the watch because healers belong where the wounds are, and because somebody has to keep these children alive.',
+      'Siquijor is the island the rest of the archipelago whispers about: home of the mananambal, the healers who brew their medicines in the forest. Amihan is one of them. She is named for the cool northeast wind.',
+      'She has set more bones than anyone in the Visayas and she knows what every plant on her island does, which is why her blowgun darts are the ones nobody wants to be hit by.',
     ],
     quote: 'I have mended worse than you. Come, let us see how you heal.',
   },
 };
 
-export const APO_BIO: Bio = {
-  id: 'apo',
-  name: 'Apo Dalisay',
-  epithet: 'Hero of the Last Red Tide',
-  sprite: 'npc_apo_0',
-  portrait: 'portraits_apo',
+export const HALIYA_BIO: Bio = {
+  id: 'haliya',
+  name: 'Haliya',
+  epithet: 'Masked goddess of moonlight',
+  sprite: 'npc_haliya_0',
+  portrait: 'portraits_haliya',
   facts: [
-    ['Age', '71'],
-    ['Role', 'Elder of the watch'],
-    ['Carries', 'A cane and the oldest sulo in Hiraya'],
+    ['From', 'Bicolano mythology'],
+    ['Guards', 'Bulan, the moon'],
+    ['Enemy', 'The Bakunawa'],
   ],
   story: [
-    'Thirty-three years ago, Dalisay held the bamboo fence alone until dawn while the barrio beat the agung. He walks with a cane now and his putong has faded to pink.',
-    'He tells the story too often and too loudly, and he is terrified that his grandson will try to live up to it.',
+    'In the mythology of Bicol, Haliya is the masked goddess of the moonlight and the sworn enemy of the Bakunawa. She guards Bulan, the moon, and the people honor her when the serpent threatens it.',
+    'In this story she cannot drive the serpent back alone. She needs the people on the shore, and someone to clear their way.',
   ],
-  quote: 'Light first, then courage. In that order, apo.',
+  quote: 'Make them loud, maharlika. The sea has never liked noise.',
+  source: 'Bicolano mythology',
 };
 
 export const CREATURE_BIOS: Record<EnemyType, Bio> = {
   duwende: {
     id: 'duwende',
     name: 'Duwende',
-    epithet: 'Anthill dwellers',
+    epithet: 'Dwellers of the punso',
     sprite: 'enemies_duwende_0',
-    facts: [['Found', 'Anthill Field'], ['Behavior', 'Hops straight at you']],
+    facts: [['Found', 'Punso Fields'], ['Behavior', 'Hops straight at you']],
     story: [
-      'Little old folk who live inside anthills and under houses. Say "tabi-tabi po" (excuse me) when you pass, and they leave you alone. Step on their homes and they curse you with boils.',
-      'The Red Tide sours their tempers. Tonight they want everyone off their lawn.',
+      'Small beings said to live in punso (anthills and earth mounds), under houses and in old trees. Pass a punso and you say "tabi-tabi po," excuse me, so you do not disturb them. Those who do are said to fall ill.',
     ],
+    source: 'Pan-Philippine folk belief',
   },
   manananggal: {
     id: 'manananggal',
     name: 'Manananggal',
-    epithet: 'The self-segmenter',
+    epithet: 'The one who separates',
     sprite: 'enemies_manananggal_0',
-    facts: [['Found', 'Banana Grove'], ['Weakness', 'Salt on the half left behind']],
+    facts: [['Found', 'Siquijor'], ['Weakness', 'Salt or ash on the half left behind']],
     story: [
-      'By day, a quiet neighbor. By night, she splits at the waist, leaves her legs hidden among the banana leaves, and flies on leathery wings.',
-      'Fast and erratic. The guardians have no time to look for the other half tonight.',
+      'By night she severs her upper body from her legs and flies on bat-like wings. If someone finds the lower half and sprinkles it with salt or ash, she cannot rejoin it before sunrise.',
     ],
+    source: 'Visayan and Tagalog folklore',
   },
   tikbalang: {
     id: 'tikbalang',
     name: 'Tikbalang',
-    epithet: 'Trickster of the crossroads',
+    epithet: 'Trickster of the mountains',
     sprite: 'enemies_tikbalang_0',
-    facts: [['Found', 'The Crossroads'], ['Behavior', 'Keeps its distance, throws embers']],
+    facts: [['Found', 'Mount Banahaw'], ['Counter', 'Wear your shirt inside out']],
     story: [
-      'Horse-headed and long-limbed, the tikbalang leads travelers in circles until they drop. Wear your shirt inside out and it cannot fool you.',
-      'Whoever pulls the three golden hairs from its mane can tame it. Nobody has, as far as anyone admits.',
+      'A tall creature with the head of a horse that haunts forests and mountain trails and leads travelers astray. Wearing your shirt inside out breaks its trick. Whoever pulls the special golden hairs from its mane can tame it.',
     ],
+    source: 'Tagalog folklore',
   },
   kapre: {
     id: 'kapre',
     name: 'Kapre',
     epithet: 'Giant of the balete',
     sprite: 'enemies_kapre_0',
-    facts: [['Found', 'Balete Grove'], ['Behavior', 'Slow, fires a three-way spread']],
+    facts: [['Found', 'Ibalong forests'], ['Sign', 'Cigar smoke from an old tree']],
     story: [
-      'Huge, hairy and patient, the kapre sits in old balete trees smoking cigars as long as your arm. Usually it only plays pranks.',
-      'The Red Tide wakes it from its smoke-dreams in a very bad mood.',
+      'A huge, hairy, dark giant who sits in big trees such as the balete, smoking an enormous cigar. Mostly a prankster who confuses travelers, but not one to anger.',
     ],
+    source: 'Tagalog folklore',
   },
   bakunawa: {
     id: 'bakunawa',
@@ -234,79 +237,87 @@ export const CREATURE_BIOS: Record<EnemyType, Bio> = {
     epithet: 'Eater of moons',
     sprite: 'enemies_bakunawa_0',
     portrait: 'portraits_bakunawa',
-    facts: [['Found', 'The Shore'], ['Moons eaten', 'Six of seven']],
+    facts: [['Found', 'The sea off Albay'], ['Moons eaten', 'Six of seven']],
     story: [
-      'A sea serpent as long as the coast, with a mouth the size of a lake. It swallowed six of Bathala\'s seven moons, and every thirty-three years it comes back for the last.',
-      'Only the voice of the agung makes it let go. The old songs say it fell in love with the moons. Nobody asked it.',
+      'A gigantic sea serpent believed to cause eclipses by swallowing the moon. In the Visayan telling, Bathala made seven moons and the Bakunawa swallowed six. People banged pots, pans and gongs to make it spit the moon back out.',
+      'In Bicol, its great enemy is Haliya. Some versions say the serpent fell in love with the moons.',
     ],
-    quote: 'Small fires. The moon was mine before your people had names.',
+    quote: 'Little warriors on the sand. The moon was mine before your kings had names.',
+    source: 'Visayan and Bicolano mythology',
   },
 };
 
 export const WORLD_BIOS: Bio[] = [
   {
-    id: 'hiraya',
-    name: 'Barrio Hiraya',
-    epithet: 'Where the fields meet the sea',
-    sprite: 'npc_apo_0',
-    portrait: 'story_01_barrio',
-    facts: [['Puroks', 'Five, counting the shore'], ['Known for', 'Rice, fish and stubbornness']],
+    id: 'maharlika',
+    name: 'Maharlika',
+    epithet: 'The islands that stayed free',
+    sprite: 'deco_balangay_0',
+    portrait: 'story_02_maharlika',
+    facts: [['Founded', 'After Mactan, 1521 (this story)'], ['Script', 'Baybayin'], ['Capital port', 'Tondo']],
     story: [
-      'A barrio of nipa huts on stilts, rice paddies, coconut palms and outrigger bangka. Its name means a dream, or a wish that comes true.',
+      'In precolonial Tagalog society, the maharlika were the freeborn warrior class. Here the word names a whole country: a league of the polities that really existed in the 1500s (Tondo, Maynila, Sugbu, Butuan, Sulu, Maguindanao and more) that never fell to a colonizer.',
+      'Its cities write in baybayin and trade by balangay as they always did. Its shrines still honor the anito and the old gods.',
     ],
   },
   {
-    id: 'agung',
-    name: 'The Agung',
-    epithet: 'The bronze voice of the shore',
-    sprite: 'deco_agung',
-    portrait: 'story_03_agung',
-    facts: [['Condition', 'Cracked by lightning'], ['Rung', 'Once every 33 years']],
+    id: 'mactan',
+    name: 'The Battle of Mactan',
+    epithet: '27 April 1521, history',
+    sprite: 'weapons_kampilan',
+    portrait: 'story_01_mactan',
+    facts: [['Where', 'Mactan, off Cebu'], ['Leader', 'Lapulapu']],
     story: [
-      'A bronze gong as wide as a bangka, hung in a frame of bamboo on the shore. Its sound is the only thing the Bakunawa fears. Tonight it is split from rim to boss.',
+      'A real battle: Lapulapu, a chieftain of Mactan, defeated the Spanish expedition of Ferdinand Magellan, who was killed in the fighting. In real history, Spain returned in 1565 and colonized the islands. Maharlika imagines that it never did.',
     ],
   },
   {
-    id: 'redtide',
-    name: 'The Red Tide',
-    epithet: 'The night the serpent rises',
-    sprite: 'ui_moon',
-    portrait: 'story_04_redtide',
-    facts: [['Comes', 'Every thirty-three years'], ['Last', 'When Apo Dalisay was 38']],
+    id: 'balangay',
+    name: 'The Balangay',
+    epithet: 'Plank boats of Butuan',
+    sprite: 'deco_balangay_0',
+    portrait: 'story_06_call',
+    facts: [['Oldest found', 'About 320 CE'], ['Where', 'Butuan, Agusan del Norte']],
     story: [
-      'The sea turns red, the moon dims, and the creatures of the night grow bold. Every child in Hiraya is taught to count the years.',
+      'Wooden plank boats excavated in Butuan, among the oldest watercraft found in Southeast Asia. The word barangay, for a community, comes from the balangay: a boatload of families who settled together.',
+    ],
+  },
+  {
+    id: 'baybayin',
+    name: 'Baybayin',
+    epithet: 'The old script',
+    sprite: 'ui_star',
+    facts: [['Example', 'ᜋᜑᜇ᜔ᜎᜒᜃ  (Maharlika)']],
+    story: [
+      'A precolonial writing system of the Tagalog and neighboring peoples, written in syllables. In Maharlika it was never replaced, so it is still on every shop sign and in every school.',
     ],
   },
 ];
 
+export const DEITY_SOURCE = 'Tagalog mythology';
+
 export interface StageInfo {
   title: string;
+  baybayin: string;
   line: string;
   pool: EnemyType[];
 }
 
-/** Puroks in order. The route is always fields → grove → crossroads → balete, then the shore. */
 export const STAGES: StageInfo[] = [
-  { title: 'PUROK 1 · ANTHILL FIELD', line: 'Tabi-tabi po. The duwende do not want to be stepped on tonight.', pool: ['duwende', 'duwende', 'duwende', 'manananggal'] },
-  { title: 'PUROK 2 · BANANA GROVE', line: 'Something has left its lower half among the banana leaves.', pool: ['manananggal', 'manananggal', 'duwende', 'duwende'] },
-  { title: 'PUROK 3 · THE CROSSROADS', line: 'Shirts inside out. The tikbalang are leading travelers astray.', pool: ['tikbalang', 'tikbalang', 'duwende', 'manananggal'] },
-  { title: 'PUROK 4 · BALETE GROVE', line: 'Cigar smoke drifts from the old balete. The kapre are awake.', pool: ['kapre', 'kapre', 'tikbalang', 'manananggal', 'duwende'] },
+  { title: 'PUNSO FIELDS', baybayin: 'ᜉᜓᜈ᜔ᜐᜓ', line: 'Tabi-tabi po. The duwende do not want to be stepped on tonight.', pool: ['duwende', 'duwende', 'duwende', 'manananggal'] },
+  { title: 'SIQUIJOR', baybayin: 'ᜐᜒᜃᜒᜑᜓᜇ᜔', line: 'Salt and ash in every pocket. The manananggal fly here.', pool: ['manananggal', 'manananggal', 'duwende', 'duwende'] },
+  { title: 'MOUNT BANAHAW', baybayin: 'ᜊᜈᜑᜏ᜔', line: 'Shirts inside out. The tikbalang are leading travelers astray.', pool: ['tikbalang', 'tikbalang', 'duwende', 'manananggal'] },
+  { title: 'IBALONG FORESTS', baybayin: 'ᜁᜊᜎᜓᜅ᜔', line: 'Cigar smoke drifts from the old balete. The kapre are awake.', pool: ['kapre', 'kapre', 'tikbalang', 'manananggal', 'duwende'] },
 ];
 
-export const PLAZA = {
-  title: 'THE PLAZA',
-  line: 'Apo Dalisay waits by the spirit gate.',
-};
-export const SHORE = {
-  title: 'THE SHORE · RED TIDE',
-  line: 'The agung hangs silent. The sea is the color of blood.',
-};
+export const PORT = { title: 'PORT OF TONDO', baybayin: 'ᜆᜓᜈ᜔ᜇᜓ', line: 'Haliya waits by the balangay.' };
+export const SHORE = { title: 'SHORE OF ALBAY', baybayin: 'ᜀᜎ᜔ᜊᜌ᜔', line: 'Beneath Mayon, the sea is the color of blood.' };
 
-export const APO_LINES = [
-  'The spirit gate will take you to the first purok, apo.',
-  'Light first, then courage. Catch the alitaptap; they keep your weapons fed.',
-  'Your anting-anting will take the first blows. Give it a moment and it mends.',
-  'Thirty-three years ago I held that fence alone. You are four. Go!',
+export const HALIYA_LINES = [
+  'The balangay will carry you to the first island, maharlika.',
+  'Catch the alitaptap. Their light fills your lamp, and a full lamp wakes your power.',
+  'When the shots fly thick, dodge. Your amulets take the first blows, then mend.',
+  'At each dambana, one of the old gods will bless you. Choose well.',
 ];
 
 export interface DialogueLine {
@@ -319,14 +330,14 @@ export interface DialogueLine {
 export function bossDialogue(hero: HeroId): DialogueLine[] {
   const g = GUARDIAN_BIOS[hero];
   return [
-    { speaker: 'BAKUNAWA', portrait: 'portraits_bakunawa', side: 'right', text: 'Small fires on the sand. Step aside. The moon was mine before your people had names.' },
-    { speaker: g.name.split(' ')[0].toUpperCase(), portrait: g.portrait!, side: 'left', text: g.quote! },
-    { speaker: 'BAKUNAWA', portrait: 'portraits_bakunawa', side: 'right', text: 'Then burn, little lights, until the dark swallows you too.' },
+    { speaker: 'BAKUNAWA', portrait: 'portraits_bakunawa', side: 'right', text: CREATURE_BIOS.bakunawa.quote! },
+    { speaker: 'HALIYA', portrait: 'portraits_haliya', side: 'left', text: 'Not this moon, serpent. Not while I wear this mask.' },
+    { speaker: g.name.toUpperCase(), portrait: g.portrait!, side: 'left', text: g.quote! },
   ];
 }
 
 export const DEFEAT_LINES = [
-  'The moon was swallowed once before, and spat out. Get up, bantay.',
-  'Rest your bones. The tide turns again, and so will you.',
-  'Even I fell, my first night. Try again, apo.',
+  'The moon has been swallowed before, and spat out. Rise, maharlika.',
+  'The tide turns. So will you.',
+  'Even Mactan was not won in one wave. Again.',
 ];

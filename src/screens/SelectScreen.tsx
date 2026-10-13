@@ -35,7 +35,7 @@ export default function SelectScreen({
     <View style={styles.root}>
       <CoverImage name="screen_select_bg" />
       <PixelText size={14} color={COLORS.gold} style={styles.heading}>
-        CHOOSE YOUR BANTAY
+        CHOOSE YOUR MAHARLIKA
       </PixelText>
       <View style={styles.body}>
         <View style={styles.cards}>
@@ -61,7 +61,7 @@ export default function SelectScreen({
             {hero.name.toUpperCase()}
           </PixelText>
           <PixelText size={7} color={COLORS.dim}>
-            {hero.title}
+            {`${hero.title} · ${hero.home}`}
           </PixelText>
           <PixelText size={6} color={COLORS.text} shadow={false} style={{ marginBottom: 8, opacity: 0.85 }}>
             {hero.lore}
@@ -69,7 +69,6 @@ export default function SelectScreen({
           <View style={styles.statLine}>
             <StatRow icon="ui_heart" value={hero.hp} color="#ff8a7a" />
             <StatRow icon="ui_shield" value={hero.armor} color={COLORS.armor} />
-            <StatRow icon="ui_energy" value={hero.energy} color={COLORS.light} />
           </View>
           <View style={styles.skill}>
             <Sprite name="ui_star" size={14} />
@@ -83,21 +82,24 @@ export default function SelectScreen({
             </View>
           </View>
           <View style={styles.weapons}>
-            {hero.weapons.map((w) => (
-              <View key={w} style={styles.weapon}>
-                <Sprite name={`weapons_${w}` as ImgKey} size={32} />
+            <View style={[styles.weapon, { flexDirection: 'row', gap: 8 }]}>
+              <Sprite name={`weapons_${hero.weapon}` as ImgKey} size={32} />
+              <View style={{ flex: 1 }}>
+                <PixelText size={8} color={COLORS.light}>
+                  {WEAPONS[hero.weapon].name}
+                </PixelText>
                 <PixelText size={6} color={COLORS.dim} shadow={false}>
-                  {WEAPONS[w].name}
+                  {WEAPONS[hero.weapon].desc}
                 </PixelText>
               </View>
-            ))}
+            </View>
           </View>
         </Panel>
       </View>
       <View style={styles.footer}>
-        <PixelButton label="BACK" onPress={onBack} color="#4a7a78" size={10} />
-        <PixelButton label={`${hero.name.toUpperCase()}'S STORY`} onPress={() => onStory(sel)} color="#4a7a78" size={10} style={{ marginLeft: 16 }} />
-        <PixelButton label="BEGIN THE WATCH" onPress={() => onPick(sel)} color={hero.color} style={{ marginLeft: 16 }} />
+        <PixelButton label="BACK" onPress={onBack} color="#5a4a78" size={10} />
+        <PixelButton label={`${hero.name.toUpperCase()}'S STORY`} onPress={() => onStory(sel)} color="#5a4a78" size={10} style={{ marginLeft: 16 }} />
+        <PixelButton label="SET SAIL" onPress={() => onPick(sel)} color={hero.color} style={{ marginLeft: 16 }} />
       </View>
     </View>
   );

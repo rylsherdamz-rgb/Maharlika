@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "Bantay",
-    "slug": "bantay",
+    "name": "Maharlika",
+    "slug": "maharlika",
     "version": "1.0.0",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0a181e",
+    "backgroundColor": "#0e0c1c",
     "ios": {
       "supportsTablet": true
     },
     "android": {
-      "package": "com.rylsherdamz.bantay",
+      "package": "com.rylsherdamz.maharlika",
       "adaptiveIcon": {
-        "backgroundColor": "#102e38",
+        "backgroundColor": "#1e1022",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

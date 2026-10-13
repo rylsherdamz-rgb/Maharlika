@@ -1,6 +1,6 @@
 import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
-import { HeroId } from '../game/data';
+import { BoonId, BOONS, HeroId } from '../game/data';
 import { DEFEAT_LINES } from '../game/story';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
@@ -11,6 +11,7 @@ export interface RunStats {
   kills: number;
   coins: number;
   time: number;
+  boons: BoonId[];
 }
 
 function fmtTime(s: number) {
@@ -42,7 +43,7 @@ export default function ResultScreen({
       <CoverImage name={stats.victory ? 'screen_victory_bg' : 'screen_gameover_bg'} />
       <Image
         source={stats.victory ? IMG.screen_victory_text : IMG.screen_gameover_text}
-        style={{ width: textW, height: textW / 6.8, marginTop: height * 0.06 }}
+        style={{ width: textW, height: textW / 5.96, marginTop: height * 0.06 }}
         resizeMode="stretch"
         fadeDuration={0}
       />
@@ -62,14 +63,26 @@ export default function ResultScreen({
               <PixelText size={9}>{value}</PixelText>
             </View>
           ))}
+          {stats.boons.length > 0 && (
+            <View style={[styles.row, { flexWrap: 'wrap', gap: 4, marginTop: 6 }]}>
+              {stats.boons.map((b) => (
+                <View key={b} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 6 }}>
+                  <Sprite name={`ui_boon_${b}` as ImgKey} size={16} />
+                  <PixelText size={7} color={COLORS.gold} shadow={false} style={{ marginLeft: 3 }}>
+                    {BOONS[b].deity}
+                  </PixelText>
+                </View>
+              ))}
+            </View>
+          )}
         </Panel>
       </View>
       {!stats.victory && (
         <View style={styles.apo}>
-          <Image source={IMG.portraits_apo} fadeDuration={0} resizeMode="stretch" style={styles.apoPortrait} />
+          <Image source={IMG.portraits_haliya} fadeDuration={0} resizeMode="stretch" style={styles.apoPortrait} />
           <View style={{ flex: 1, marginLeft: 10 }}>
             <PixelText size={8} color={COLORS.light}>
-              APO DALISAY
+              HALIYA
             </PixelText>
             <PixelText size={8} shadow={false}>
               {DEFEAT_LINES[Math.floor(stats.time) % DEFEAT_LINES.length]}
@@ -78,7 +91,7 @@ export default function ResultScreen({
         </View>
       )}
       <View style={styles.footer}>
-        <PixelButton label="MENU" onPress={onMenu} color="#4a7a78" size={10} />
+        <PixelButton label="MENU" onPress={onMenu} color="#5a4a78" size={10} />
         <PixelButton label={stats.victory ? 'PLAY AGAIN' : 'RETRY'} onPress={onRetry} color={COLORS.gold} style={{ marginLeft: 16 }} />
       </View>
     </View>

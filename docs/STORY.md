@@ -1,103 +1,123 @@
-# Bantay: Story Bible
+# Maharlika: Ang Gabi ng Bakunawa (Story Bible)
 
-## Premise
+## The premise
 
-**Barrio Hiraya** sits where the rice fields meet the sea, a village of nipa huts on stilts,
-coconut palms, paddies and outrigger *bangka*. Its people fish by day, farm by dusk and sleep
-under a single moon.
+**An alternate history.** On 27 April 1521, Lapulapu and the warriors of Mactan defeated
+Ferdinand Magellan's expedition in the shallows off Cebu, and Magellan was killed. That part is
+history. In our world Spain came back in 1565 and colonized the islands. In this game **no one
+ever came back**.
 
-The elders say **Bathala** once hung seven moons in the sky. The **Bakunawa**, a sea serpent as
-long as the coast, rose and swallowed six. The people saved the last one by beating the great
-bronze **agung** (gong) until the deafened serpent spat it out. Since then the agung has hung on
-the shore and the serpent has slept.
+Five hundred years later the islands are **Maharlika**: a free league of the polities that
+really existed in the 1500s (Tondo, Maynila, Sugbu, Butuan, Sulu, Maguindanao and others).
+Baybayin is the everyday script, the balangay still sail between the islands, and the babaylan
+and the old gods are still part of public life.
 
-Every **thirty-three years** comes the **Night of the Red Tide**: the sea turns red, the moon
-dims, and the creatures of the night grow bold. The agung must sing again before dawn.
+**The night of the game.** The moon is turning red. The **Bakunawa**, the sea serpent that
+swallowed six of Bathala's seven moons, is rising for the last one. Long ago the people drove it
+off by making noise: banging gongs, pots and pans until it spat the moon out. Tonight the
+creatures of the night are attacking the villages so the people cannot gather on the shore.
 
-**Tonight, lightning has split the agung.** Its voice is gone, the creatures are waking, and
-four guardians (*bantay*) must cross the barrio's four puroks (village zones), reach the shore,
-drive the Bakunawa back, and make the cracked agung sing.
+**Haliya**, the masked Bicolano goddess of moonlight and the Bakunawa's sworn enemy, calls four
+maharlika in the port of Tondo. They sail island to island, clear the way, and make their stand
+on the **shore of Albay beneath Mayon**, holding the serpent back while the people make their
+noise.
 
-## Timeline
+## Sources: what is folklore, what is history, what we invented
 
-| When | What happened |
-|---|---|
-| Long ago | Bathala hangs seven moons. The Bakunawa swallows six. The agung saves the seventh. |
-| 33 years ago | The last Red Tide. Young **Dalisay** holds the bamboo fence alone until dawn; a 19-year-old **Amihan** runs out to bind his wounds. |
-| Last monsoon | **Ina Hilaya**, the old babaylan, dies. **Mayumi** inherits her beads and rod. |
-| One month ago | Mayumi begins dreaming of a sad voice under the sea, counting moons. |
-| Tonight | A storm cracks the agung. The sea turns red. Apo Dalisay calls the watch. |
-
-## Structure of a run
-
-| Act | Place | Beat | Creatures |
-|---|---|---|---|
-| Prologue | Story panels | The legend, the cracked agung, the four are called | none |
-| 0 | **The Plaza** | Apo Dalisay gives advice beside the spirit gate | none |
-| 1 | **Purok 1 · Anthill Field** | "Tabi-tabi po." The duwende are angry | duwende, manananggal |
-| 2 | **Purok 2 · Banana Grove** | Something left its lower half among the leaves | manananggal, duwende |
-| 3 | **Purok 3 · The Crossroads** | Shirts inside out; the tikbalang lead travelers astray | tikbalang, duwende, manananggal |
-| 4 | **Purok 4 · Balete Grove** | Cigar smoke; the kapre are awake | kapre, tikbalang, manananggal, duwende |
-| Finale | **The Shore · Red Tide** | Face-off dialogue, then the Bakunawa | Bakunawa (summons manananggal) |
-| Ending | Story panels | The serpent sinks; the agung sings; dawn; guardian epilogue | none |
-
-Defeat ends on the swallowed-moon screen, with a line of encouragement from Apo Dalisay.
-
-## The guardians
-
-### Kidlat Dalisay, the Barrio Watchman (19)
-Grandson of Apo Dalisay. Grew up on the story of the last Red Tide and can tell it better than
-the old man. For six years he has walked the fence line with a sumpit, finding only stray dogs.
-Brave, impatient, too loud; afraid of being only the grandson of a legend.
-*Skill: Lightning Rush.* **Face-off:** "My lolo turned you back once. Tonight it is my turn."
-**Epilogue:** He strikes the agung his grandfather once struck; Apo hands him the old sulo.
-
-### Liksi, the Rice-Field Scout (16)
-Message runner of the puroks, the fastest in Hiraya, the only one the carabao follow. At seven
-a tikbalang led her in circles for three days; the barrio held her wake; she walked home
-laughing with a braid of its mane, and has never said what happened. Cheeky and fearless.
-*Skill: Hop.* **Face-off:** "Big talk for a fish. Catch me if you can."
-**Epilogue:** She runs every dike shouting the moon is safe, and a horse-headed shadow runs beside her.
-
-### Mayumi, the Babaylan (24)
-Apprentice of the late Ina Hilaya, who left her the beads, the balete-root agimat rod and a
-sampaguita that never wilts, but not the old woman's certainty. She dreams of the serpent and
-understands it, and is afraid of what that means.
-*Skill: Anito Ring.* **Face-off:** "I hear you in my dreams, old one. You are not hungry. You are lonely."
-**Epilogue:** She sings to the sea until morning. The Bakunawa loved the moons; it did not want to be alone.
-
-### Amihan Salazar, the Herbalist (52)
-Manghihilot (healer of hands and herbs) and widow of a fisherman who never came home. She was
-the girl who bound young Dalisay's wounds at the last Red Tide. Dry, practical and fierce; she
-joins because healers belong where the wounds are.
-*Skill: Hilot.* **Face-off:** "I have mended worse than you. Come, let us see how you heal."
-**Epilogue:** Three bones set, salabat for everyone, and her first sleep through dawn in 33 years.
-
-### Apo Dalisay, Hero of the Last Red Tide (71), mentor
-Held the fence alone 33 years ago. Walks with a cane; his red putong has faded to pink. Tells
-the story too often, and is terrified his grandson will try to live up to it.
-*"Light first, then courage. In that order, apo."*
-
-## The creatures
-
-| Creature | Folklore | In the game |
+| Element | Status | Notes |
 |---|---|---|
-| **Duwende** | Little folk of anthills; say "tabi-tabi po" or be cursed | Hops straight at you |
-| **Manananggal** | Splits at the waist, flies on leathery wings; salt the half left behind | Fast, erratic flyer |
-| **Tikbalang** | Horse-headed trickster of crossroads; foiled by inside-out shirts | Keeps distance, throws embers |
-| **Kapre** | Cigar-smoking giant of the balete tree | Slow, three-way spread |
-| **Bakunawa** | Moon-eating sea serpent; driven off by noise | Boss: moon-shard rings, aimed fans, summons; enrages at half health |
+| Bakunawa, eclipses, swallowing the moon | **Folklore** | Visayan and Bicolano mythology. A giant sea serpent (or dragon) blamed for eclipses. |
+| Bathala's seven moons; six swallowed | **Folklore** | A widely told Visayan version of the Bakunawa myth. |
+| Banging pots, pans and gongs to make it spit the moon out | **Folklore** | The traditional response to an eclipse in the myth. |
+| Haliya, masked goddess of moonlight, enemy of the Bakunawa, guardian of Bulan | **Folklore** | Bicolano mythology. |
+| The Bakunawa loving the moons | **Folklore (a variant)** | Told in some versions; Mayumi's epilogue draws on it. |
+| Apolaki, Mayari, Tala, Anitun Tabu, Dumakulem, Lakapati, Aman Sinaya, Lakan Bakod | **Folklore** | Deities of the Tagalog pantheon; each blessing matches the deity's domain. |
+| Duwende in punso; "tabi-tabi po" | **Folklore** | Pan-Philippine belief. |
+| Manananggal: severs at the waist and flies; salt or ash on the lower half | **Folklore** | Visayan and Tagalog. |
+| Tikbalang: horse-headed trickster, leads travelers astray; shirt inside out; taming by its mane hairs | **Folklore** | Tagalog. |
+| Kapre: cigar-smoking giant of big trees such as the balete | **Folklore** | Tagalog. |
+| Battle of Mactan, Lapulapu, Magellan's death (1521) | **History** | |
+| Balangay boats of Butuan (from about 320 CE); "barangay" from "balangay" | **History** | |
+| Maharlika as the Tagalog freeborn warrior class | **History** | Precolonial social class. |
+| Baybayin script; putong, salakot, tapis, kampilan, kalasag, sumpit, pana, agung | **History / material culture** | Precolonial clothing, weapons and instruments. |
+| Babaylan (Visayan) and mananambal (Siquijor folk healers) | **History / living tradition** | |
+| Mount Banahaw as a sacred mountain; Mayon in Albay; Ibalong as the old epic name of Bicol | **Real places and epic** | |
+| Maharlika never being colonized | **Invented** | The game's "what if". |
+| The four heroes, their backstories, Haliya calling them | **Invented** | Built on real roles (maharlika, navigator, babaylan, mananambal). |
+| The route and which creatures appear on which island | **Invented** | Placed where each creature's lore points (kapre in balete forests, tikbalang on a mountain, etc.). |
+| The dialogue and epilogues | **Invented** | |
 
-## Themes
+Myths vary by region and teller. Where versions differ, the game uses the common version and says so.
 
-- **Inheritance.** Every guardian carries something handed down: a sumpit, a rod, a story, a scar.
-- **Light first, then courage.** The game's resource is literally light (fireflies, lamps, the moon).
-- **The monster's side.** The Bakunawa is not simply evil. It loved the moons, and the ending lets Mayumi say so.
-- **Community.** The agung is struck by everyone together; the dawn panel puts the whole barrio on the beach.
+## The route of a run
+
+| # | Island | Lore line | Creatures |
+|---|---|---|---|
+| 0 | **Port of Tondo** (ᜆᜓᜈ᜔ᜇᜓ) | Haliya waits by the balangay | none |
+| 1 | **Punso Fields** (ᜉᜓᜈ᜔ᜐᜓ) | "Tabi-tabi po." The duwende are disturbed | duwende, manananggal |
+| 2 | **Siquijor** (ᜐᜒᜃᜒᜑᜓᜇ᜔) | Salt and ash in every pocket | manananggal, duwende |
+| 3 | **Mount Banahaw** (ᜊᜈᜑᜏ᜔) | Shirts inside out; the tikbalang lead travelers astray | tikbalang, duwende, manananggal |
+| 4 | **Ibalong Forests** (ᜁᜊᜎᜓᜅ᜔) | Cigar smoke from the old balete | kapre, tikbalang, manananggal, duwende |
+| 5 | **Shore of Albay** (ᜀᜎ᜔ᜊᜌ᜔) | Beneath Mayon, the sea is red | the Bakunawa (summons manananggal) |
+
+After each island: a **dambana** (shrine) where one of three Tagalog gods offers a blessing,
+then the **balangay** sails on.
+
+The prologue (6 panels) runs: Mactan 1521 → Maharlika today → the seven moons → Haliya →
+the moon bleeds → the four are called. The ending (2 panels plus epilogue) runs: the noise on
+the shore → dawn over Mayon → the hero's own epilogue.
+
+## The four maharlika (invented characters, real roles)
+
+### Kidlat, Maharlika of Mactan (19)
+Sworn to the warrior line that trains in the shallows where Lapulapu stood. Wears the red
+**putong** of a proven warrior a little early. Fights with the **kampilan**, the long sword of
+the south; in careful hands it can cut an arrow from the air. Brave and quick to charge.
+*Skill: **Bagyo**, a whirl of the blade.* "Mactan turned back the ships. We can turn back a fish."
+
+### Liksi, Navigator of Butuan (16)
+From the river city where the balangay were built more than a thousand years before Mactan.
+Steers by stars, swells and birds. Archer with the **pana**. Wears a **salakot** and, on land at
+night, her shirt inside out against tikbalang.
+*Skill: **Ulan ng Pana**, a storm of arrows.*
+
+### Mayumi, Babaylan of Panay (24)
+A **babaylan**, healer and spirit-medium of the Visayas, trained to speak with the **anito**.
+She dreams of the serpent counting moons and believes the old songs: it loved them.
+*Skill: **Anito Ring**, piercing spirit orbs.*
+
+### Amihan, Mananambal of Siquijor (52)
+A **mananambal**, folk healer of the island the whole archipelago whispers about. Named for the
+cool northeast wind. Her **sumpit** darts are poisoned with what grows on Siquijor.
+*Skill: **Tambal** ("medicine"), heal and restore amulets.*
+
+### Haliya, goddess of moonlight (folklore)
+From Bicolano myth. Masked, guardian of Bulan, sworn enemy of the Bakunawa. She cannot drive the
+serpent off alone. She needs the people's noise, and someone to clear their way.
+
+## The gods (blessings at the dambana)
+
+| Deity | Domain (Tagalog pantheon) | Blessing |
+|---|---|---|
+| Apolaki | Sun and war | Init ng Araw: +25% damage |
+| Mayari | Moon | Talim ng Buwan: shots pierce; longer kampilan reach |
+| Tala | Stars | Bituing Gabay: +1 max health |
+| Anitun Tabu | Wind and rain | Hanging Mabilis: faster movement and dodge |
+| Dumakulem | Guardian of mountains | Bundok na Kalasag: +2 amulets |
+| Lakapati | Fertility and harvest | Ani: heal on each island, more herbs |
+| Aman Sinaya | Sea | Alon: faster attacks |
+| Lakan Bakod | Fences and harvests | Bakod: amulets recharge twice as fast |
+
+## How it differs from a dungeon shooter
+
+- **Islands in the sea**, not walled rooms. You walk on land; shots fly over water.
+- **Balangay** between islands, not portals. **Dambana blessings**, not loot chests.
+- **One signature weapon per hero**, including a **melee kampilan** that parries shots. No ammo or energy swapping.
+- **Dodge roll** for everyone. **Skills charge with light** (from fighting and catching fireflies), not a cooldown.
+- **HUD** is a portrait medallion with bead rows; Baybayin labels throughout.
 
 ## Where it lives in the code
 
-- `src/game/story.ts`: every line of text (panels, bios, stage names, Apo lines, boss dialogue, epilogues).
-- `src/screens/StoryScreen.tsx`: intro and ending cutscenes.
-- `src/screens/CodexScreen.tsx`: the in-game **Kwento** codex.
-- `tools/generate_assets.py`: story panel art, portraits, Apo Dalisay, the agung.
+- `src/game/story.ts`: all story text; `src/game/data.ts`: heroes, weapons, gods.
+- `src/screens/StoryScreen.tsx` (cutscenes), `CodexScreen.tsx` (Kwento: Maharlika, Creatures, The Gods, The World, each entry noting its source).
+- `tools/generate_assets.py`: all art, including Baybayin rendered from Noto Sans Tagalog.
