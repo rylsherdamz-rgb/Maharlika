@@ -9,6 +9,7 @@ import {
   HeroDef,
   HeroId,
   LIGHT_MAX,
+  WeaponId,
   WEAPONS,
 } from './data';
 import { bossDialogue, DialogueLine, HALIYA_LINES, PORT, SHORE, STAGES } from './story';
@@ -38,6 +39,7 @@ export interface Mods {
 
 export interface Hero {
   def: HeroDef;
+  weapon: WeaponId;
   x: number;
   y: number;
   hp: number;
@@ -60,6 +62,8 @@ export interface Hero {
   dashDx: number;
   dashDy: number;
   walk: number;
+  atkAnim: number; // >0 while the attack pose is showing
+  dustAt: number; // walk time of the last footstep puff
   mods: Mods;
 }
 
@@ -92,6 +96,7 @@ export interface Bullet {
   life: number;
   pierce: boolean;
   poison?: number;
+  homing?: boolean;
   hit?: Set<number>;
 }
 
@@ -104,6 +109,18 @@ export interface Pickup {
   y: number;
   t: number;
 }
+
+/** Short-lived sprite effects: footstep dust and impact sparks. */
+export interface Fx {
+  id: number;
+  kind: 'dust' | 'hit';
+  x: number;
+  y: number;
+  t: number; // seconds since it appeared
+}
+/** Seconds a dodge roll lasts. */
+export const DODGE_TIME = 0.2;
+export const FX_LIFE = { dust: 0.36, hit: 0.18 };
 
 export interface FloatText {
   id: number;
@@ -128,6 +145,7 @@ export interface Game {
   bullets: Bullet[];
   pickups: Pickup[];
   texts: FloatText[];
+  fx: Fx[];
   shrine: { x: number; y: number; used: boolean } | null;
   choice: BoonId[] | null;
   boons: BoonId[];
@@ -159,7 +177,7 @@ export function stageLabel(g: Game) {
   return STAGES[g.stage - 1].title;
 }
 
-export function newGame(heroId: HeroId): Game {
+export function newGame(heroId: HeroId, weapon?: WeaponId): Game {
   const def = HEROES.find((h) => h.id === heroId)!;
   const route: RoomName[] = ['port'];
   for (let i = 1; i <= STAGES.length; i++) route.push(pick([`pulo${i}_a`, `pulo${i}_b`]) as RoomName);
@@ -167,6 +185,7 @@ export function newGame(heroId: HeroId): Game {
   const g: Game = {
     hero: {
       def,
+      weapon: weapon && def.weapons.includes(weapon) ? weapon : def.weapons[0],
       x: ENTRY.x,
       y: ENTRY.y,
       hp: def.hp,
@@ -189,12 +208,15 @@ export function newGame(heroId: HeroId): Game {
       dashDx: 0,
       dashDy: 0,
       walk: 0,
+      atkAnim: 0,
+      dustAt: 0,
       mods: { dmg: 1, rate: 1, speed: 1, pierce: false, reach: 1, regen: 1, dodgeCd: 1, herbs: 0, harvest: false },
     },
     enemies: [],
     bullets: [],
     pickups: [],
     texts: [],
+    fx: [],
     shrine: null,
     choice: null,
     boons: [],
@@ -227,12 +249,13 @@ function enterRoom(g: Game, stage: number) {
   g.enemies = [];
   g.bullets = [];
   g.pickups = [];
+  g.fx = [];
   g.shrine = null;
   g.boat = null;
   g.npc = null;
   h.x = ENTRY.x;
   h.y = ENTRY.y;
-  h.spin = h.swing = h.dash = 0;
+  h.spin = h.swing = h.dash = h.atkAnim = 0;
   g.wave = 0;
   if (h.mods.harvest && stage > 0) {
     h.hp = Math.min(h.maxHp, h.hp + 1);
@@ -348,11 +371,15 @@ function addText(g: Game, x: number, y: number, text: string, color: string) {
   g.texts.push({ id: g.nextId++, x, y, text, color, t: 0.8 });
 }
 
+function addFx(g: Game, kind: Fx['kind'], x: number, y: number) {
+  g.fx.push({ id: g.nextId++, kind, x, y, t: 0 });
+}
+
 function dropPickup(g: Game, kind: PickupKind, x: number, y: number) {
   g.pickups.push({ id: g.nextId++, kind, x: x + rand(-4, 4), y: y + rand(-4, 4), t: 0 });
 }
 
-function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg: number, fromHero: boolean, sprite: BulletSprite, r = 2.5, pierce = false, poison?: number) {
+function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg: number, fromHero: boolean, sprite: BulletSprite, r = 2.5, pierce = false, poison?: number, homing = false) {
   g.bullets.push({
     id: g.nextId++,
     x,
@@ -366,6 +393,7 @@ function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg:
     life: 2.5,
     pierce,
     poison,
+    homing,
     hit: pierce ? new Set() : undefined,
   });
 }
@@ -393,6 +421,7 @@ function damageEnemy(g: Game, e: Enemy, dmg: number) {
   const d = Math.round(dmg * g.hero.mods.dmg * 10) / 10;
   e.hp -= d;
   e.flash = 0.1;
+  addFx(g, 'hit', e.x + rand(-3, 3), e.y + rand(-3, 3));
   g.hero.light = Math.min(LIGHT_MAX, g.hero.light + d * 1.3);
   addText(g, e.x, e.y - 10, `${Math.round(d)}`, '#ffffff');
   if (e.hp <= 0) killEnemy(g, e);
@@ -488,6 +517,8 @@ export function update(g: Game, input: Input, dt: number) {
     t.y -= 18 * dt;
   }
   g.texts = g.texts.filter((t) => t.t > 0);
+  for (const f of g.fx) f.t += dt;
+  g.fx = g.fx.filter((f) => f.t < FX_LIFE[f.kind]);
 
   // island flow: waves, then the shrine and the boat
   if (g.room !== 'port' && !g.boat && g.enemies.length === 0) {
@@ -555,6 +586,7 @@ function updateHero(g: Game, input: Input, dt: number) {
   h.atkCd = Math.max(0, h.atkCd - dt);
   h.dodgeCd = Math.max(0, h.dodgeCd - dt);
   h.swing = Math.max(0, h.swing - dt);
+  h.atkAnim = Math.max(0, h.atkAnim - dt);
   h.spin = Math.max(0, h.spin - dt);
   h.sinceHit += dt;
 
@@ -584,9 +616,10 @@ function updateHero(g: Game, input: Input, dt: number) {
       const m2 = Math.hypot(mx, my);
       h.dashDx = m2 > 0.1 ? mx / m2 : h.facing;
       h.dashDy = m2 > 0.1 ? my / m2 : 0;
-      h.dash = 0.2;
+      h.dash = DODGE_TIME;
       h.invuln = Math.max(h.invuln, 0.3);
       h.dodgeCd = 0.9 * m.dodgeCd;
+      addFx(g, 'dust', h.x, h.y + 7);
     }
   }
   if (h.dash > 0) {
@@ -597,6 +630,10 @@ function updateHero(g: Game, input: Input, dt: number) {
   }
   h.moving = mag > 0.15 || h.dash > 0;
   if (h.moving) h.walk += dt;
+  if (h.moving && h.dash <= 0 && h.walk - h.dustAt > 0.3) {
+    h.dustAt = h.walk;
+    addFx(g, 'dust', h.x - h.facing * 3, h.y + 8);
+  }
 
   const target = nearestTarget(g);
   if (target) h.aim = Math.atan2(target.y - h.y, target.x - h.x);
@@ -608,18 +645,24 @@ function updateHero(g: Game, input: Input, dt: number) {
     if (h.light >= LIGHT_MAX) useSkill(g, mx, my);
   }
 
-  const w = WEAPONS[h.def.weapon];
+  const w = WEAPONS[h.weapon];
   if (input.attack && h.atkCd <= 0) {
     if (w.melee) {
-      slash(g, h.aim, w.radius * m.reach, (75 * Math.PI) / 180, w.damage);
+      slash(g, h.aim, w.radius * m.reach, ((w.arc ?? 75) * Math.PI) / 180, w.damage);
       h.swing = 0.14;
       h.swingAim = h.aim;
     } else {
       const gx = h.x + Math.cos(h.aim) * 9;
       const gy = h.y + 3 + Math.sin(h.aim) * 9;
-      shoot(g, gx, gy, h.aim + rand(-w.spread, w.spread), w.speed, w.damage, true, w.sprite!, w.radius, w.pierce || m.pierce, w.poison);
+      const n = w.count ?? 1;
+      for (let i = 0; i < n; i++) {
+        // a fan spreads evenly across the arc; a single shot wobbles inside it
+        const a = n > 1 ? h.aim + w.spread * ((i / (n - 1)) * 2 - 1) : h.aim + rand(-w.spread, w.spread);
+        shoot(g, gx, gy, a, w.speed, w.damage, true, w.sprite!, w.radius, w.pierce || m.pierce, w.poison, w.homing);
+      }
     }
     h.atkCd = w.rate * m.rate;
+    h.atkAnim = Math.min(0.2, h.atkCd);
   }
 }
 
@@ -802,9 +845,33 @@ function updateBoss(g: Game, e: Enemy, ux: number, uy: number, d: number, aim: n
   }
 }
 
+/** Turn a seeking shot toward the closest living creature, keeping its speed. */
+function steer(g: Game, b: Bullet, dt: number) {
+  let best: Enemy | null = null;
+  let bd = 120;
+  for (const e of g.enemies) {
+    if (e.spawn > 0 || e.hp <= 0) continue;
+    const d = dist(b.x, b.y, e.x, e.y);
+    if (d < bd) {
+      bd = d;
+      best = e;
+    }
+  }
+  if (!best) return;
+  const speed = Math.hypot(b.vx, b.vy);
+  const cur = Math.atan2(b.vy, b.vx);
+  let diff = Math.atan2(best.y - b.y, best.x - b.x) - cur;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  const turn = Math.max(-5 * dt, Math.min(5 * dt, diff));
+  b.vx = Math.cos(cur + turn) * speed;
+  b.vy = Math.sin(cur + turn) * speed;
+}
+
 function updateBullets(g: Game, dt: number) {
   const h = g.hero;
   for (const b of g.bullets) {
+    if (b.homing) steer(g, b, dt);
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     b.life -= dt;

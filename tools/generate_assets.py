@@ -210,6 +210,82 @@ HEROES = {
     },
 }
 
+# ---------------------------------------------------------------- guardian animation
+# Every guardian gets a full set of poses built from the same pixel map, so the
+# moves stay on-model: idle breathing, a 4-step walk, a two-beat attack, a tucked
+# dodge roll and a hurt recoil. All frames face right; the game mirrors them.
+def leg_char(name):
+    return next(c for c in HEROES[name]["legs"][0] if c != ".")
+
+
+def body_img(name, legs):
+    h = HEROES[name]
+    return rows_to_img(h["body"] + [legs], outline=False)
+
+
+def offset(img, dx=0, dy=0):
+    out = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    out.alpha_composite(img, (max(dx, 0), max(dy, 0)), (max(-dx, 0), max(-dy, 0)))
+    return out
+
+
+def lift_top(img, y_split, dy):
+    """Move the rows above `y_split` by `dy` (a breath or a step bob), keep the legs planted."""
+    out = img.copy()
+    top = img.crop((0, 0, img.width, y_split))
+    ImageDraw.Draw(out).rectangle([0, 0, img.width, y_split - 1 + max(dy, 0)], fill=(0, 0, 0, 0))
+    out.alpha_composite(top, (0, dy))
+    return out
+
+
+def recolor(img, fn):
+    out = img.copy()
+    px = out.load()
+    for y in range(out.height):
+        for x in range(out.width):
+            p = px[x, y]
+            if p[3]:
+                px[x, y] = fn(p[:3]) + (p[3],)
+    return out
+
+
+def hero_pose(name, pose, f):
+    c = leg_char(name)
+    stand = HEROES[name]["legs"][0]
+    if pose == "idle":
+        img = body_img(name, stand)
+        if f == 1:
+            img = lift_top(img, 9, 1)            # shoulders drop on the out-breath
+    elif pose == "walk":
+        strides = [f"...{c}{c}.....{c}{c}....", HEROES[name]["legs"][1],
+                   f"....{c}{c}.....{c}{c}...", f"......{c}{c}{c}{c}......"]
+        img = body_img(name, strides[f])
+        if f % 2 == 1:                           # body rises on the passing step, legs stretch
+            img = offset(img, 0, -1)
+            ImageDraw.Draw(img).rectangle([0, 14, 15, 14], fill=(0, 0, 0, 0))
+            img.alpha_composite(rows_to_img([""] * 14 + [strides[f]], outline=False))
+    elif pose == "attack":
+        if f == 0:                               # wind up: weight on the back foot
+            img = offset(body_img(name, f"..{c}{c}.....{c}{c}....."), -1, 0)
+        else:                                    # strike: lunge, lead arm thrown out
+            img = offset(body_img(name, f"...{c}{c}......{c}{c}.."), 1, 0)
+            d = ImageDraw.Draw(img)
+            d.point([(15, 10), (15, 11)], fill=PAL["F"])
+    elif pose == "roll":
+        ball = body_img(name, stand).resize((12, 12), Image.NEAREST)
+        img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+        img.alpha_composite(ball, (2, 3))
+        img = img.rotate(-90 * f, resample=Image.NEAREST, center=(8, 9))
+    elif pose == "hurt":
+        img = offset(body_img(name, f".{c}{c}......{c}{c}....."), -1, 1)
+        img = recolor(img, lambda p: (min(255, p[0] + 45), int(p[1] * 0.82), int(p[2] * 0.82)))
+    else:
+        raise ValueError(pose)
+    return add_outline(img)
+
+
+HERO_POSES = {"idle": 2, "walk": 4, "attack": 2, "roll": 4, "hurt": 1}
+
 # ---------------------------------------------------------------- creatures
 DUWENDE = [
     "", "",
@@ -392,6 +468,38 @@ WEAPONS = {
         ".qQQQqQQQQqQQQQ.",
         ".qqqqqqqqqqqqqq.",
     ],
+    # kris: the wavy-bladed dagger-sword of Mindanao and Sulu (fast melee)
+    "kris": [
+        "", "", "", "", "",
+        ".......SS...SS..",
+        ".nyyySSWSSSSWSW.",
+        "..y.SS...SS.....",
+    ],
+    # bangkaw: a throwing spear with a leaf-shaped iron head
+    "bangkaw": [
+        "", "", "", "", "", "",
+        "............SS..",
+        "nnNNNNNNNNNySSWS",
+        "............SS..",
+    ],
+    # lingganay: the babaylan's bronze bell; its ring scatters spirits
+    "lingganay": [
+        "", "", "", "",
+        "...........yy...",
+        ".........yyAAy..",
+        "..nnNNNyyAAAAAy.",
+        "..nNNNNyyAAYAAy.",
+        ".........yyAAy..",
+        "...........yy...",
+    ],
+    # barang: a bamboo tube of spirit beetles, the sorcery Siquijor is feared for
+    "barang": [
+        "", "", "", "", "",
+        "..........gGg...",
+        ".qQQQQQqnnGgGg..",
+        ".qqqqqqqnnGGGg..",
+        "..........gGg...",
+    ],
 }
 
 # ---------------------------------------------------------------- shots (8x8, drawn pointing right)
@@ -417,6 +525,29 @@ PROJECTILES = {
         "........",
         ".gGGGSW.",
         "........",
+    ],
+    "shot_spear": [
+        "........",
+        "........",
+        "......S.",
+        "nNNNNySW",
+        "......S.",
+    ],
+    "shot_chime": [
+        "........",
+        "..AAA...",
+        ".A...A..",
+        ".A.Y.A..",
+        ".A...A..",
+        "..AAA...",
+    ],
+    "shot_beetle": [
+        "........",
+        "..g.g...",
+        ".gGGGg..",
+        "gGCGGGg.",
+        ".gGGGg..",
+        "..g.g...",
     ],
     "shot_enemy": [
         "........",
@@ -450,6 +581,27 @@ def slash_fx(f):
                     al = al // 2
                 px[x, y] = c + (al,)
     return img
+
+def dust_fx(f):
+    """Footstep / roll dust: a puff that grows and thins out (8x8)."""
+    img = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    r = 1.5 + f * 1.2
+    al = (200, 150, 90)[f]
+    for cx, cy, k in ((3.5, 4.5, 1.0), (2, 5.5, 0.7), (5.5, 5, 0.8)):
+        rr = r * k
+        d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=(206, 196, 170, al))
+    return img
+
+
+def hit_fx(f):
+    """Impact spark when a blow or shot lands (8x8)."""
+    rows = [
+        ["...Y....", "...W....", ".Y.W.Y..", "..WWW...", "YWWVWWY.", "..WWW...", ".Y.W.Y..", "...W...."],
+        ["Y......Y", ".Y....Y.", "...WW...", "..W..W..", "..W..W..", "...WW...", ".Y....Y.", "Y......Y"],
+    ][f]
+    return rows_to_img(rows, 8, 8, outline=False)
+
 
 # ---------------------------------------------------------------- items
 ITEMS = {
@@ -1463,6 +1615,35 @@ def brand_sheet():
     img.alpha_composite(up(bakunawa_frame(1), 2), (236, 136))
     return img
 
+def animation_sheet():
+    """Every guardian pose in a row, followed by both of their weapons."""
+    order = [(p, f) for p, n in HERO_POSES.items() for f in range(n)]
+    cell = 20
+    W = 8 + 44 + (len(order) + 1) * cell + 2 * cell + 8
+    H = 16 + len(HEROES) * (cell + 4) + 6
+    img = Image.new("RGBA", (W, H), (14, 12, 28, 255))
+    d = ImageDraw.Draw(img)
+    x = 52
+    for pose, n in HERO_POSES.items():
+        d.text((x + 1, 2), pose.upper()[:n * 3 + 1], fill=(255, 186, 72))
+        x += n * cell
+    d.text((x + cell + 1, 2), "ARMS", fill=(255, 186, 72))
+    loadouts = {"kidlat": ("kampilan", "kris"), "liksi": ("pana", "bangkaw"),
+                "mayumi": ("agimat", "lingganay"), "amihan": ("sumpit", "barang")}
+    for r, name in enumerate(HEROES):
+        y = 16 + r * (cell + 4)
+        d.text((6, y + 4), name.upper(), fill=(255, 246, 228))
+        for i, (pose, f) in enumerate(order):
+            cx = 52 + i * cell
+            d.rectangle([cx, y, cx + 17, y + 17], fill=(26, 22, 48))
+            img.alpha_composite(hero_pose(name, pose, f), (cx + 1, y + 1))
+        for j, w in enumerate(loadouts[name]):
+            cx = 52 + (len(order) + 1 + j) * cell
+            d.rectangle([cx, y, cx + 17, y + 17], fill=(42, 36, 68))
+            img.alpha_composite(rows_to_img(WEAPONS[w]), (cx + 1, y + 1))
+    return img
+
+
 # ---------------------------------------------------------------- story cast: Haliya, portraits, props
 # Haliya: the Bicolano masked goddess of moonlight, sworn enemy of the Bakunawa.
 HALIYA = [
@@ -1932,8 +2113,9 @@ def main():
     for sub in ("sprites", "ui", "screens", "rooms", "story", "portraits", "brand"):
         shutil.rmtree(os.path.join(ASSETS, sub), ignore_errors=True)
     for name in HEROES:
-        for f in range(2):
-            save(hero_frame(name, f), f"sprites/heroes/{name}_{f}.png")
+        for pose, n in HERO_POSES.items():
+            for f in range(n):
+                save(hero_pose(name, pose, f), f"sprites/heroes/{name}_{pose}_{f}.png")
     for name, frames in ENEMIES.items():
         for f, rows in enumerate(frames):
             save(rows_to_img(rows), f"sprites/enemies/{name}_{f}.png")
@@ -1945,6 +2127,9 @@ def main():
         save(rows_to_img(rows, 8, 8, outline=False), f"sprites/projectiles/{name}.png")
     for f in range(2):
         save(slash_fx(f), f"sprites/fx/slash_{f}.png", 4)
+        save(hit_fx(f), f"sprites/fx/hit_{f}.png")
+    for f in range(3):
+        save(dust_fx(f), f"sprites/fx/dust_{f}.png")
     for name, rows in ITEMS.items():
         save(rows_to_img(rows), f"sprites/items/{name}.png")
     save(rows_to_img(DAMBANA), "sprites/deco/dambana.png")
@@ -1981,6 +2166,7 @@ def main():
     save(text_img("NILAMON", 3, (255, 130, 110), (150, 24, 34)), "screens/gameover_text.png", 4)
     save(text_img("MALAYA!", 3, (255, 248, 200), (240, 150, 50)), "screens/victory_text.png", 4)
     save(brand_sheet(), "brand/brand_sheet.png", 4)
+    save(animation_sheet(), "brand/animation_sheet.png", 4)
     save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["Q"], "short", ("putong", "vest")), "portraits/kidlat.png")
     save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["G"], "short", ("salakot", "leaf", "blush")), "portraits/liksi.png")
     save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["T"], "long", ("flower", "beads")), "portraits/mayumi.png")

@@ -21,17 +21,26 @@ it is folklore, history or invented for the game.
   Clear the island, visit its **dambana** (shrine), then board the **balangay** to sail on.
 - **Blessings of the gods:** each dambana offers three of eight Tagalog deities (Apolaki, Mayari,
   Tala, Anitun Tabu, Dumakulem, Lakapati, Aman Sinaya, Lakan Bakod). Pick one; they stack for the run.
-- **One signature weapon per hero:** kampilan (melee, cuts enemy shots), pana (bow), agimat rod
-  (piercing spirit orbs), sumpit (poison darts).
+- **Two weapons per hero, picked on the select screen:** kampilan or kris (melee, both cut enemy shots),
+  pana or bangkaw (bow, or a piercing thrown spear), agimat rod or lingganay (piercing spirit orbs, or a
+  three-way fan of bell chimes), sumpit or barang (poison darts, or homing spirit beetles).
 - **Dodge roll** for everyone; **skills charge with light** from fighting and catching fireflies.
 - **Health beads and amulets:** amulets (anting-anting) absorb hits and recharge.
 
-| Hero | From | Weapon | Skill |
+| Hero | From | Weapons | Skill |
 |---|---|---|---|
-| **Kidlat** | Mactan, maharlika warrior | Kampilan | Bagyo: blade whirl that clears shots |
-| **Liksi** | Butuan, navigator | Pana | Ulan ng Pana: arrow storm |
-| **Mayumi** | Panay, babaylan | Agimat rod | Anito Ring: spirit orbs |
-| **Amihan** | Siquijor, mananambal | Sumpit | Tambal: heal and restore amulets |
+| **Kidlat** | Mactan, maharlika warrior | Kampilan / Kris | Bagyo: blade whirl that clears shots |
+| **Liksi** | Butuan, navigator | Pana / Bangkaw | Ulan ng Pana: arrow storm |
+| **Mayumi** | Panay, babaylan | Agimat rod / Lingganay | Anito Ring: spirit orbs |
+| **Amihan** | Siquijor, mananambal | Sumpit / Barang | Tambal: heal and restore amulets |
+
+Every guardian is fully animated: idle breathing, a 4-step walk, a two-beat attack, a 4-frame
+dodge roll and a hurt recoil, with footstep dust and hit sparks.
+
+![Animation sheet](assets/brand/animation_sheet.png)
+
+The home screen is a labelled menu (Play, Story, Kwento, How to Play) with a one-line hint on every
+option and a How to Play guide covering the controls and the goal of a run.
 
 Route: Port of Tondo → Punso Fields → Siquijor → Mount Banahaw → Ibalong Forests → Shore of Albay
 (the Bakunawa). Illustrated prologue and ending, a dialogue before the boss, an epilogue per hero,
@@ -48,6 +57,7 @@ and the **Kwento** codex (Maharlika · Creatures · The Gods · The World) with 
 | Cards at a dambana | Choose a blessing |
 
 Web build: `WASD` move, `Space` attack, `Shift` dodge, `K` skill, `1-3` choose a blessing, `Esc` pause.
+On the home screen, `Enter` plays and `H` opens How to Play.
 
 ## Running it
 
@@ -70,7 +80,8 @@ Everything is drawn in [`tools/generate_assets.py`](tools/generate_assets.py) as
 small procedural routines (Baybayin is rendered from Noto Sans Tagalog). Run
 `python3 tools/generate_assets.py` (needs Pillow and `npm install`) to regenerate:
 
-- heroes, creatures, the Bakunawa, Haliya, weapons, shots and the kampilan slash effect
+- heroes in five poses (idle, walk, attack, roll, hurt), creatures, the Bakunawa, Haliya, eight
+  weapons, shots, the kampilan slash, footstep dust and hit sparks; `assets/brand/animation_sheet.png`
 - island maps (sea, surf, sand, themed ground and props such as punso, banana, balete, rocks,
   bronze lamp posts) with collision grids in `src/game/rooms.json`
 - balangay, dambana, agung; HUD medallion, bead pips, eight deity emblems, touch controls

@@ -3,7 +3,7 @@ import { PixelifySans_500Medium, PixelifySans_700Bold, useFonts } from '@expo-go
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { HeroId } from './src/game/data';
+import { HeroId, WeaponId } from './src/game/data';
 import { ENDING, EPILOGUE, INTRO } from './src/game/story';
 import CodexScreen from './src/screens/CodexScreen';
 import GameScreen from './src/screens/GameScreen';
@@ -15,7 +15,7 @@ import TitleScreen from './src/screens/TitleScreen';
 type Screen =
   | { name: 'title' }
   | { name: 'select' }
-  | { name: 'game'; hero: HeroId; run: number }
+  | { name: 'game'; hero: HeroId; weapon: WeaponId; run: number }
   | { name: 'result'; stats: RunStats }
   | { name: 'intro'; then: 'select' | 'title' }
   | { name: 'ending'; stats: RunStats }
@@ -27,9 +27,9 @@ export default function App() {
   const [run, setRun] = useState(0);
   const [seenIntro, setSeenIntro] = useState(false);
 
-  const start = (hero: HeroId) => {
+  const start = (hero: HeroId, weapon: WeaponId) => {
     setRun((r) => r + 1);
-    setScreen({ name: 'game', hero, run: run + 1 });
+    setScreen({ name: 'game', hero, weapon, run: run + 1 });
   };
 
   let content: React.ReactNode = null;
@@ -79,6 +79,7 @@ export default function App() {
           <GameScreen
             key={screen.run}
             heroId={screen.hero}
+            weaponId={screen.weapon}
             onEnd={(stats) => setScreen(stats.victory ? { name: 'ending', stats } : { name: 'result', stats })}
             onQuit={() => setScreen({ name: 'title' })}
           />
@@ -88,7 +89,7 @@ export default function App() {
         content = (
           <ResultScreen
             stats={screen.stats}
-            onRetry={() => start(screen.stats.hero)}
+            onRetry={() => start(screen.stats.hero, screen.stats.weapon)}
             onMenu={() => setScreen({ name: 'title' })}
           />
         );

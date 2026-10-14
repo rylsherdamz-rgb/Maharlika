@@ -1,11 +1,12 @@
 import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
-import { BoonId, BOONS, HeroId } from '../game/data';
+import { BoonId, BOONS, HeroId, WeaponId } from '../game/data';
 import { DEFEAT_LINES } from '../game/story';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
 export interface RunStats {
   hero: HeroId;
+  weapon: WeaponId;
   victory: boolean;
   stage: string;
   kills: number;
@@ -49,7 +50,7 @@ export default function ResultScreen({
       />
       <View style={styles.middle}>
         <Sprite
-          name={`heroes_${stats.hero}_${stats.victory ? t % 2 : 0}` as ImgKey}
+          name={`heroes_${stats.hero}_${stats.victory ? `attack_${t % 2}` : 'hurt_0'}` as ImgKey}
           size={Math.min(96, height * 0.22)}
           style={!stats.victory ? { transform: [{ rotate: '90deg' }], opacity: 0.8 } : undefined}
         />

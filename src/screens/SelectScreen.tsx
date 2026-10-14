@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
-import { HEROES, HeroId, WEAPONS } from '../game/data';
+import { HEROES, HeroId, WeaponId, WEAPONS } from '../game/data';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
 function StatRow({ icon, value, color }: { icon: ImgKey; value: number; color: string }) {
@@ -21,13 +21,16 @@ export default function SelectScreen({
   onStory,
 }: {
   onBack: () => void;
-  onPick: (id: HeroId) => void;
+  onPick: (id: HeroId, weapon: WeaponId) => void;
   onStory: (id: HeroId) => void;
 }) {
   const { width, height } = useWindowDimensions();
   const [sel, setSel] = useState<HeroId>('kidlat');
-  const t = useTicker(180);
+  // remembers the weapon chosen for each maharlika while browsing
+  const [arms, setArms] = useState<Record<HeroId, number>>({ kidlat: 0, liksi: 0, mayumi: 0, amihan: 0 });
+  const t = useTicker(150);
   const hero = HEROES.find((h) => h.id === sel)!;
+  const weaponId = hero.weapons[arms[sel]];
   const cardW = Math.min(130, (width * 0.55) / 4);
   const spriteSize = Math.min(cardW - 16, height * 0.2);
 
@@ -47,7 +50,7 @@ export default function SelectScreen({
                   color={active ? h.color : COLORS.edge}
                   style={[styles.card, { width: cardW }, active && { transform: [{ translateY: -6 }] }]}
                 >
-                  <Sprite name={`heroes_${h.id}_${active ? t % 2 : 0}` as ImgKey} size={spriteSize} />
+                  <Sprite name={`heroes_${h.id}_${active ? `walk_${t % 4}` : `idle_${Math.floor(t / 4) % 2}`}` as ImgKey} size={spriteSize} />
                   <PixelText size={8} color={active ? h.color : COLORS.dim} style={{ marginTop: 4 }}>
                     {h.name.toUpperCase()}
                   </PixelText>
@@ -81,25 +84,35 @@ export default function SelectScreen({
               </PixelText>
             </View>
           </View>
+          <PixelText size={7} color={COLORS.dim} shadow={false} style={{ marginBottom: 4 }}>
+            CHOOSE A WEAPON
+          </PixelText>
           <View style={styles.weapons}>
-            <View style={[styles.weapon, { flexDirection: 'row', gap: 8 }]}>
-              <Sprite name={`weapons_${hero.weapon}` as ImgKey} size={32} />
-              <View style={{ flex: 1 }}>
-                <PixelText size={8} color={COLORS.light}>
-                  {WEAPONS[hero.weapon].name}
-                </PixelText>
-                <PixelText size={6} color={COLORS.dim} shadow={false}>
-                  {WEAPONS[hero.weapon].desc}
-                </PixelText>
-              </View>
-            </View>
+            {hero.weapons.map((w, i) => {
+              const on = arms[sel] === i;
+              return (
+                <Pressable
+                  key={w}
+                  onPress={() => setArms((a) => ({ ...a, [sel]: i }))}
+                  style={[styles.weapon, { borderColor: on ? hero.color : COLORS.edge, backgroundColor: on ? COLORS.panelLight : 'transparent' }]}
+                >
+                  <Sprite name={`weapons_${w}` as ImgKey} size={28} />
+                  <PixelText size={7} color={on ? COLORS.light : COLORS.dim}>
+                    {WEAPONS[w].name.toUpperCase()}
+                  </PixelText>
+                </Pressable>
+              );
+            })}
           </View>
+          <PixelText size={6} color={COLORS.text} shadow={false} style={{ marginTop: 4, opacity: 0.85 }}>
+            {WEAPONS[weaponId].desc}
+          </PixelText>
         </Panel>
       </View>
       <View style={styles.footer}>
         <PixelButton label="BACK" onPress={onBack} color="#5a4a78" size={10} />
         <PixelButton label={`${hero.name.toUpperCase()}'S STORY`} onPress={() => onStory(sel)} color="#5a4a78" size={10} style={{ marginLeft: 16 }} />
-        <PixelButton label="SET SAIL" onPress={() => onPick(sel)} color={hero.color} style={{ marginLeft: 16 }} />
+        <PixelButton label="SET SAIL" onPress={() => onPick(sel, weaponId)} color={hero.color} style={{ marginLeft: 16 }} />
       </View>
     </View>
   );
@@ -115,7 +128,7 @@ const styles = StyleSheet.create({
   statLine: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   stat: { flexDirection: 'row', alignItems: 'center' },
   skill: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
-  weapons: { flexDirection: 'row', justifyContent: 'space-around' },
-  weapon: { alignItems: 'center' },
+  weapons: { flexDirection: 'row', gap: 6 },
+  weapon: { flex: 1, alignItems: 'center', borderWidth: 2, paddingVertical: 4 },
   footer: { flexDirection: 'row', justifyContent: 'center' },
 });

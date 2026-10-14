@@ -1,7 +1,7 @@
 export type HeroId = 'kidlat' | 'liksi' | 'mayumi' | 'amihan';
-export type WeaponId = 'kampilan' | 'pana' | 'agimat' | 'sumpit';
+export type WeaponId = 'kampilan' | 'pana' | 'agimat' | 'sumpit' | 'kris' | 'bangkaw' | 'lingganay' | 'barang';
 export type EnemyType = 'duwende' | 'manananggal' | 'tikbalang' | 'kapre' | 'bakunawa';
-export type BulletSprite = 'shot_arrow' | 'shot_spirit' | 'shot_dart' | 'shot_enemy';
+export type BulletSprite = 'shot_arrow' | 'shot_spirit' | 'shot_dart' | 'shot_spear' | 'shot_chime' | 'shot_beetle' | 'shot_enemy';
 export type BoonId =
   | 'apolaki'
   | 'mayari'
@@ -21,7 +21,8 @@ export interface HeroDef {
   hp: number;
   armor: number;
   speed: number;
-  weapon: WeaponId;
+  /** Signature weapon first; the second is the alternate the player can take instead. */
+  weapons: [WeaponId, WeaponId];
   skill: { name: string; desc: string };
   color: string;
 }
@@ -39,7 +40,7 @@ export const HEROES: HeroDef[] = [
     hp: 8,
     armor: 5,
     speed: 76,
-    weapon: 'kampilan',
+    weapons: ['kampilan', 'kris'],
     skill: { name: 'Bagyo', desc: 'Whirl the kampilan: strike all around and cut down shots' },
     color: '#d63a30',
   },
@@ -52,7 +53,7 @@ export const HEROES: HeroDef[] = [
     hp: 5,
     armor: 3,
     speed: 82,
-    weapon: 'pana',
+    weapons: ['pana', 'bangkaw'],
     skill: { name: 'Ulan ng Pana', desc: 'A storm of arrows in every direction' },
     color: '#62b24a',
   },
@@ -65,7 +66,7 @@ export const HEROES: HeroDef[] = [
     hp: 5,
     armor: 4,
     speed: 70,
-    weapon: 'agimat',
+    weapons: ['agimat', 'lingganay'],
     skill: { name: 'Anito Ring', desc: 'Release a ring of piercing spirit orbs' },
     color: '#36a4a0',
   },
@@ -78,7 +79,7 @@ export const HEROES: HeroDef[] = [
     hp: 6,
     armor: 4,
     speed: 74,
-    weapon: 'sumpit',
+    weapons: ['sumpit', 'barang'],
     skill: { name: 'Tambal', desc: 'Heal 2 and restore every amulet' },
     color: '#f08428',
   },
@@ -97,6 +98,9 @@ export interface WeaponDef {
   radius: number; // shot radius, or reach for melee
   pierce: boolean;
   poison?: number; // seconds of poison per hit
+  count?: number; // shots per attack, fanned across `spread`
+  homing?: boolean; // shots turn toward the nearest creature
+  arc?: number; // melee swing arc in degrees (each side of the aim)
 }
 
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
@@ -104,6 +108,10 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
   pana: { id: 'pana', name: 'Pana', desc: 'Bow. Fast, accurate arrows.', melee: false, damage: 3, rate: 0.24, speed: 300, spread: 0.04, sprite: 'shot_arrow', radius: 2.5, pierce: false },
   agimat: { id: 'agimat', name: 'Agimat Rod', desc: 'Spirit orbs that pass through foes.', melee: false, damage: 5, rate: 0.46, speed: 160, spread: 0.02, sprite: 'shot_spirit', radius: 4, pierce: true },
   sumpit: { id: 'sumpit', name: 'Sumpit', desc: 'Blowgun. Darts poison what they hit.', melee: false, damage: 1, rate: 0.2, speed: 280, spread: 0.06, sprite: 'shot_dart', radius: 2.5, pierce: false, poison: 2.4 },
+  kris: { id: 'kris', name: 'Kris', desc: 'Wavy blade. Quick, close cuts; also parries shots.', melee: true, damage: 4, rate: 0.22, speed: 0, spread: 0, radius: 20, pierce: true, arc: 60 },
+  bangkaw: { id: 'bangkaw', name: 'Bangkaw', desc: 'Throwing spear. Slow, heavy, runs through foes.', melee: false, damage: 7, rate: 0.55, speed: 230, spread: 0.02, sprite: 'shot_spear', radius: 3, pierce: true },
+  lingganay: { id: 'lingganay', name: 'Lingganay', desc: 'Bronze bell. Rings out three chimes in a fan.', melee: false, damage: 3, rate: 0.5, speed: 170, spread: 0.32, sprite: 'shot_chime', radius: 3.5, pierce: false, count: 3 },
+  barang: { id: 'barang', name: 'Barang', desc: 'Spirit beetles that seek foes and poison them.', melee: false, damage: 2, rate: 0.42, speed: 120, spread: 0.3, sprite: 'shot_beetle', radius: 3, pierce: false, poison: 1.6, homing: true },
 };
 
 export interface EnemyDef {
@@ -137,7 +145,7 @@ export interface BoonDef {
 /** Blessings granted at the dambana (shrines). The deities are from the Tagalog pantheon. */
 export const BOONS: Record<BoonId, BoonDef> = {
   apolaki: { id: 'apolaki', deity: 'Apolaki', domain: 'God of the sun and of war', name: 'Init ng Araw', desc: '+25% damage' },
-  mayari: { id: 'mayari', deity: 'Mayari', domain: 'Goddess of the moon', name: 'Talim ng Buwan', desc: 'Shots pierce; the kampilan reaches further' },
+  mayari: { id: 'mayari', deity: 'Mayari', domain: 'Goddess of the moon', name: 'Talim ng Buwan', desc: 'Shots pierce; blades reach further' },
   tala: { id: 'tala', deity: 'Tala', domain: 'Goddess of the stars', name: 'Bituing Gabay', desc: '+1 max health, and heal 1' },
   anitun_tabu: { id: 'anitun_tabu', deity: 'Anitun Tabu', domain: 'Goddess of wind and rain', name: 'Hanging Mabilis', desc: 'Move 15% faster; dodge recovers sooner' },
   dumakulem: { id: 'dumakulem', deity: 'Dumakulem', domain: 'Guardian of the mountains', name: 'Bundok na Kalasag', desc: '+2 amulets' },

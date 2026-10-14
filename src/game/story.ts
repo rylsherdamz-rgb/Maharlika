@@ -96,7 +96,7 @@ export const GUARDIAN_BIOS: Record<HeroId, Bio> = {
     id: 'kidlat',
     name: 'Kidlat',
     epithet: 'Maharlika of Mactan',
-    sprite: 'heroes_kidlat_0',
+    sprite: 'heroes_kidlat_idle_0',
     portrait: 'portraits_kidlat',
     facts: [
       ['Age', '19'],
@@ -115,7 +115,7 @@ export const GUARDIAN_BIOS: Record<HeroId, Bio> = {
     id: 'liksi',
     name: 'Liksi',
     epithet: 'Navigator of Butuan',
-    sprite: 'heroes_liksi_0',
+    sprite: 'heroes_liksi_idle_0',
     portrait: 'portraits_liksi',
     facts: [
       ['Age', '16'],
@@ -133,7 +133,7 @@ export const GUARDIAN_BIOS: Record<HeroId, Bio> = {
     id: 'mayumi',
     name: 'Mayumi',
     epithet: 'Babaylan of Panay',
-    sprite: 'heroes_mayumi_0',
+    sprite: 'heroes_mayumi_idle_0',
     portrait: 'portraits_mayumi',
     facts: [
       ['Age', '24'],
@@ -151,7 +151,7 @@ export const GUARDIAN_BIOS: Record<HeroId, Bio> = {
     id: 'amihan',
     name: 'Amihan',
     epithet: 'Mananambal of Siquijor',
-    sprite: 'heroes_amihan_0',
+    sprite: 'heroes_amihan_idle_0',
     portrait: 'portraits_amihan',
     facts: [
       ['Age', '52'],
@@ -281,6 +281,23 @@ export const WORLD_BIOS: Bio[] = [
     story: [
       'Wooden plank boats excavated in Butuan, among the oldest watercraft found in Southeast Asia. The word barangay, for a community, comes from the balangay: a boatload of families who settled together.',
     ],
+  },
+  {
+    id: 'arms',
+    name: 'Arms of the Islands',
+    epithet: 'Eight weapons, two per maharlika',
+    sprite: 'weapons_kris',
+    facts: [
+      ['Kidlat', 'Kampilan or kris'],
+      ['Liksi', 'Pana or bangkaw'],
+      ['Mayumi', 'Agimat rod or lingganay'],
+      ['Amihan', 'Sumpit or barang'],
+    ],
+    story: [
+      'The kris, the wavy-bladed sword of Mindanao, Sulu and the wider Malay world, and the bangkaw, a Visayan spear that could be thrown or thrust, are real weapons of the islands, as are the kampilan, the pana (bow) and the sumpit (blowgun).',
+      'Barang is Visayan folklore: sorcery said to send insects, often beetles, against a victim, and Siquijor is the island most associated with it. The lingganay, a bronze bell, is named after a real word for bell; a babaylan ringing it to scatter spirits is invented for this game, as is the agimat rod.',
+    ],
+    source: 'Philippine history and Visayan folklore; the bell and the rod are invented for the game',
   },
   {
     id: 'baybayin',

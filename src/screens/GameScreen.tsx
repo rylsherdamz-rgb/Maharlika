@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { GestureResponderEvent, Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
-import { BOONS, BOSS_NAME, ENEMIES, HeroId, LIGHT_MAX, WEAPONS } from '../game/data';
-import { advanceDialog, chooseBoon, Game, Input, newGame, ROOM_H, ROOM_W, stageLabel, update } from '../game/engine';
+import { BOONS, BOSS_NAME, ENEMIES, HeroId, LIGHT_MAX, WeaponId, WEAPONS } from '../game/data';
+import { advanceDialog, chooseBoon, DODGE_TIME, FX_LIFE, Game, Hero, Input, newGame, ROOM_H, ROOM_W, stageLabel, update } from '../game/engine';
 import { BaybayinText, COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
 import { RunStats } from './ResultScreen';
 
@@ -21,10 +21,29 @@ function Pips({ value, max, full, empty }: { value: number; max: number; full: I
   );
 }
 
-export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; onEnd: (s: RunStats) => void; onQuit: () => void }) {
+/** Which pose the hero is in this frame: roll, hurt, attack, walk or idle. */
+function heroFrame(h: Hero, time: number) {
+  if (h.dash > 0) return `roll_${Math.min(3, Math.floor(((DODGE_TIME - h.dash) / DODGE_TIME) * 4))}`;
+  if (h.sinceHit < 0.25) return 'hurt_0';
+  if (h.atkAnim > 0) return h.atkAnim > 0.08 ? 'attack_1' : 'attack_0';
+  if (h.moving) return `walk_${Math.floor(h.walk * 10) % 4}`;
+  return `idle_${Math.floor(time * 2) % 2}`;
+}
+
+export default function GameScreen({
+  heroId,
+  weaponId,
+  onEnd,
+  onQuit,
+}: {
+  heroId: HeroId;
+  weaponId?: WeaponId;
+  onEnd: (s: RunStats) => void;
+  onQuit: () => void;
+}) {
   const { width: W, height: H } = useWindowDimensions();
   const gameRef = useRef<Game>(null as unknown as Game);
-  if (!gameRef.current) gameRef.current = newGame(heroId);
+  if (!gameRef.current) gameRef.current = newGame(heroId, weaponId);
   const input = useRef<Input>({ mx: 0, my: 0, attack: false, skill: false, dodge: false }).current;
   const keys = useRef({ mx: 0, my: 0, attack: false }).current;
   const touches = useRef(new Map<number, Control>()).current;
@@ -72,6 +91,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
             () =>
               endRef.current.onEnd({
                 hero: heroId,
+                weapon: g.hero.weapon,
                 victory: g.result === 'victory',
                 stage: stageLabel(g),
                 kills: g.kills,
@@ -219,21 +239,26 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
   );
 
   const layers: { y: number; node: React.ReactNode[] }[] = [];
-  const weapon = WEAPONS[h.def.weapon];
+  const weapon = WEAPONS[h.weapon];
 
   // hero, weapon and blade effects
   {
-    const frame = h.moving ? Math.floor(h.walk * 8) % 2 : 0;
     const blink = h.invuln > 0 && h.dash <= 0 && Math.floor(g.time * 20) % 2 === 0;
-    const deg = (h.aim * 180) / Math.PI;
-    const reach = weapon.melee ? 7 : 5;
-    const wx = h.x + Math.cos(h.aim) * reach;
-    const wy = h.y + 3 + Math.sin(h.aim) * reach;
+    // blades sweep through their arc while a swing shows; ranged weapons kick back on each shot
+    let aim = h.aim;
+    if (weapon.melee && h.swing > 0) {
+      const p = 1 - h.swing / 0.14;
+      aim = h.swingAim + ((p * 2 - 1) * (weapon.arc ?? 75) * Math.PI) / 180;
+    }
+    const deg = (aim * 180) / Math.PI;
+    const reach = (weapon.melee ? 7 : 5) - (weapon.melee ? 0 : h.atkAnim * 12);
+    const wx = h.x + Math.cos(aim) * reach;
+    const wy = h.y + 3 + Math.sin(aim) * reach;
     const nodes: React.ReactNode[] = [
       shadow(h.x, h.y + 8, 10, 'hs'),
-      sprite(`heroes_${h.def.id}_${frame}`, h.x, h.y, 16, { transform: [{ scaleX: h.facing }], opacity: blink ? 0.35 : h.dash > 0 ? 0.55 : 1 }, 'hero'),
-      sprite(`weapons_${weapon.id}`, wx, wy, 14, { transform: [{ rotate: `${deg}deg` }, { scaleY: h.facing }] }, 'weapon'),
+      sprite(`heroes_${h.def.id}_${heroFrame(h, g.time)}`, h.x, h.y, 16, { transform: [{ scaleX: h.facing }], opacity: blink ? 0.35 : 1 }, 'hero'),
     ];
+    if (h.dash <= 0) nodes.push(sprite(`weapons_${weapon.id}`, wx, wy, 14, { transform: [{ rotate: `${deg}deg` }, { scaleY: h.facing }] }, 'weapon'));
     if (h.swing > 0) {
       const sa = (h.swingAim * 180) / Math.PI;
       nodes.push(sprite('fx_slash_0', h.x + Math.cos(h.swingAim) * 8, h.y + 3 + Math.sin(h.swingAim) * 8, 34, { transform: [{ rotate: `${sa}deg` }], opacity: Math.min(1, h.swing * 10) }, 'slash'));
@@ -291,6 +316,11 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
     const bob = Math.sin(p.t * 4 + p.id) * 1.5;
     layers.push({ y: p.y - 4, node: [sprite(`items_${p.kind}`, p.x, p.y + bob, 16, undefined, `p${p.id}`)] });
   }
+  for (const f of g.fx) {
+    const life = FX_LIFE[f.kind];
+    const frame = Math.min(f.kind === 'dust' ? 2 : 1, Math.floor((f.t / life) * (f.kind === 'dust' ? 3 : 2)));
+    layers.push({ y: f.kind === 'dust' ? f.y - 9 : f.y + 20, node: [sprite(`fx_${f.kind}_${frame}`, f.x, f.y, 8, undefined, `fx${f.id}`)] });
+  }
   layers.sort((a, b) => a.y - b.y);
 
   const boss = g.enemies.find((e) => e.type === 'bakunawa');
@@ -305,7 +335,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
         {g.boat && img(`deco_balangay_${Math.floor(g.time * 2) % 2}`, g.boat.x + 14, g.boat.y - 2, 32, 20, undefined, 'boat')}
         {layers.map((l) => l.node)}
         {g.bullets.map((b) => {
-          const rot = b.sprite === 'shot_arrow' || b.sprite === 'shot_dart';
+          const rot = b.sprite === 'shot_arrow' || b.sprite === 'shot_dart' || b.sprite === 'shot_spear' || b.sprite === 'shot_beetle';
           const deg = (Math.atan2(b.vy, b.vx) * 180) / Math.PI;
           return sprite(`projectiles_${b.sprite}`, b.x, b.y, b.r > 3 ? 10 : rot ? 9 : 7, rot ? { transform: [{ rotate: `${deg}deg` }] } : undefined, `b${b.id}`);
         })}
