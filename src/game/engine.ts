@@ -81,6 +81,8 @@ export interface Enemy {
   facing: 1 | -1;
   poison: number;
   poisonTick: number;
+  /** Per-creature phase: tiyanak 0 = disguised; sigbin 1 = backing off; bungisngis 1 = winding up a slam. */
+  state: number;
 }
 
 export interface Bullet {
@@ -354,6 +356,7 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
     facing: -1,
     poison: 0,
     poisonTick: 0,
+    state: 0,
   });
 }
 
@@ -421,10 +424,22 @@ function damageEnemy(g: Game, e: Enemy, dmg: number) {
   const d = Math.round(dmg * g.hero.mods.dmg * 10) / 10;
   e.hp -= d;
   e.flash = 0.1;
+  if (e.type === 'tiyanak' && e.state === 0) revealTiyanak(g, e);
   addFx(g, 'hit', e.x + rand(-3, 3), e.y + rand(-3, 3));
   g.hero.light = Math.min(LIGHT_MAX, g.hero.light + d * 1.3);
   addText(g, e.x, e.y - 10, `${Math.round(d)}`, '#ffffff');
   if (e.hp <= 0) killEnemy(g, e);
+}
+
+function revealTiyanak(g: Game, e: Enemy) {
+  e.state = 1;
+  e.cd = 0.5;
+  addText(g, e.x, e.y - 12, 'TIYANAK!', '#ff8a7a');
+}
+
+/** The sigbin can only be seen, and so only be targeted, when it is close. */
+export function sigbinVisible(g: Game, e: Enemy) {
+  return e.type !== 'sigbin' || e.flash > 0 || dist(e.x, e.y, g.hero.x, g.hero.y) < 56;
 }
 
 function killEnemy(g: Game, e: Enemy) {
@@ -547,7 +562,7 @@ function nearestTarget(g: Game) {
   let best: Enemy | null = null;
   let bd = 190;
   for (const e of g.enemies) {
-    if (e.spawn > 0) continue;
+    if (e.spawn > 0 || !sigbinVisible(g, e)) continue;
     const d = dist(h.x, h.y, e.x, e.y);
     if (d < bd && lineOfSight(g, h.x, h.y + 2, e.x, e.y)) {
       bd = d;
@@ -652,8 +667,10 @@ function updateHero(g: Game, input: Input, dt: number) {
       h.swing = 0.14;
       h.swingAim = h.aim;
     } else {
-      const gx = h.x + Math.cos(h.aim) * 9;
-      const gy = h.y + 3 + Math.sin(h.aim) * 9;
+      // shots leave from the weapon tip, or closer in when a foe is pressed against the hero
+      const tip = target ? Math.min(9, Math.max(0, dist(h.x, h.y, target.x, target.y) - 8)) : 9;
+      const gx = h.x + Math.cos(h.aim) * tip;
+      const gy = h.y + 3 + Math.sin(h.aim) * tip;
       const n = w.count ?? 1;
       for (let i = 0; i < n; i++) {
         // a fan spreads evenly across the arc; a single shot wobbles inside it
@@ -807,11 +824,77 @@ function updateEnemies(g: Game, dt: number) {
         }
         break;
       }
+      case 'tiyanak': {
+        // sits crying until someone comes close, then lunges in short bursts
+        if (e.state === 0) {
+          if (d < 46) revealTiyanak(g, e);
+          else if (e.cd <= 0) {
+            addText(g, e.x, e.y - 10, 'uwaa...', '#d8cce4');
+            e.cd = rand(2.5, 4);
+          }
+          break;
+        }
+        // between lunges it creeps in from range, or backs away after a bite
+        const lunge = e.cd < 0.35;
+        const pace = lunge ? 4 : d < 30 ? -0.8 : 0.6;
+        moveBody(g, e, ux * def.speed * pace * dt, uy * def.speed * pace * dt, hw);
+        if (e.cd <= 0) e.cd = rand(1.1, 1.6);
+        break;
+      }
+      case 'sigbin': {
+        // closes in unseen, bites, then backs off before the next pass
+        if (e.state === 1) {
+          moveBody(g, e, -ux * def.speed * 0.8 * dt, -uy * def.speed * 0.8 * dt, hw);
+          if (e.cd <= 0) e.state = 0;
+        } else {
+          const weave = Math.sin(e.t * 4) * 0.7;
+          moveBody(g, e, (ux - uy * weave) * def.speed * dt, (uy + ux * weave) * def.speed * dt, hw);
+          if (d < def.radius + 7) {
+            e.state = 1;
+            e.cd = 1.1;
+          }
+        }
+        break;
+      }
+      case 'santelmo': {
+        // drifts over water and walls alike, circling, and casts sparks in a cross
+        const want = d > 80 ? 1 : d < 60 ? -1 : 0;
+        const vx = (dx / d) * want - (dy / d) * 0.9;
+        const vy = (dy / d) * want + (dx / d) * 0.9;
+        e.x = Math.max(8, Math.min(ROOM_W - 8, e.x + vx * def.speed * dt));
+        e.y = Math.max(8, Math.min(ROOM_H - 8, e.y + vy * def.speed * dt));
+        if (e.cd <= 0) {
+          const base = Math.floor(e.t) % 2 ? Math.PI / 4 : 0;
+          for (let i = 0; i < 4; i++) shoot(g, e.x, e.y, base + (i * Math.PI) / 2, 70, 1, false, 'shot_enemy');
+          e.cd = rand(2, 2.6);
+        }
+        break;
+      }
+      case 'bungisngis': {
+        // lumbers in, laughs while winding up, then slams out a ring of shots
+        if (e.state === 1) {
+          if (e.cd <= 0) {
+            for (let i = 0; i < 12; i++) shoot(g, e.x, e.y + 4, (i / 12) * Math.PI * 2 + e.t, 80, 1, false, 'shot_enemy', 3);
+            g.shake = Math.max(g.shake, 0.2);
+            e.state = 0;
+            e.cd = rand(2.4, 3);
+          }
+          break;
+        }
+        moveBody(g, e, ux * def.speed * dt, uy * def.speed * dt, hw);
+        if (e.cd <= 0 && d < 90) {
+          e.state = 1;
+          e.cd = 0.7;
+          addText(g, e.x, e.y - 16, 'HA HA HA!', '#ffe882');
+        }
+        break;
+      }
       case 'bakunawa':
         updateBoss(g, e, ux, uy, d, aim, dt);
         break;
     }
-    if (d < def.radius + 5) hurtHero(g, def.contact);
+    const harmless = e.type === 'tiyanak' && e.state === 0;
+    if (!harmless && d < def.radius + 5) hurtHero(g, def.contact);
   }
   g.enemies = g.enemies.filter((e) => e.hp > 0);
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GestureResponderEvent, Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { BOONS, BOSS_NAME, ENEMIES, HeroId, LIGHT_MAX, WeaponId, WEAPONS } from '../game/data';
-import { advanceDialog, chooseBoon, DODGE_TIME, FX_LIFE, Game, Hero, Input, newGame, ROOM_H, ROOM_W, stageLabel, update } from '../game/engine';
+import { advanceDialog, chooseBoon, DODGE_TIME, FX_LIFE, Game, Hero, Input, newGame, ROOM_H, ROOM_W, sigbinVisible, stageLabel, update } from '../game/engine';
 import { BaybayinText, COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
 import { RunStats } from './ResultScreen';
 
@@ -275,13 +275,24 @@ export default function GameScreen({
     const def = ENEMIES[e.type];
     const spawning = e.spawn > 0;
     const tint = e.flash > 0 ? '#ffffff' : e.poison > 0 && Math.floor(g.time * 6) % 2 === 0 ? '#9be36d' : undefined;
+    // creature-specific looks: the tiyanak's disguise, the bungisngis mid-laugh,
+    // the sigbin walking backward and only half there until it is close
+    let key = `enemies_${e.type}_${anim}`;
+    if (e.type === 'tiyanak' && e.state === 0) key = 'enemies_tiyanak_baby';
+    if (e.type === 'bungisngis' && e.state === 1) key = 'enemies_bungisngis_1';
+    const flip = e.type === 'sigbin' ? e.facing : -e.facing;
+    const hidden = !sigbinVisible(g, e);
+    const floating = e.type === 'santelmo';
+    let opacity = spawning ? 0.4 + 0.4 * Math.sin(g.time * 30) : 1;
+    if (hidden) opacity = 0.12 + 0.08 * Math.sin(g.time * 9 + e.id);
+    const bob = floating ? Math.sin(g.time * 4 + e.id) * 2 : 0;
     layers.push({
       y: e.y,
       node: [
-        shadow(e.x, e.y + def.size / 2, def.size * 0.6, `es${e.id}`),
-        sprite(`enemies_${e.type}_${anim}`, e.x, e.y, def.size, {
-          transform: [{ scaleX: -e.facing }, { scale: spawning ? 1 - e.spawn * 0.6 : 1 }],
-          opacity: spawning ? 0.4 + 0.4 * Math.sin(g.time * 30) : 1,
+        !hidden && shadow(e.x, e.y + def.size / 2 + (floating ? 4 : 0), def.size * (floating ? 0.4 : 0.6), `es${e.id}`),
+        sprite(key, e.x, e.y + bob, def.size, {
+          transform: [{ scaleX: flip }, { scale: spawning ? 1 - e.spawn * 0.6 : 1 }],
+          opacity,
           tintColor: tint,
         }, `e${e.id}`),
       ],

@@ -1,6 +1,6 @@
 export type HeroId = 'kidlat' | 'liksi' | 'mayumi' | 'amihan';
 export type WeaponId = 'kampilan' | 'pana' | 'agimat' | 'sumpit' | 'kris' | 'bangkaw' | 'lingganay' | 'barang';
-export type EnemyType = 'duwende' | 'manananggal' | 'tikbalang' | 'kapre' | 'bakunawa';
+export type EnemyType = 'duwende' | 'manananggal' | 'tikbalang' | 'kapre' | 'tiyanak' | 'sigbin' | 'santelmo' | 'bungisngis' | 'bakunawa';
 export type BulletSprite = 'shot_arrow' | 'shot_spirit' | 'shot_dart' | 'shot_spear' | 'shot_chime' | 'shot_beetle' | 'shot_enemy';
 export type BoonId =
   | 'apolaki'
@@ -129,6 +129,10 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
   manananggal: { name: 'Manananggal', hp: 5, speed: 52, radius: 5, contact: 1, size: 16, coins: 1 },
   tikbalang: { name: 'Tikbalang', hp: 10, speed: 30, radius: 6, contact: 1, size: 16, coins: 2 },
   kapre: { name: 'Kapre', hp: 15, speed: 20, radius: 6, contact: 1, size: 16, coins: 2 },
+  tiyanak: { name: 'Tiyanak', hp: 6, speed: 36, radius: 5, contact: 1, size: 16, coins: 1 },
+  sigbin: { name: 'Sigbin', hp: 8, speed: 46, radius: 6, contact: 1, size: 16, coins: 2 },
+  santelmo: { name: 'Santelmo', hp: 5, speed: 44, radius: 5, contact: 1, size: 14, coins: 1 },
+  bungisngis: { name: 'Bungisngis', hp: 30, speed: 16, radius: 8, contact: 2, size: 22, coins: 4 },
   bakunawa: { name: 'Bakunawa', hp: 380, speed: 22, radius: 13, contact: 2, size: 32, coins: 30 },
 };
 

@@ -11,7 +11,8 @@ import type { EnemyType, HeroId } from './data';
  * The myths are real and kept close to their sources (see docs/STORY.md):
  * the Bakunawa and the seven moons (Visayan), Haliya the masked moon goddess
  * who fights the Bakunawa (Bicolano), the Tagalog deities who grant blessings,
- * and the creature lore of duwende, manananggal, tikbalang and kapre.
+ * and the creature lore of duwende, manananggal, tikbalang, kapre, tiyanak, sigbin,
+ * santelmo and bungisngis.
  * What is invented: the four heroes, Haliya calling them, and the route of
  * the journey that ties the myths together.
  */
@@ -46,7 +47,7 @@ export const INTRO: StoryPanel[] = [
   {
     art: 'story_05_eclipse',
     title: 'The Moon Bleeds',
-    text: 'Tonight the moon is turning red: the Bakunawa is rising for the last one. The creatures of the night have come out with it, duwende from their punso, manananggal from the groves, tikbalang from the mountains, kapre from the balete trees, and they are keeping the people from gathering on the shore.',
+    text: 'Tonight the moon is turning red: the Bakunawa is rising for the last one. The creatures of the night have come out with it, duwende from their punso, manananggal from the groves, tikbalang from the mountains, kapre from the balete trees, sigbin and tiyanak and the wandering santelmo, and they are keeping the people from gathering on the shore.',
   },
   {
     art: 'story_06_call',
@@ -231,6 +232,54 @@ export const CREATURE_BIOS: Record<EnemyType, Bio> = {
     ],
     source: 'Tagalog folklore',
   },
+  tiyanak: {
+    id: 'tiyanak',
+    name: 'Tiyanak',
+    epithet: 'The crying in the forest',
+    sprite: 'enemies_tiyanak_baby',
+    facts: [['Found', 'Ibalong forests'], ['Behavior', 'Cries until you come close, then lunges'], ['Tip', 'Hit it first to break the disguise']],
+    story: [
+      'A forest creature that takes the shape of a crying infant to lure travelers. Whoever picks the baby up sees it change into its true form, small and fanged, and attack.',
+      'Travelers are told not to follow a baby crying deep in the woods. Some tellings say loud noise or turning your clothes inside out drives it away.',
+    ],
+    source: 'Tagalog folklore',
+  },
+  sigbin: {
+    id: 'sigbin',
+    name: 'Sigbin',
+    epithet: 'The one that walks backward',
+    sprite: 'enemies_sigbin_0',
+    facts: [['Found', 'Siquijor'], ['Behavior', 'Unseen at a distance; bites, then backs off'], ['Tip', 'You can only aim at it up close']],
+    story: [
+      'A creature like a hornless goat or a dog with long ears, said to walk backward with its head hung low between its hind legs. It can make itself invisible and is said to drink blood from a person\'s shadow.',
+      'Some families, called sigbinan, are said to keep one. It is part of the folklore of Bohol, Siquijor and the other Visayan islands.',
+    ],
+    source: 'Visayan folklore',
+  },
+  santelmo: {
+    id: 'santelmo',
+    name: 'Santelmo',
+    epithet: 'The wandering fire',
+    sprite: 'enemies_santelmo_0',
+    facts: [['Found', 'Punso Fields, Mount Banahaw'], ['Behavior', 'Floats over water and walls; casts sparks in a cross']],
+    story: [
+      'A ball of fire seen at night drifting over fields, forests and the sea. It is often said to be the soul of someone who drowned or died far from home, and following it leads you astray.',
+      'The name comes from San Telmo (Saint Elmo) through Spanish. In this history the islands were never colonized, but the game keeps the name people know today.',
+    ],
+    source: 'Pan-Philippine folklore; the name is Spanish in origin',
+  },
+  bungisngis: {
+    id: 'bungisngis',
+    name: 'Bungisngis',
+    epithet: 'The laughing giant',
+    sprite: 'enemies_bungisngis_0',
+    facts: [['Found', 'Mount Banahaw'], ['Behavior', 'Slow; laughs, then slams out a ring of shots'], ['Tip', 'When it laughs, get out of the way']],
+    story: [
+      'A one-eyed giant of the forests, huge and very strong, whose upper lip is so big it can cover its face. Its name comes from the word for grinning or giggling, because it is always laughing.',
+      'In the tales it is strong but slow-witted, and clever people get the better of it.',
+    ],
+    source: 'Tagalog and Visayan folklore',
+  },
   bakunawa: {
     id: 'bakunawa',
     name: 'Bakunawa',
@@ -321,10 +370,10 @@ export interface StageInfo {
 }
 
 export const STAGES: StageInfo[] = [
-  { title: 'PUNSO FIELDS', baybayin: 'ᜉᜓᜈ᜔ᜐᜓ', line: 'Tabi-tabi po. The duwende do not want to be stepped on tonight.', pool: ['duwende', 'duwende', 'duwende', 'manananggal'] },
-  { title: 'SIQUIJOR', baybayin: 'ᜐᜒᜃᜒᜑᜓᜇ᜔', line: 'Salt and ash in every pocket. The manananggal fly here.', pool: ['manananggal', 'manananggal', 'duwende', 'duwende'] },
-  { title: 'MOUNT BANAHAW', baybayin: 'ᜊᜈᜑᜏ᜔', line: 'Shirts inside out. The tikbalang are leading travelers astray.', pool: ['tikbalang', 'tikbalang', 'duwende', 'manananggal'] },
-  { title: 'IBALONG FORESTS', baybayin: 'ᜁᜊᜎᜓᜅ᜔', line: 'Cigar smoke drifts from the old balete. The kapre are awake.', pool: ['kapre', 'kapre', 'tikbalang', 'manananggal', 'duwende'] },
+  { title: 'PUNSO FIELDS', baybayin: 'ᜉᜓᜈ᜔ᜐᜓ', line: 'Tabi-tabi po. The duwende do not want to be stepped on tonight.', pool: ['duwende', 'duwende', 'duwende', 'manananggal', 'santelmo'] },
+  { title: 'SIQUIJOR', baybayin: 'ᜐᜒᜃᜒᜑᜓᜇ᜔', line: 'Salt and ash in every pocket. Something walks backward in the dark.', pool: ['manananggal', 'manananggal', 'sigbin', 'sigbin', 'duwende'] },
+  { title: 'MOUNT BANAHAW', baybayin: 'ᜊᜈᜑᜏ᜔', line: 'Shirts inside out. Laughter echoes from the high trail.', pool: ['tikbalang', 'tikbalang', 'bungisngis', 'santelmo', 'duwende'] },
+  { title: 'IBALONG FORESTS', baybayin: 'ᜁᜊᜎᜓᜅ᜔', line: 'Cigar smoke from the old balete, and a baby crying where no baby should be.', pool: ['kapre', 'kapre', 'tiyanak', 'tiyanak', 'tikbalang', 'manananggal'] },
 ];
 
 export const PORT = { title: 'PORT OF TONDO', baybayin: 'ᜆᜓᜈ᜔ᜇᜓ', line: 'Haliya waits by the balangay.' };
@@ -335,6 +384,8 @@ export const HALIYA_LINES = [
   'Catch the alitaptap. Their light fills your lamp, and a full lamp wakes your power.',
   'When the shots fly thick, dodge. Your amulets take the first blows, then mend.',
   'At each dambana, one of the old gods will bless you. Choose well.',
+  'If you hear a baby crying in the forest, do not go to it. Strike first.',
+  'The sigbin walks backward and hides from the eye. You will only see it when it is close.',
 ];
 
 export interface DialogueLine {

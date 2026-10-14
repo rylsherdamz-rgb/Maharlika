@@ -24,6 +24,10 @@ it is folklore, history or invented for the game.
 - **Two weapons per hero, picked on the select screen:** kampilan or kris (melee, both cut enemy shots),
   pana or bangkaw (bow, or a piercing thrown spear), agimat rod or lingganay (piercing spirit orbs, or a
   three-way fan of bell chimes), sumpit or barang (poison darts, or homing spirit beetles).
+- **Eight folklore creatures** besides the Bakunawa, each with its own trick: duwende, manananggal,
+  tikbalang, kapre, the **tiyanak** (cries like a baby until you come close), the **sigbin** (unseen
+  until it is near), the **santelmo** (fire that floats over water) and the **bungisngis** (a laughing
+  giant whose slam sends out a ring of shots).
 - **Dodge roll** for everyone; **skills charge with light** from fighting and catching fireflies.
 - **Health beads and amulets:** amulets (anting-anting) absorb hits and recharge.
 

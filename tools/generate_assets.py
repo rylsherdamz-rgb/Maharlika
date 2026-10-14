@@ -371,6 +371,118 @@ KAPRE = [
 ]
 
 
+# Tiyanak: lures travelers as a crying infant, then shows its true form
+TIYANAK_BABY = [
+    "", "", "", "", "",
+    "......FFFF......",
+    ".....FFFFFF.....",
+    ".....FEFFEF.....",
+    ".....FFffFF.....",
+    "....wwFFFFww....",
+    "...wwwwwwwwww...",
+    "...wwWwwwwWww...",
+    "...wwwwwwwwww...",
+    "....wwwwwwww....",
+    ".....wwwwww.....",
+]
+TIYANAK = [
+    "", "", "",
+    "......ssss......",
+    ".....ssssss.....",
+    "....sXsssXss....",
+    "....ssssssss....",
+    "....sWsWsWss....",
+    ".....ssssss.....",
+    "...ssssssssss...",
+    "..s.ssssssss.s..",
+    "..W.ssssssss.W..",
+    ".....ssssss.....",
+    ".....ss..ss.....",
+    ".....WW..WW.....",
+]
+
+# Sigbin: walks backward, head hung low between its hind legs; unseen until close
+SIGBIN = [
+    "", "", "",
+    "............nD..",
+    "...........nD...",
+    "...nnnnnnnnnD...",
+    "..nNNNNNNNNNn...",
+    ".nNNNNNNNNNNNn..",
+    ".nNnNNNNNNNNn...",
+    "DD.nN.....nNn...",
+    "DnD.nN....nN....",
+    ".nXn.N....N.....",
+    "..nn.kk...kk....",
+]
+
+# Santelmo: a wandering ball of fire, said to be a lost soul
+SANTELMO = [
+    "", "",
+    ".......Y........",
+    "......YAY.......",
+    ".....YAOAY......",
+    "....YAOOOAY.....",
+    "...YAOOROOAY....",
+    "...YAORRROAY....",
+    "...YAOORROAY....",
+    "....YAOOOAY.....",
+    ".....YAAAY......",
+    "......YYY.......",
+]
+SANTELMO_FLICKER = [
+    "", "",
+    "........Y.......",
+    ".......YAY......",
+    "......YAOAY.....",
+    "....YYAOOAY.....",
+    "...YAOOROOAY....",
+    "...YAORRROAY....",
+    "...YAOORROAY....",
+    "....YAOOOAY.....",
+    ".....YAAAY......",
+    "......YYY.......",
+]
+
+# Bungisngis: the one-eyed giant who never stops laughing
+BUNGISNGIS = [
+    "",
+    "....DDDDDDDD....",
+    "...DFFFFFFFFD...",
+    "...FFFWWWWFFF...",
+    "...FFWWEEWWFF...",
+    "...FFFWWWWFFF...",
+    "...FFFFFFFFFF...",
+    "...FrrrrrrrrF...",
+    "...FrWrWWrWrF...",
+    "...FFrrrrrrFF...",
+    "..FFNNNNNNNNFF..",
+    ".FF.NNNNNNNN.FF.",
+    ".FF.NNyyyyNN.FF.",
+    "....NNNNNNNN....",
+    "....FF....FF....",
+    "....nn....nn....",
+]
+BUNGISNGIS_LAUGH = [
+    "",
+    "....DDDDDDDD....",
+    "...DFFFFFFFFD...",
+    "...FFFWWWWFFF...",
+    "...FFWWEEWWFF...",
+    "...FFFFFFFFFF...",
+    "...FrrrrrrrrF...",
+    "...FrWrWWrWrF...",
+    "...FrrrrrrrrF...",
+    "...FFrrrrrrFF...",
+    "..FFNNNNNNNNFF..",
+    "FF..NNNNNNNN..FF",
+    "FF..NNyyyyNN..FF",
+    "....NNNNNNNN....",
+    "...FF......FF...",
+    "...nn......nn...",
+]
+
+
 def with_legs(rows, legs):
     r = list(rows) + [""] * 16
     r[14] = legs
@@ -384,7 +496,13 @@ ENEMIES = {
     # kapre fur is dark bark brown so it reads on the night ground
     "kapre": [[r.translate(str.maketrans("Dn", "nN")) for r in rows]
               for rows in (KAPRE, with_legs(KAPRE, "....nnn.nnn....."))],
+    "tiyanak": [TIYANAK, with_legs(TIYANAK, "....WW....WW....")],
+    "sigbin": [SIGBIN, with_legs(SIGBIN, "..nn..kk.kk.....")],
+    "santelmo": [SANTELMO, SANTELMO_FLICKER],
+    "bungisngis": [BUNGISNGIS, BUNGISNGIS_LAUGH],
 }
+# extra single-frame looks (the tiyanak's disguise)
+ENEMY_EXTRA = {"tiyanak_baby": TIYANAK_BABY}
 
 
 def bakunawa_frame(f):
@@ -2119,6 +2237,8 @@ def main():
     for name, frames in ENEMIES.items():
         for f, rows in enumerate(frames):
             save(rows_to_img(rows), f"sprites/enemies/{name}_{f}.png")
+    for name, rows in ENEMY_EXTRA.items():
+        save(rows_to_img(rows), f"sprites/enemies/{name}.png")
     for f in range(2):
         save(bakunawa_frame(f), f"sprites/enemies/bakunawa_{f}.png")
     for name, rows in WEAPONS.items():

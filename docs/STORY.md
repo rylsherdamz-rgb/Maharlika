@@ -36,6 +36,11 @@ noise.
 | Manananggal: severs at the waist and flies; salt or ash on the lower half | **Folklore** | Visayan and Tagalog. |
 | Tikbalang: horse-headed trickster, leads travelers astray; shirt inside out; taming by its mane hairs | **Folklore** | Tagalog. |
 | Kapre: cigar-smoking giant of big trees such as the balete | **Folklore** | Tagalog. |
+| Tiyanak: takes the form of a crying infant to lure travelers, then shows its true form | **Folklore** | Tagalog. |
+| Sigbin: walks backward with its head between its hind legs; turns invisible; drinks blood from shadows; kept by sigbinan families | **Folklore** | Visayan (Bohol, Siquijor). |
+| Santelmo: a ball of fire over fields and the sea, often said to be a lost soul | **Folklore** | Pan-Philippine. The name is from Spanish San Telmo; kept even though this history has no colonization. |
+| Bungisngis: one-eyed, always-laughing forest giant, strong but slow-witted | **Folklore** | Tagalog and Visayan. |
+| Kris, bangkaw (real weapons); barang (Visayan insect sorcery) | **History / Folklore** | The lingganay bell and agimat rod as weapons are invented. |
 | Battle of Mactan, Lapulapu, Magellan's death (1521) | **History** | |
 | Balangay boats of Butuan (from about 320 CE); "barangay" from "balangay" | **History** | |
 | Maharlika as the Tagalog freeborn warrior class | **History** | Precolonial social class. |
@@ -54,10 +59,10 @@ Myths vary by region and teller. Where versions differ, the game uses the common
 | # | Island | Lore line | Creatures |
 |---|---|---|---|
 | 0 | **Port of Tondo** (ᜆᜓᜈ᜔ᜇᜓ) | Haliya waits by the balangay | none |
-| 1 | **Punso Fields** (ᜉᜓᜈ᜔ᜐᜓ) | "Tabi-tabi po." The duwende are disturbed | duwende, manananggal |
-| 2 | **Siquijor** (ᜐᜒᜃᜒᜑᜓᜇ᜔) | Salt and ash in every pocket | manananggal, duwende |
-| 3 | **Mount Banahaw** (ᜊᜈᜑᜏ᜔) | Shirts inside out; the tikbalang lead travelers astray | tikbalang, duwende, manananggal |
-| 4 | **Ibalong Forests** (ᜁᜊᜎᜓᜅ᜔) | Cigar smoke from the old balete | kapre, tikbalang, manananggal, duwende |
+| 1 | **Punso Fields** (ᜉᜓᜈ᜔ᜐᜓ) | "Tabi-tabi po." The duwende are disturbed | duwende, manananggal, santelmo |
+| 2 | **Siquijor** (ᜐᜒᜃᜒᜑᜓᜇ᜔) | Salt and ash; something walks backward in the dark | manananggal, sigbin, duwende |
+| 3 | **Mount Banahaw** (ᜊᜈᜑᜏ᜔) | Shirts inside out; laughter on the high trail | tikbalang, bungisngis, santelmo, duwende |
+| 4 | **Ibalong Forests** (ᜁᜊᜎᜓᜅ᜔) | Cigar smoke, and a baby crying where none should be | kapre, tiyanak, tikbalang, manananggal |
 | 5 | **Shore of Albay** (ᜀᜎ᜔ᜊᜌ᜔) | Beneath Mayon, the sea is red | the Bakunawa (summons manananggal) |
 
 After each island: a **dambana** (shrine) where one of three Tagalog gods offers a blessing,
@@ -112,7 +117,7 @@ serpent off alone. She needs the people's noise, and someone to clear their way.
 
 - **Islands in the sea**, not walled rooms. You walk on land; shots fly over water.
 - **Balangay** between islands, not portals. **Dambana blessings**, not loot chests.
-- **One signature weapon per hero**, including a **melee kampilan** that parries shots. No ammo or energy swapping.
+- **Two weapons per hero** (signature or alternate, picked before sailing), including **melee blades** that parry shots. No ammo or energy swapping.
 - **Dodge roll** for everyone. **Skills charge with light** (from fighting and catching fireflies), not a cooldown.
 - **HUD** is a portrait medallion with bead rows; Baybayin labels throughout.
 
