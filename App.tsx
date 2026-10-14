@@ -7,12 +7,15 @@ import { HeroId, WeaponId } from './src/game/data';
 import { ENDING, EPILOGUE, INTRO } from './src/game/story';
 import CodexScreen from './src/screens/CodexScreen';
 import GameScreen from './src/screens/GameScreen';
+import LoadingScreen from './src/screens/LoadingScreen';
 import ResultScreen, { RunStats } from './src/screens/ResultScreen';
 import SelectScreen from './src/screens/SelectScreen';
 import StoryScreen from './src/screens/StoryScreen';
 import TitleScreen from './src/screens/TitleScreen';
 
 type Screen =
+  | { name: 'boot' }
+  | { name: 'sailing'; hero: HeroId; weapon: WeaponId }
   | { name: 'title' }
   | { name: 'select' }
   | { name: 'game'; hero: HeroId; weapon: WeaponId; run: number }
@@ -23,18 +26,27 @@ type Screen =
 
 export default function App() {
   const [fontsLoaded] = useFonts({ PixelifySans_500Medium, PixelifySans_700Bold, NotoSansTagalog_400Regular });
-  const [screen, setScreen] = useState<Screen>({ name: 'title' });
+  const [screen, setScreen] = useState<Screen>({ name: 'boot' });
   const [run, setRun] = useState(0);
   const [seenIntro, setSeenIntro] = useState(false);
 
-  const start = (hero: HeroId, weapon: WeaponId) => {
+  const start = (hero: HeroId, weapon: WeaponId) => setScreen({ name: 'sailing', hero, weapon });
+  const launch = (hero: HeroId, weapon: WeaponId) => {
     setRun((r) => r + 1);
     setScreen({ name: 'game', hero, weapon, run: run + 1 });
   };
 
   let content: React.ReactNode = null;
-  if (fontsLoaded) {
+  if (screen.name === 'boot') {
+    // shown from the first frame, before the fonts are in, until the fonts are ready
+    content = <LoadingScreen ready={fontsLoaded} fontsReady={fontsLoaded} onDone={() => setScreen({ name: 'title' })} />;
+  } else if (fontsLoaded) {
     switch (screen.name) {
+      case 'sailing': {
+        const { hero, weapon } = screen;
+        content = <LoadingScreen ready minMs={1100} onDone={() => launch(hero, weapon)} />;
+        break;
+      }
       case 'title':
         content = (
           <TitleScreen

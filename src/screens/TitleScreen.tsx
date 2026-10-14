@@ -48,7 +48,7 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
   const [help, setHelp] = useState(false);
   const logoW = Math.min(width * 0.46, 430);
   const bob = Math.round(Math.sin(t / 4) * 3);
-  const heroSize = Math.min(56, height * 0.13);
+  const heroSize = Math.min(48, height * 0.12);
 
   // web build: Enter plays, H toggles the guide, Esc closes it
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
         </PixelText>
       </View>
 
-      {/* the four maharlika, walking in place and striking in turn */}
+      {/* the six maharlika, walking in place and striking in turn */}
       <View style={[styles.parade, { width: logoW + 24, bottom: height * 0.12 }]} pointerEvents="none">
         {HEROES.map((h, i) => {
           const striking = Math.floor(t / 6) % HEROES.length === i;

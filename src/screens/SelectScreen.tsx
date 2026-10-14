@@ -27,18 +27,18 @@ export default function SelectScreen({
   const { width, height } = useWindowDimensions();
   const [sel, setSel] = useState<HeroId>('kidlat');
   // remembers the weapon chosen for each maharlika while browsing
-  const [arms, setArms] = useState<Record<HeroId, number>>({ kidlat: 0, liksi: 0, mayumi: 0, amihan: 0 });
+  const [arms, setArms] = useState<Record<HeroId, number>>({ kidlat: 0, liksi: 0, mayumi: 0, amihan: 0, banog: 0, dalisay: 0 });
   const t = useTicker(150);
   const hero = HEROES.find((h) => h.id === sel)!;
   const weaponId = hero.weapons[arms[sel]];
-  const cardW = Math.min(130, (width * 0.55) / 4);
+  const cardW = Math.min(110, (width * 0.56) / HEROES.length - 8);
   const spriteSize = Math.min(cardW - 16, height * 0.2);
 
   return (
     <View style={styles.root}>
       <CoverImage name="screen_select_bg" />
       <PixelText size={14} color={COLORS.gold} style={styles.heading}>
-        CHOOSE YOUR MAHARLIKA
+        PUMILI NG MAHARLIKA · Choose your hero
       </PixelText>
       <View style={styles.body}>
         <View style={styles.cards}>
@@ -85,7 +85,7 @@ export default function SelectScreen({
             </View>
           </View>
           <PixelText size={7} color={COLORS.dim} shadow={false} style={{ marginBottom: 4 }}>
-            CHOOSE A WEAPON
+            PUMILI NG SANDATA · Choose a weapon
           </PixelText>
           <View style={styles.weapons}>
             {hero.weapons.map((w, i) => {
@@ -110,9 +110,9 @@ export default function SelectScreen({
         </Panel>
       </View>
       <View style={styles.footer}>
-        <PixelButton label="BACK" onPress={onBack} color="#5a4a78" size={10} />
-        <PixelButton label={`${hero.name.toUpperCase()}'S STORY`} onPress={() => onStory(sel)} color="#5a4a78" size={10} style={{ marginLeft: 16 }} />
-        <PixelButton label="SET SAIL" onPress={() => onPick(sel, weaponId)} color={hero.color} style={{ marginLeft: 16 }} />
+        <PixelButton label="BALIK · BACK" onPress={onBack} color="#5a4a78" size={10} />
+        <PixelButton label={`KWENTO NI ${hero.name.toUpperCase()}`} onPress={() => onStory(sel)} color="#5a4a78" size={10} style={{ marginLeft: 16 }} />
+        <PixelButton label="LAYAG · SET SAIL" onPress={() => onPick(sel, weaponId)} color={hero.color} style={{ marginLeft: 16 }} />
       </View>
     </View>
   );

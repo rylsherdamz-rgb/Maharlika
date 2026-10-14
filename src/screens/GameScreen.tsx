@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GestureResponderEvent, Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { BOONS, BOSS_NAME, ENEMIES, HeroId, LIGHT_MAX, WeaponId, WEAPONS } from '../game/data';
-import { advanceDialog, chooseBoon, DODGE_TIME, FX_LIFE, Game, Hero, Input, newGame, ROOM_H, ROOM_W, sigbinVisible, stageLabel, update } from '../game/engine';
+import { advanceDialog, chooseBoon, DODGE_TIME, FX_FRAMES, FX_LIFE, Game, Hero, Input, newGame, ROOM_H, ROOM_W, sigbinVisible, stageLabel, update } from '../game/engine';
 import { BaybayinText, COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
 import { RunStats } from './ResultScreen';
 
@@ -263,6 +263,10 @@ export default function GameScreen({
       const sa = (h.swingAim * 180) / Math.PI;
       nodes.push(sprite('fx_slash_0', h.x + Math.cos(h.swingAim) * 8, h.y + 3 + Math.sin(h.swingAim) * 8, 34, { transform: [{ rotate: `${sa}deg` }], opacity: Math.min(1, h.swing * 10) }, 'slash'));
     }
+    if (h.shield > 0) {
+      const pulse = 30 + Math.sin(g.time * 12) * 2;
+      nodes.push(sprite('fx_ring_shield', h.x, h.y + 2, pulse, { opacity: h.shield < 0.6 && Math.floor(g.time * 10) % 2 ? 0.3 : 0.9 }, 'shieldRing'));
+    }
     if (h.spin > 0) {
       for (let i = 0; i < 4; i++) {
         nodes.push(sprite('fx_slash_1', h.x, h.y + 3, 70, { transform: [{ rotate: `${g.time * 1400 + i * 90}deg` }] }, `spin${i}`));
@@ -325,12 +329,48 @@ export default function GameScreen({
 
   for (const p of g.pickups) {
     const bob = Math.sin(p.t * 4 + p.id) * 1.5;
+    if (p.kind === 'weapon') {
+      // a weapon on the ground: glowing, slowly turning, with its name above it
+      const glow = 0.25 + 0.15 * Math.sin(p.t * 5);
+      layers.push({
+        y: p.y - 4,
+        node: [
+          <View key={`pg${p.id}`} style={{ position: 'absolute', left: (p.x - 8) * s, top: (p.y - 4) * s, width: 16 * s, height: 10 * s, borderRadius: 8 * s, backgroundColor: `rgba(255,200,110,${glow})` }} />,
+          sprite(`weapons_${p.weapon}`, p.x, p.y + bob, 14, { transform: [{ rotate: `${Math.sin(p.t * 2) * 25 - 30}deg` }], opacity: p.armed ? 1 : 0.6 }, `p${p.id}`),
+          <PixelText key={`pn${p.id}`} size={Math.max(6, 2.6 * s)} color={COLORS.light} shadow style={{ position: 'absolute', left: p.x * s - 60, width: 120, textAlign: 'center', top: (p.y - 15) * s }}>
+            {WEAPONS[p.weapon!].name.toUpperCase()}
+          </PixelText>,
+        ],
+      });
+      continue;
+    }
     layers.push({ y: p.y - 4, node: [sprite(`items_${p.kind}`, p.x, p.y + bob, 16, undefined, `p${p.id}`)] });
   }
+  if (g.chest) {
+    const c = g.chest;
+    const glow = c.open ? 0 : 0.25 + 0.2 * Math.sin(g.time * 3);
+    layers.push({
+      y: c.y,
+      node: [
+        <View key="chestGlow" style={{ position: 'absolute', left: (c.x - 12) * s, top: (c.y - 2) * s, width: 24 * s, height: 12 * s, borderRadius: 12 * s, backgroundColor: `rgba(255,232,130,${glow})` }} />,
+        shadow(c.x, c.y + 7, 12, 'chestS'),
+        sprite(`deco_chest_${c.open ? 1 : 0}`, c.x, c.y, 16, undefined, 'chest'),
+      ],
+    });
+  }
   for (const f of g.fx) {
-    const life = FX_LIFE[f.kind];
-    const frame = Math.min(f.kind === 'dust' ? 2 : 1, Math.floor((f.t / life) * (f.kind === 'dust' ? 3 : 2)));
-    layers.push({ y: f.kind === 'dust' ? f.y - 9 : f.y + 20, node: [sprite(`fx_${f.kind}_${frame}`, f.x, f.y, 8, undefined, `fx${f.id}`)] });
+    const p = Math.min(1, f.t / FX_LIFE[f.kind]);
+    if (f.kind === 'wave') {
+      const size = 16 + p * (f.size ?? 120);
+      layers.push({ y: 9999, node: [sprite('fx_ring_wave', f.x, f.y, size, { opacity: 1 - p }, `fx${f.id}`)] });
+      continue;
+    }
+    const n = FX_FRAMES[f.kind];
+    const frame = Math.min(n - 1, Math.floor(p * n));
+    const big = f.kind === 'boom' || f.kind === 'poof';
+    const size = f.kind === 'boom' ? (f.size ?? 24) : big ? 18 : 8;
+    const y = f.kind === 'heal' ? f.y - p * 8 : f.y;
+    layers.push({ y: f.kind === 'dust' ? f.y - 9 : f.y + 20, node: [sprite(`fx_${f.kind}_${frame}`, f.x, y, size, undefined, `fx${f.id}`)] });
   }
   layers.sort((a, b) => a.y - b.y);
 
@@ -348,7 +388,9 @@ export default function GameScreen({
         {g.bullets.map((b) => {
           const rot = b.sprite === 'shot_arrow' || b.sprite === 'shot_dart' || b.sprite === 'shot_spear' || b.sprite === 'shot_beetle';
           const deg = (Math.atan2(b.vy, b.vx) * 180) / Math.PI;
-          return sprite(`projectiles_${b.sprite}`, b.x, b.y, b.r > 3 ? 10 : rot ? 9 : 7, rot ? { transform: [{ rotate: `${deg}deg` }] } : undefined, `b${b.id}`);
+          // shots the kalasag turned back keep the enemy sprite, tinted gold
+          const turned = b.fromHero && b.sprite === 'shot_enemy' ? { tintColor: COLORS.gold } : undefined;
+          return sprite(`projectiles_${b.sprite}`, b.x, b.y, b.r > 3 ? 10 : rot ? 9 : 7, rot ? { transform: [{ rotate: `${deg}deg` }] } : turned, `b${b.id}`);
         })}
         {g.texts.map((t) => (
           <PixelText
@@ -401,6 +443,12 @@ export default function GameScreen({
             <View style={styles.lampTrack}>
               <View style={[styles.lampFill, { width: `${lightFrac * 100}%`, backgroundColor: ready ? COLORS.gold : COLORS.light }]} />
             </View>
+          </View>
+          <View style={styles.lamp}>
+            <Sprite name={`weapons_${h.weapon}` as ImgKey} size={18} />
+            <PixelText size={7} color={COLORS.light}>
+              {`${weapon.name.toUpperCase()}${h.weaponLv ? ` +${h.weaponLv}` : ''}`}
+            </PixelText>
           </View>
           {g.boons.length > 0 && (
             <View style={styles.pips}>

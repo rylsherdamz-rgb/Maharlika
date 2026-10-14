@@ -208,6 +208,46 @@ HEROES = {
         ],
         "legs": ["....FF....FF....", ".....FF..FF....."],
     },
+    # Banog: bagani (proven warrior) of Bukidnon, red tangkulo headcloth with a hawk feather
+    "banog": {
+        "body": [
+            "..........W.....",
+            ".........WH.....",
+            "....RRRRRRRR....",
+            "...RRrRRRrRRR...",
+            "...nnfffffffn...",
+            "...nfEfffEffn...",
+            "...nffffffffn...",
+            "....ffffrfff....",
+            ".....ffffff.....",
+            "...RRDDDDDDRR...",
+            "..RrDDyDDyDDrR..",
+            "..fRDDDDDDDDRf..",
+            "...RDDyyyyDDR...",
+            "....DDDDDDDD....",
+        ],
+        "legs": ["....ff....ff....", ".....ff..ff....."],
+    },
+    # Dalisay: pearl diver of Sulu, teal kumbong veil, pearl string, patterned malong
+    "dalisay": {
+        "body": [
+            "................",
+            ".....TTTTTT.....",
+            "....TTTTTTTT....",
+            "...TTtTTTTtTT...",
+            "...TTFFFFFFTT...",
+            "...TFEFFFFEFT...",
+            "...TFFFFFFFFT...",
+            "...TTFFMMFFTT...",
+            "....tWHWHWHt....",
+            "...BBBBBBBBBB...",
+            "..BBYBBYBBYBBB..",
+            "..FBBBBBBBBBBF..",
+            "...BYBBYBBYBB...",
+            "...bbbbbbbbbb...",
+        ],
+        "legs": ["....FF....FF....", ".....FF..FF....."],
+    },
 }
 
 # ---------------------------------------------------------------- guardian animation
@@ -610,6 +650,52 @@ WEAPONS = {
         ".........yyAAy..",
         "...........yy...",
     ],
+    # panabas: heavy, wide-bladed chopping sword of Mindanao (slow, wide melee)
+    "panabas": [
+        "", "", "", "",
+        "..........SSSS..",
+        ".........SSSSWS.",
+        ".nnyyNNNSSSSSS..",
+        ".nnyyNNN........",
+    ],
+    # balaraw: a short double-edged dagger (very fast, short melee)
+    "balaraw": [
+        "", "", "", "", "", "",
+        "........SS......",
+        "..nnyySSSSWS....",
+        "........SS......",
+    ],
+    # baston: rattan sticks of arnis / eskrima (fast melee that knocks foes back)
+    "baston": [
+        "", "", "", "",
+        "............Q...",
+        "..........QQ....",
+        "........QQ......",
+        "......qQ........",
+        "....qQ.....QQ...",
+        "..qQ.....QQ.....",
+        ".......QQ.......",
+        ".....qQ.........",
+        "...qQ...........",
+    ],
+    # buntot pagi: stingray-tail whip; the barbs carry venom (long, narrow melee)
+    "buntot_pagi": [
+        "", "", "", "", "", "",
+        ".nn.............",
+        ".nnshshshshshsh.",
+        "...............s",
+    ],
+    # lantaka: a small bronze swivel cannon, carried on Sulu and Moro boats
+    "lantaka": [
+        "", "", "", "",
+        "........yy......",
+        "..yyyyyyyyyyyyy.",
+        ".yAAYAAAAAAAAAyk",
+        ".yAAAAAAAAAAAAyk",
+        "..yyyyyyyyyyyyy.",
+        "....nn..........",
+        "...nnnn.........",
+    ],
     # barang: a bamboo tube of spirit beetles, the sorcery Siquijor is feared for
     "barang": [
         "", "", "", "", "",
@@ -667,6 +753,14 @@ PROJECTILES = {
         ".gGGGg..",
         "..g.g...",
     ],
+    "shot_cannon": [
+        "........",
+        "..kkk...",
+        ".kSSSk..",
+        ".kSWSk..",
+        ".kSSSk..",
+        "..kkk...",
+    ],
     "shot_enemy": [
         "........",
         "..rRr...",
@@ -721,8 +815,104 @@ def hit_fx(f):
     return rows_to_img(rows, 8, 8, outline=False)
 
 
+def boom_fx(f):
+    """Lantaka blast: flash, fireball, smoke (16x16)."""
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    if f == 0:
+        d.ellipse([3, 3, 12, 12], fill=PAL["Y"] + (255,))
+        d.ellipse([5, 5, 10, 10], fill=PAL["W"] + (255,))
+    elif f == 1:
+        d.ellipse([1, 1, 14, 14], fill=PAL["O"] + (255,))
+        d.ellipse([3, 3, 12, 12], fill=PAL["A"] + (255,))
+        d.ellipse([6, 5, 10, 9], fill=PAL["Y"] + (255,))
+    else:
+        for cx, cy, r in ((5, 6, 4), (10, 5, 4), (8, 10, 4), (4, 11, 3), (12, 10, 3)):
+            d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(110, 100, 104, 190))
+    return img
+
+
+def sparkle_fx(f):
+    """Glints for chests, upgrades and pickups (8x8)."""
+    rows = [
+        ["........", "...Y....", "...Y....", ".YYWYY..", "...Y....", "...Y....", "........", "........"],
+        ["Y.....Y.", "........", "...W....", "..WYW...", "...W....", "........", "Y.....Y.", "........"],
+    ][f]
+    return rows_to_img(rows, 8, 8, outline=False)
+
+
+def heal_fx(f):
+    """A rising green cross when health returns (8x8)."""
+    rows = [
+        ["........", "........", "...G....", "..GVG...", "...G....", "........", "........", "........"],
+        ["...G....", "..GVG...", "...G....", "........", "......G.", ".G...GVG", "GVG...G.", ".G......"],
+    ][f]
+    return rows_to_img(rows, 8, 8, outline=False)
+
+
+def poof_fx(f):
+    """Smoke puff when a creature is banished (16x16)."""
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    r = 3 + f * 2
+    al = (230, 170, 90)[f]
+    for a in range(0, 360, 60):
+        cx = 8 + math.cos(math.radians(a + f * 20)) * (2 + f * 2)
+        cy = 8 + math.sin(math.radians(a + f * 20)) * (2 + f * 2)
+        d.ellipse([cx - r / 2, cy - r / 2, cx + r / 2, cy + r / 2], fill=(200, 190, 210, al))
+    if f == 0:
+        d.ellipse([5, 5, 10, 10], fill=PAL["W"] + (255,))
+    return img
+
+
+def ring_fx(color, width=2):
+    """A thin ring, scaled in game: Banog's kalasag and Dalisay's wave (32x32)."""
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.ellipse([1, 1, 30, 30], outline=color + (230,), width=width)
+    d.ellipse([4, 4, 27, 27], outline=color + (90,), width=1)
+    return img
+
+
+# kaban: a carved wooden chest bound in brass, found on cleared islands
+CHEST = [
+    "", "", "",
+    "...nnnnnnnnnn...",
+    "..nNNNNNNNNNNn..",
+    "..nyyyyyyyyyyn..",
+    "..nNNNNyyNNNNn..",
+    "..nNNNNAYNNNNn..",
+    "..nNNNNyyNNNNn..",
+    "..nyyyyyyyyyyn..",
+    "..nNNNNNNNNNNn..",
+    "..nnnnnnnnnnnn..",
+]
+CHEST_OPEN = [
+    "",
+    "...nnnnnnnnnn...",
+    "..nNNNNNNNNNNn..",
+    "..nyyyyyyyyyyn..",
+    "..nkkkkkkkkkkn..",
+    "..nkYkAkkYkkkn..",
+    "..nyyyyyyyyyyn..",
+    "..nNNNNNNNNNNn..",
+    "..nNNNNNNNNNNn..",
+    "..nyyyyyyyyyyn..",
+    "..nNNNNNNNNNNn..",
+    "..nnnnnnnnnnnn..",
+]
+
 # ---------------------------------------------------------------- items
 ITEMS = {
+    # hasaan: whetstone, sharpens whatever weapon you carry (+1 level)
+    "whetstone": [
+        "", "", "", "",
+        "........Y.......",
+        "...SSSSSSSSs....",
+        "..SSWWSSSSSSs...",
+        "..sSSSSSSSSss...",
+        "...sssssssss....",
+    ],
     # ginto: a gold bead, the islands' old currency
     "coin": [
         "", "", "", "",
@@ -803,6 +993,10 @@ ISLANDS = {
     "pulo3":  {"ground": (78, 78, 70), "grass": (98, 108, 84), "sand": (150, 144, 128), "deco": "rock", "big": "boulder"},
     "pulo4":  {"ground": (40, 58, 44), "grass": (54, 84, 54), "sand": (140, 130, 100), "deco": "fern", "big": "balete"},
     "shore":  {"ground": (74, 68, 74), "grass": (92, 84, 90), "sand": (104, 96, 100), "deco": "rock", "big": "boulder"},
+    # Sulu Sea: white coral sand, reef, houses on stilts over the shallows
+    "sulu":   {"ground": (176, 160, 118), "grass": (120, 150, 96), "sand": (226, 214, 176), "deco": "coral", "big": "stilt"},
+    # Ifugao: the rice terraces of the Cordillera, guarded by carved bulul
+    "ifugao": {"ground": (70, 98, 52), "grass": (130, 160, 70), "sand": (120, 104, 72), "deco": "palay", "big": "bulul"},
 }
 
 
@@ -897,6 +1091,29 @@ DECO = {
         ".gGG..GgG..GGg..",
         ".......g........",
     ],
+    # coral head on the Sulu reef
+    "coral": [
+        "", "", "", "",
+        "....M...M.......",
+        "...MMM.MMM..M...",
+        "....M.M.M..MMM..",
+        "..M..MMMM...M...",
+        ".MMM..MM..M.M...",
+        "..M.MMMMMMMM....",
+        "....MMMMMMM.....",
+        "...wwwwwwwww....",
+    ],
+    # palay: ripening rice tufts on the terraces
+    "palay": [
+        "", "", "",
+        "...Y.....Y......",
+        "..YQ.Y..YQ..Y...",
+        "...Q.QY..Q.YQ...",
+        "...GgQ..GgQ.Q...",
+        "..GGgG.GGgGGg...",
+        "...GgGGgGgGg....",
+        "....gggggggg....",
+    ],
     # bronze lamp post on the Tondo docks
     "lantern": [
         "",
@@ -953,6 +1170,33 @@ BIG = {
         "sSSSSSSSSsssss..",
         "ssSSSSSSssssss..",
         ".ssssssssssss...",
+    ],
+    # bahay sa dagat: a nipa house on stilts (seen from above)
+    "stilt": [
+        "..qqqqqqqqqqqq..",
+        ".qQQQQQQQQQQQQq.",
+        "qQQqQQQqQQQqQQQq",
+        "qQQQQQQQQQQQQQQq",
+        ".qqqqqqqqqqqqqq.",
+        "..nNNNNNNNNNNn..",
+        "..n.n..nn..n.n..",
+        "..n.n..nn..n.n..",
+        "..n.n..nn..n.n..",
+    ],
+    # bulul: carved wooden rice guardian of the Ifugao
+    "bulul": [
+        "",
+        "......nnnn......",
+        ".....nNNNNn.....",
+        ".....NENNEN.....",
+        ".....nNNNNn.....",
+        "......nNNn......",
+        ".....NNNNNN.....",
+        "....nN.NN.Nn....",
+        "....nN.NN.Nn....",
+        ".....NNNNNN.....",
+        ".....NN..NN.....",
+        "....sssssssss...",
     ],
     # carved post with a bronze lamp
     "pillar": [
@@ -1684,6 +1928,25 @@ def render_island(g, seed, theme):
                                 px[x * 16, y * 16 + i] = (190, 230, 230, 255)
                             else:
                                 px[x * 16 + 15, y * 16 + i] = (190, 230, 230, 255)
+    if theme == "ifugao":  # terrace walls: a stone step every third row of land
+        d = ImageDraw.Draw(img)
+        for y in range(ROOM_H):
+            if y % 3:
+                continue
+            for x in range(ROOM_W):
+                if g[y][x] == FLOOR and land(x, y - 1):
+                    d.line([(x * 16, y * 16), (x * 16 + 15, y * 16)], fill=(96, 84, 64, 255))
+                    d.line([(x * 16, y * 16 + 1), (x * 16 + 15, y * 16 + 1)], fill=(60, 52, 40, 255))
+    if theme == "sulu":  # clear turquoise shallows
+        fx = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        fp = fx.load()
+        for y in range(ROOM_H):
+            for x in range(ROOM_W):
+                if g[y][x] == WATER and any(land(x + dx, y + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)):
+                    for yy in range(16):
+                        for xx in range(16):
+                            fp[x * 16 + xx, y * 16 + yy] = (60, 200, 190, 90)
+        img.alpha_composite(fx)
     if theme == "shore":  # red tide tint over the water
         fx = Image.new("RGBA", img.size, (0, 0, 0, 0))
         fp = fx.load()
@@ -1703,12 +1966,11 @@ def hero_frame(name, f):
 
 
 def app_icon():
-    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
-    img.alpha_composite(diamond_img(32, (30, 16, 34), PAL["A"], alpha=255))
+    img = Image.new("RGBA", (32, 32), (24, 14, 34, 255))
+    stars(img, 8, 5, 32)
     d = ImageDraw.Draw(img)
-    d.ellipse([18, 5, 26, 13], fill=(214, 120, 96))
-    d.ellipse([21, 4, 28, 12], fill=(30, 16, 34))
-    img.alpha_composite(hero_frame("kidlat", 0), (8, 10))
+    d.rectangle([0, 0, 31, 31], outline=PAL["y"])
+    img.alpha_composite(app_icon_art())
     return img
 
 
@@ -1725,8 +1987,8 @@ def brand_sheet():
         x = 22 + i * 24
         d.rectangle([x, 58, x + 18, 70], fill=PAL[k], outline=(0, 0, 0))
     for i, name in enumerate(HEROES):
-        img.alpha_composite(up(hero_frame(name, 0), 3), (12 + i * 50, 80))
-    img.alpha_composite(up(rows_to_img(HALIYA), 3), (214, 80))
+        img.alpha_composite(up(hero_frame(name, 0), 3), (6 + i * 34, 80))
+    img.alpha_composite(up(rows_to_img(HALIYA), 3), (212, 80))
     img.alpha_composite(up(balangay(0), 2), (260, 96))
     for i, name in enumerate(ENEMIES):
         img.alpha_composite(up(rows_to_img(ENEMIES[name][0]), 2), (16 + i * 40, 150))
@@ -1747,7 +2009,8 @@ def animation_sheet():
         x += n * cell
     d.text((x + cell + 1, 2), "ARMS", fill=(255, 186, 72))
     loadouts = {"kidlat": ("kampilan", "kris"), "liksi": ("pana", "bangkaw"),
-                "mayumi": ("agimat", "lingganay"), "amihan": ("sumpit", "barang")}
+                "mayumi": ("agimat", "lingganay"), "amihan": ("sumpit", "barang"),
+                "banog": ("panabas", "baston"), "dalisay": ("buntot_pagi", "lantaka")}
     for r, name in enumerate(HEROES):
         y = 16 + r * (cell + 4)
         d.text((6, y + 4), name.upper(), fill=(255, 246, 228))
@@ -1878,6 +2141,22 @@ def portrait(skin, shade, hair, outfit, style, extras=()):
     if "tapis" in extras:
         for y in (28, 30):
             d.line([(5, y), (26, y)], fill=PAL["O"])
+    if "tangkulo" in extras:  # Bagani's red headcloth with a hawk feather
+        d.rectangle([8, 3, 23, 8], fill=PAL["R"])
+        d.line([(8, 8), (23, 8)], fill=PAL["r"])
+        d.polygon([(22, 3), (27, -1), (28, 0), (24, 5)], fill=PAL["W"])
+        d.line([(24, 3), (27, 0)], fill=PAL["h"])
+    if "redtrim" in extras:
+        d.line([(9, 26), (22, 26)], fill=PAL["R"])
+        d.point([(12, 28), (15, 28), (19, 28)], fill=PAL["y"])
+    if "kumbong" in extras:  # Sulu veil over the hair and shoulders
+        d.rounded_rectangle([6, 2, 25, 10], radius=4, fill=PAL["T"])
+        d.rectangle([6, 8, 8, 26], fill=PAL["T"])
+        d.rectangle([23, 8, 25, 26], fill=PAL["t"])
+        d.line([(9, 9), (22, 9)], fill=PAL["t"])
+    if "pearls" in extras:
+        for i, x in enumerate(range(10, 23, 2)):
+            d.point((x, 24 + (1 if 12 < x < 20 else 0)), fill=PAL["W"] if i % 2 else PAL["H"])
     if "cane" in extras:
         d.line([(27, 18), (27, 31)], fill=PAL["n"])
         d.line([(25, 18), (27, 18)], fill=PAL["n"])
@@ -2053,6 +2332,46 @@ def title_bg():
     return img
 
 
+def loading_bg():
+    """Loading screen: the Bakunawa coiled around the last moon over a quiet sea."""
+    img = Image.new("RGBA", (320, 180), (0, 0, 0, 255))
+    dither_gradient(img, (8, 8, 22), (34, 20, 44), 0, 140)
+    stars(img, 140, 11, 130)
+    glow_disc(img, 160, 70, 30, (240, 200, 150))
+    moon(img, 160, 70, 22)
+    serpent_arc(img, 160, 70, 34, 0.4, 5.6, 6, (40, 118, 118), (196, 52, 44))
+    sea(img, 136, (30, 22, 44), (10, 8, 22), 13, glint=(220, 200, 160))
+    moon_path(img, 160, 136, (230, 210, 170))
+    balangay_fleet(img, [(40, 150, 1, 0), (250, 154, 1, 1)])
+    return img
+
+
+def app_icon_art():
+    """The app icon: the last moon as a red crescent, the Bakunawa coiled beneath it, a kampilan across."""
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    px = img.load()
+    for y in range(32):
+        for x in range(32):
+            in_moon = (x - 15.5) ** 2 + (y - 12.5) ** 2 < 8.5 ** 2
+            in_bite = (x - 20.5) ** 2 + (y - 9.5) ** 2 < 7.5 ** 2
+            if in_moon and not in_bite:
+                px[x, y] = (226, 104, 72, 255) if x + y < 26 else (176, 64, 50, 255)
+    d = ImageDraw.Draw(img)
+    d.arc([3, 6, 29, 30], 10, 175, fill=(54, 164, 160), width=3)      # coil under the moon
+    d.arc([5, 8, 27, 28], 30, 150, fill=(24, 92, 104), width=1)
+    for a in (40, 80, 120, 160):                                          # dorsal fins
+        x = 16 + 14 * math.cos(math.radians(a))
+        y = 18 + 13 * math.sin(math.radians(a))
+        d.point((x, y + 1), fill=PAL["R"])
+    d.ellipse([25, 13, 30, 18], fill=(54, 164, 160))                      # head rising to the moon
+    d.point((27, 14), fill=PAL["X"])
+    d.line([(6, 27), (23, 4)], fill=PAL["S"], width=2)                    # kampilan
+    d.point([(23, 3), (25, 4)], fill=PAL["W"])
+    d.line([(4, 30), (7, 26)], fill=PAL["y"], width=2)
+    add_outline(img)
+    return img
+
+
 def dawn_bg():
     """Victory: dawn over the sea of Albay, the fleet sailing home past Mayon."""
     img = Image.new("RGBA", (320, 180), (0, 0, 0, 255))
@@ -2185,7 +2504,7 @@ def story_call():
     glow_disc(img, 60, 112, 16, (255, 236, 170), ((26, 22), (14, 40), (6, 60)))
     sprite_at(img, rows_to_img(HALIYA), 36, 96, 3)
     for i, name in enumerate(HEROES):
-        sprite_at(img, hero_frame(name, 0), 92 + i * 34, 102, 3)
+        sprite_at(img, hero_frame(name, 0), 58 + i * 34, 102, 3)
     return img
 
 
@@ -2223,7 +2542,7 @@ def story_dawn():
     d.polygon([(0, 166), (190, 160), (200, 180), (0, 180)], fill=(196, 168, 112))
     sprite_at(img, rows_to_img(HALIYA), 30, 136, 2)
     for i, name in enumerate(HEROES):
-        sprite_at(img, hero_frame(name, 0), 70 + i * 24, 138, 2)
+        sprite_at(img, hero_frame(name, 0), 62 + i * 22, 138, 2)
     return img
 # ---------------------------------------------------------------- main
 def main():
@@ -2250,6 +2569,15 @@ def main():
         save(hit_fx(f), f"sprites/fx/hit_{f}.png")
     for f in range(3):
         save(dust_fx(f), f"sprites/fx/dust_{f}.png")
+        save(boom_fx(f), f"sprites/fx/boom_{f}.png")
+        save(poof_fx(f), f"sprites/fx/poof_{f}.png")
+    for f in range(2):
+        save(sparkle_fx(f), f"sprites/fx/sparkle_{f}.png")
+        save(heal_fx(f), f"sprites/fx/heal_{f}.png")
+    save(ring_fx((236, 200, 120), 3), "sprites/fx/ring_shield.png", 4)
+    save(ring_fx((130, 238, 214)), "sprites/fx/ring_wave.png", 4)
+    save(rows_to_img(CHEST), "sprites/deco/chest_0.png")
+    save(rows_to_img(CHEST_OPEN), "sprites/deco/chest_1.png")
     for name, rows in ITEMS.items():
         save(rows_to_img(rows), f"sprites/items/{name}.png")
     save(rows_to_img(DAMBANA), "sprites/deco/dambana.png")
@@ -2281,6 +2609,7 @@ def main():
     save(select_bg(), "screens/select_bg.png", SCREEN_SCALE)
     save(defeat_bg(), "screens/gameover_bg.png", SCREEN_SCALE)
     save(dawn_bg(), "screens/victory_bg.png", SCREEN_SCALE)
+    save(loading_bg(), "screens/loading_bg.png", SCREEN_SCALE)
     save(text_img("MAHARLIKA", 4, (255, 232, 130), (210, 110, 40), depth=3), "screens/logo.png", 4)
     save(baybayin_img("ᜋᜑᜇ᜔ᜎᜒᜃ", 12, (240, 210, 130)), "screens/logo_baybayin.png", 4)
     save(text_img("NILAMON", 3, (255, 130, 110), (150, 24, 34)), "screens/gameover_text.png", 4)
@@ -2292,6 +2621,8 @@ def main():
     save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["T"], "long", ("flower", "beads")), "portraits/mayumi.png")
     save(portrait(PAL["F"], PAL["f"], (58, 48, 50), PAL["w"], "bun", ("tapis", "wrinkles", "streak", "earrings")), "portraits/amihan.png")
     save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["H"], "long", ("mask", "beads")), "portraits/haliya.png")
+    save(portrait((176, 112, 72), (134, 80, 52), PAL["D"], PAL["D"], "short", ("tangkulo", "redtrim")), "portraits/banog.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["B"], "short", ("kumbong", "pearls")), "portraits/dalisay.png")
     save(bakunawa_portrait(), "portraits/bakunawa.png")
     for name, fn in (("01_mactan", story_mactan), ("02_maharlika", story_maharlika), ("03_legend", story_legend),
                      ("04_haliya", story_haliya), ("05_eclipse", story_eclipse), ("06_call", story_call),
@@ -2303,6 +2634,9 @@ def main():
     for i in range(1, 5):
         for v, sfx in enumerate("ab"):
             plan.append((f"pulo{i}_{sfx}", "combat", f"pulo{i}", 200 + i * 10 + v))
+    for i, theme in enumerate(("sulu", "ifugao")):
+        for v, sfx in enumerate("ab"):
+            plan.append((f"{theme}_{sfx}", "combat", theme, 400 + i * 10 + v))
     plan.append(("shore", "shore", "shore", 300))
     for name, kind, theme, seed in plan:
         g = make_island(seed, kind)
@@ -2313,23 +2647,24 @@ def main():
 
     icon = app_icon()
     up(icon, 32).save(os.path.join(ASSETS, "icon.png"))
-    fg = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
-    fg.alpha_composite(hero_frame("kidlat", 0), (8, 8))
-    up(fg, 32).save(os.path.join(ASSETS, "android-icon-foreground.png"))
-    bgi = Image.new("RGBA", (32, 32), (30, 16, 34, 255))
-    stars(bgi, 10, 7, 32)
-    ImageDraw.Draw(bgi).ellipse([22, 3, 28, 9], fill=(214, 120, 96))
-    up(bgi, 32).save(os.path.join(ASSETS, "android-icon-background.png"))
-    mono = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
-    kp = hero_frame("kidlat", 0).load()
-    for y in range(16):
-        for x in range(16):
-            if kp[x, y][3]:
+    # adaptive icon: the art sits in the middle two-thirds, the launcher's safe zone
+    art = app_icon_art()
+    fg = Image.new("RGBA", (48, 48), (0, 0, 0, 0))
+    fg.alpha_composite(art, (8, 8))
+    up(fg, 21).save(os.path.join(ASSETS, "android-icon-foreground.png"))
+    bgi = Image.new("RGBA", (48, 48), (24, 14, 34, 255))
+    stars(bgi, 16, 7, 48)
+    up(bgi, 21).save(os.path.join(ASSETS, "android-icon-background.png"))
+    mono = Image.new("RGBA", (48, 48), (0, 0, 0, 0))
+    ap = art.load()
+    for y in range(32):
+        for x in range(32):
+            if ap[x, y][3]:
                 mono.putpixel((x + 8, y + 8), (255, 255, 255, 255))
-    up(mono, 32).save(os.path.join(ASSETS, "android-icon-monochrome.png"))
+    up(mono, 21).save(os.path.join(ASSETS, "android-icon-monochrome.png"))
     up(icon, 8).save(os.path.join(ASSETS, "favicon.png"))
     splash = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-    splash.alpha_composite(up(hero_frame("kidlat", 0), 2), (16, 12))
+    splash.alpha_composite(up(art, 2), (0, 0))
     up(splash, 16).save(os.path.join(ASSETS, "splash-icon.png"))
 
     contact_sheet()

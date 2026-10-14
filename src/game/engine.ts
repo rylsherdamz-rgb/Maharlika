@@ -9,10 +9,13 @@ import {
   HeroDef,
   HeroId,
   LIGHT_MAX,
+  LOOT_WEAPONS,
+  WEAPON_LV_BONUS,
+  WEAPON_LV_MAX,
   WeaponId,
   WEAPONS,
 } from './data';
-import { bossDialogue, DialogueLine, HALIYA_LINES, PORT, SHORE, STAGES } from './story';
+import { bossDialogue, DialogueLine, HALIYA_LINES, PORT, ROUTE_SLOTS, SHORE, STAGES } from './story';
 
 export const TILE = roomData.tile;
 export const ROOM_W = roomData.width * TILE;
@@ -40,6 +43,8 @@ export interface Mods {
 export interface Hero {
   def: HeroDef;
   weapon: WeaponId;
+  weaponLv: number; // whetstones applied (0..WEAPON_LV_MAX)
+  shield: number; // >0 while Banog's kalasag is raised
   x: number;
   y: number;
   hp: number;
@@ -99,10 +104,11 @@ export interface Bullet {
   pierce: boolean;
   poison?: number;
   homing?: boolean;
+  explode?: number;
   hit?: Set<number>;
 }
 
-export type PickupKind = 'coin' | 'energy_orb' | 'potion_health';
+export type PickupKind = 'coin' | 'energy_orb' | 'potion_health' | 'whetstone' | 'weapon';
 
 export interface Pickup {
   id: number;
@@ -110,19 +116,33 @@ export interface Pickup {
   x: number;
   y: number;
   t: number;
+  weapon?: WeaponId;
+  /** false for a weapon the hero just put down, until they step away from it */
+  armed?: boolean;
+}
+
+/** A kaban: a chest that appears once an island is safe. */
+export interface Chest {
+  x: number;
+  y: number;
+  open: boolean;
 }
 
 /** Short-lived sprite effects: footstep dust and impact sparks. */
+export type FxKind = 'dust' | 'hit' | 'boom' | 'poof' | 'sparkle' | 'heal' | 'wave';
 export interface Fx {
   id: number;
-  kind: 'dust' | 'hit';
+  kind: FxKind;
   x: number;
   y: number;
   t: number; // seconds since it appeared
+  size?: number; // final size for rings and blasts
 }
 /** Seconds a dodge roll lasts. */
 export const DODGE_TIME = 0.2;
-export const FX_LIFE = { dust: 0.36, hit: 0.18 };
+export const FX_LIFE: Record<FxKind, number> = { dust: 0.36, hit: 0.18, boom: 0.4, poof: 0.36, sparkle: 0.5, heal: 0.6, wave: 0.45 };
+/** Animation frames in each effect's sprite strip (rings scale instead). */
+export const FX_FRAMES: Record<FxKind, number> = { dust: 3, hit: 2, boom: 3, poof: 3, sparkle: 2, heal: 2, wave: 1 };
 
 export interface FloatText {
   id: number;
@@ -148,6 +168,7 @@ export interface Game {
   pickups: Pickup[];
   texts: FloatText[];
   fx: Fx[];
+  chest: Chest | null;
   shrine: { x: number; y: number; used: boolean } | null;
   choice: BoonId[] | null;
   boons: BoonId[];
@@ -173,21 +194,32 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const dist = (ax: number, ay: number, bx: number, by: number) => Math.hypot(ax - bx, ay - by);
 const pick = <T>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
+/** The island theme of the current room, e.g. 'pulo2' or 'sulu'. */
+function stageInfo(g: Game) {
+  return STAGES[g.room.replace(/_[ab]$/, '')];
+}
+
 export function stageLabel(g: Game) {
   if (g.room === 'port') return 'TONDO';
   if (g.room === 'shore') return 'ALBAY';
-  return STAGES[g.stage - 1].title;
+  return stageInfo(g).title;
 }
 
 export function newGame(heroId: HeroId, weapon?: WeaponId): Game {
   const def = HEROES.find((h) => h.id === heroId)!;
+  // each leg of the voyage picks one of its islands, then one of that island's two maps
   const route: RoomName[] = ['port'];
-  for (let i = 1; i <= STAGES.length; i++) route.push(pick([`pulo${i}_a`, `pulo${i}_b`]) as RoomName);
+  for (const slot of ROUTE_SLOTS) {
+    const theme = pick(slot);
+    route.push(`${theme}_${pick(['a', 'b'])}` as RoomName);
+  }
   route.push('shore');
   const g: Game = {
     hero: {
       def,
       weapon: weapon && def.weapons.includes(weapon) ? weapon : def.weapons[0],
+      weaponLv: 0,
+      shield: 0,
       x: ENTRY.x,
       y: ENTRY.y,
       hp: def.hp,
@@ -219,6 +251,7 @@ export function newGame(heroId: HeroId, weapon?: WeaponId): Game {
     pickups: [],
     texts: [],
     fx: [],
+    chest: null,
     shrine: null,
     choice: null,
     boons: [],
@@ -252,16 +285,18 @@ function enterRoom(g: Game, stage: number) {
   g.bullets = [];
   g.pickups = [];
   g.fx = [];
+  g.chest = null;
   g.shrine = null;
   g.boat = null;
   g.npc = null;
   h.x = ENTRY.x;
   h.y = ENTRY.y;
-  h.spin = h.swing = h.dash = h.atkAnim = 0;
+  h.spin = h.swing = h.dash = h.atkAnim = h.shield = 0;
   g.wave = 0;
   if (h.mods.harvest && stage > 0) {
     h.hp = Math.min(h.maxHp, h.hp + 1);
     addText(g, h.x, h.y - 12, '+1 LAKAPATI', '#62b24a');
+    addFx(g, 'heal', h.x, h.y - 4);
   }
   if (g.room === 'port') {
     g.waves = 0;
@@ -276,7 +311,7 @@ function enterRoom(g: Game, stage: number) {
     g.wave = 1;
   } else {
     g.waves = 2;
-    const info = STAGES[stage - 1];
+    const info = stageInfo(g);
     g.banner = { text: info.title, baybayin: info.baybayin, sub: info.line, t: 3.2 };
     spawnWave(g);
   }
@@ -362,7 +397,7 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
 
 function spawnWave(g: Game) {
   g.wave++;
-  const pool = STAGES[Math.min(g.stage, STAGES.length) - 1].pool;
+  const pool = stageInfo(g).pool;
   const n = 3 + g.stage + (g.wave - 1);
   for (let i = 0; i < n; i++) {
     const p = randomFloor(g, 90);
@@ -374,15 +409,31 @@ function addText(g: Game, x: number, y: number, text: string, color: string) {
   g.texts.push({ id: g.nextId++, x, y, text, color, t: 0.8 });
 }
 
-function addFx(g: Game, kind: Fx['kind'], x: number, y: number) {
-  g.fx.push({ id: g.nextId++, kind, x, y, t: 0 });
+function addFx(g: Game, kind: FxKind, x: number, y: number, size?: number) {
+  g.fx.push({ id: g.nextId++, kind, x, y, t: 0, size });
 }
 
-function dropPickup(g: Game, kind: PickupKind, x: number, y: number) {
-  g.pickups.push({ id: g.nextId++, kind, x: x + rand(-4, 4), y: y + rand(-4, 4), t: 0 });
+function dropPickup(g: Game, kind: PickupKind, x: number, y: number, weapon?: WeaponId, armed = true) {
+  g.pickups.push({ id: g.nextId++, kind, x: x + rand(-4, 4), y: y + rand(-4, 4), t: 0, weapon, armed });
 }
 
-function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg: number, fromHero: boolean, sprite: BulletSprite, r = 2.5, pierce = false, poison?: number, homing = false) {
+/** Open a kaban: gold, fireflies, maybe herbs, and either a weapon or a whetstone. */
+function openChest(g: Game, c: Chest) {
+  c.open = true;
+  addFx(g, 'sparkle', c.x, c.y - 6);
+  addText(g, c.x, c.y - 14, 'KABAN!', '#ffe882');
+  for (let i = 0; i < 4 + Math.floor(Math.random() * 4); i++) dropPickup(g, 'coin', c.x, c.y + 8);
+  for (let i = 0; i < 2; i++) dropPickup(g, 'energy_orb', c.x, c.y + 8);
+  if (Math.random() < 0.4) dropPickup(g, 'potion_health', c.x, c.y + 8);
+  if (Math.random() < 0.55) {
+    const options = LOOT_WEAPONS.filter((w) => w !== g.hero.weapon);
+    dropPickup(g, 'weapon', c.x, c.y + 12, pick(options));
+  } else {
+    dropPickup(g, 'whetstone', c.x, c.y + 12);
+  }
+}
+
+function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg: number, fromHero: boolean, sprite: BulletSprite, r = 2.5, pierce = false, poison?: number, homing = false, explode?: number) {
   g.bullets.push({
     id: g.nextId++,
     x,
@@ -397,6 +448,7 @@ function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg:
     pierce,
     poison,
     homing,
+    explode,
     hit: pierce ? new Set() : undefined,
   });
 }
@@ -421,7 +473,7 @@ function hurtHero(g: Game, dmg: number) {
 
 function damageEnemy(g: Game, e: Enemy, dmg: number) {
   if (e.hp <= 0) return;
-  const d = Math.round(dmg * g.hero.mods.dmg * 10) / 10;
+  const d = Math.round(dmg * g.hero.mods.dmg * (1 + g.hero.weaponLv * WEAPON_LV_BONUS) * 10) / 10;
   e.hp -= d;
   e.flash = 0.1;
   if (e.type === 'tiyanak' && e.state === 0) revealTiyanak(g, e);
@@ -444,6 +496,7 @@ export function sigbinVisible(g: Game, e: Enemy) {
 
 function killEnemy(g: Game, e: Enemy) {
   g.kills++;
+  addFx(g, 'poof', e.x, e.y);
   const def = ENEMIES[e.type];
   for (let i = 0; i < def.coins; i++) dropPickup(g, 'coin', e.x, e.y);
   const orbs = e.type === 'bakunawa' ? 10 : 1 + Math.floor(Math.random() * 2);
@@ -544,9 +597,12 @@ export function update(g: Game, input: Input, dt: number) {
     } else {
       g.boat = { ...DOCK };
       g.shrine = { x: CENTER.x, y: CENTER.y - TILE, used: false };
-      g.banner = { text: 'THE ISLAND IS SAFE', sub: 'Visit the dambana, then sail on.', t: 2 };
+      const spot = randomFloor(g, 40);
+      g.chest = { x: spot.x, y: spot.y, open: false };
+      g.banner = { text: 'THE ISLAND IS SAFE', sub: 'Open the kaban, visit the dambana, then sail on.', t: 2.4 };
     }
   }
+  if (g.chest && !g.chest.open && dist(g.hero.x, g.hero.y, g.chest.x, g.chest.y) < 14) openChest(g, g.chest);
   if (g.shrine && !g.shrine.used && dist(g.hero.x, g.hero.y, g.shrine.x, g.shrine.y) < 20) {
     g.shrine.used = true;
     const opts = boonOptions(g);
@@ -580,17 +636,41 @@ function angleDiff(a: number, b: number) {
 }
 
 /** Melee strike: hits creatures in an arc and cuts enemy shots out of the air. */
-function slash(g: Game, aim: number, reach: number, arc: number, dmg: number) {
+function slash(g: Game, aim: number, reach: number, arc: number, dmg: number, poison?: number, knock?: number) {
   const h = g.hero;
   const cy = h.y + 3;
   for (const e of g.enemies) {
     if (e.spawn > 0 || e.hp <= 0) continue;
     const d = dist(h.x, cy, e.x, e.y);
-    if (d < reach + ENEMIES[e.type].radius && angleDiff(Math.atan2(e.y - cy, e.x - h.x), aim) < arc) damageEnemy(g, e, dmg);
+    if (d < reach + ENEMIES[e.type].radius && angleDiff(Math.atan2(e.y - cy, e.x - h.x), aim) < arc) {
+      damageEnemy(g, e, dmg);
+      if (poison) {
+        e.poison = poison;
+        if (e.poisonTick <= 0) e.poisonTick = 0.5;
+      }
+      if (knock && e.type !== 'bakunawa') push(g, e, h.x, cy, knock);
+    }
   }
   for (const b of g.bullets) {
     if (b.fromHero) continue;
     if (dist(h.x, cy, b.x, b.y) < reach + 6 && angleDiff(Math.atan2(b.y - cy, b.x - h.x), aim) < arc) b.life = 0;
+  }
+}
+
+/** Shove a creature directly away from a point, stopping at walls and water. */
+function push(g: Game, e: Enemy, fx: number, fy: number, amount: number) {
+  const d = dist(e.x, e.y, fx, fy) || 1;
+  const steps = 4;
+  for (let i = 0; i < steps; i++) moveBody(g, e, ((e.x - fx) / d) * (amount / steps), ((e.y - fy) / d) * (amount / steps), ENEMIES[e.type].radius - 1);
+}
+
+/** A lantaka ball bursting: hurts everything in the blast. */
+function blast(g: Game, x: number, y: number, radius: number, dmg: number) {
+  addFx(g, 'boom', x, y, radius * 1.4);
+  g.shake = Math.max(g.shake, 0.12);
+  for (const e of g.enemies) {
+    if (e.spawn > 0 || e.hp <= 0) continue;
+    if (dist(x, y, e.x, e.y) < radius + ENEMIES[e.type].radius) damageEnemy(g, e, dmg);
   }
 }
 
@@ -602,6 +682,19 @@ function updateHero(g: Game, input: Input, dt: number) {
   h.dodgeCd = Math.max(0, h.dodgeCd - dt);
   h.swing = Math.max(0, h.swing - dt);
   h.atkAnim = Math.max(0, h.atkAnim - dt);
+  h.shield = Math.max(0, h.shield - dt);
+  if (h.shield > 0) {
+    // the raised kalasag turns enemy shots back on the creatures that threw them
+    for (const b of g.bullets) {
+      if (b.fromHero || dist(b.x, b.y, h.x, h.y + 2) > 22) continue;
+      b.fromHero = true;
+      b.vx *= -1.4;
+      b.vy *= -1.4;
+      b.dmg = 3;
+      b.pierce = false;
+      b.life = 1.5;
+    }
+  }
   h.spin = Math.max(0, h.spin - dt);
   h.sinceHit += dt;
 
@@ -663,7 +756,7 @@ function updateHero(g: Game, input: Input, dt: number) {
   const w = WEAPONS[h.weapon];
   if (input.attack && h.atkCd <= 0) {
     if (w.melee) {
-      slash(g, h.aim, w.radius * m.reach, ((w.arc ?? 75) * Math.PI) / 180, w.damage);
+      slash(g, h.aim, w.radius * m.reach, ((w.arc ?? 75) * Math.PI) / 180, w.damage, w.poison, w.knock);
       h.swing = 0.14;
       h.swingAim = h.aim;
     } else {
@@ -675,7 +768,7 @@ function updateHero(g: Game, input: Input, dt: number) {
       for (let i = 0; i < n; i++) {
         // a fan spreads evenly across the arc; a single shot wobbles inside it
         const a = n > 1 ? h.aim + w.spread * ((i / (n - 1)) * 2 - 1) : h.aim + rand(-w.spread, w.spread);
-        shoot(g, gx, gy, a, w.speed, w.damage, true, w.sprite!, w.radius, w.pierce || m.pierce, w.poison, w.homing);
+        shoot(g, gx, gy, a, w.speed, w.damage, true, w.sprite!, w.radius, w.pierce || m.pierce, w.poison, w.homing, w.explode);
       }
     }
     h.atkCd = w.rate * m.rate;
@@ -709,6 +802,23 @@ function useSkill(g: Game, mx: number, my: number) {
       h.hp = Math.min(h.maxHp, h.hp + 2);
       h.armor = h.maxArmor;
       addText(g, h.x, h.y - 14, '+2 TAMBAL', '#62b24a');
+      addFx(g, 'heal', h.x, h.y - 4);
+      break;
+    case 'banog':
+      h.shield = 2.5;
+      h.invuln = Math.max(h.invuln, 2.5);
+      addText(g, h.x, h.y - 14, 'KALASAG!', '#ecc878');
+      break;
+    case 'dalisay':
+      addFx(g, 'wave', h.x, h.y + 2, 150);
+      g.shake = 0.2;
+      for (const e of g.enemies) {
+        if (e.spawn > 0 || e.hp <= 0 || dist(h.x, h.y, e.x, e.y) > 75) continue;
+        damageEnemy(g, e, 8);
+        if (e.type !== 'bakunawa') push(g, e, h.x, h.y, 34);
+      }
+      for (const b of g.bullets) if (!b.fromHero && dist(h.x, h.y, b.x, b.y) < 75) b.life = 0;
+      addText(g, h.x, h.y - 14, 'DALUYONG!', '#82eed6');
       break;
   }
 }
@@ -960,6 +1070,7 @@ function updateBullets(g: Game, dt: number) {
     b.life -= dt;
     if (shotBlocked(g, b.x, b.y)) {
       b.life = 0;
+      if (b.explode) blast(g, b.x, b.y, b.explode, b.dmg * 0.7);
       continue;
     }
     if (b.fromHero) {
@@ -974,6 +1085,7 @@ function updateBullets(g: Game, dt: number) {
           if (b.pierce) b.hit!.add(e.id);
           else {
             b.life = 0;
+            if (b.explode) blast(g, b.x, b.y, b.explode, b.dmg * 0.7);
             break;
           }
         }
@@ -997,12 +1109,36 @@ function updatePickups(g: Game, dt: number) {
       p.x += ((h.x - p.x) / d) * 120 * dt;
       p.y += ((h.y - p.y) / d) * 120 * dt;
     }
+    if (p.kind === 'weapon' && !p.armed && d > 14) p.armed = true;
+    if (d < 8 && p.kind === 'weapon') {
+      if (!p.armed) {
+        keep.push(p);
+        continue;
+      }
+      // swap: the old weapon is left on the ground so the player can change their mind
+      const old = h.weapon;
+      h.weapon = p.weapon!;
+      g.pickups.push({ id: g.nextId++, kind: 'weapon', x: p.x, y: p.y, t: 0, weapon: old, armed: false });
+      addText(g, h.x, h.y - 14, WEAPONS[h.weapon].name.toUpperCase(), '#ffba48');
+      addFx(g, 'sparkle', h.x, h.y - 6);
+      continue;
+    }
     if (d < 8) {
       if (p.kind === 'coin') g.coins++;
       else if (p.kind === 'energy_orb') h.light = Math.min(LIGHT_MAX, h.light + 6);
-      else {
+      else if (p.kind === 'whetstone') {
+        if (h.weaponLv < WEAPON_LV_MAX) {
+          h.weaponLv++;
+          addText(g, h.x, h.y - 14, `HASA +${h.weaponLv}`, '#ffe882');
+        } else {
+          g.coins += 10;
+          addText(g, h.x, h.y - 14, '+10 BARYA', '#ffe882');
+        }
+        addFx(g, 'sparkle', h.x, h.y - 6);
+      } else {
         h.hp = Math.min(h.maxHp, h.hp + 2);
         addText(g, h.x, h.y - 12, '+2', '#62b24a');
+        addFx(g, 'heal', h.x, h.y - 4);
       }
       continue;
     }

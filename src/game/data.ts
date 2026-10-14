@@ -1,7 +1,20 @@
-export type HeroId = 'kidlat' | 'liksi' | 'mayumi' | 'amihan';
-export type WeaponId = 'kampilan' | 'pana' | 'agimat' | 'sumpit' | 'kris' | 'bangkaw' | 'lingganay' | 'barang';
+export type HeroId = 'kidlat' | 'liksi' | 'mayumi' | 'amihan' | 'banog' | 'dalisay';
+export type WeaponId =
+  | 'kampilan'
+  | 'pana'
+  | 'agimat'
+  | 'sumpit'
+  | 'kris'
+  | 'bangkaw'
+  | 'lingganay'
+  | 'barang'
+  | 'panabas'
+  | 'balaraw'
+  | 'baston'
+  | 'buntot_pagi'
+  | 'lantaka';
 export type EnemyType = 'duwende' | 'manananggal' | 'tikbalang' | 'kapre' | 'tiyanak' | 'sigbin' | 'santelmo' | 'bungisngis' | 'bakunawa';
-export type BulletSprite = 'shot_arrow' | 'shot_spirit' | 'shot_dart' | 'shot_spear' | 'shot_chime' | 'shot_beetle' | 'shot_enemy';
+export type BulletSprite = 'shot_arrow' | 'shot_spirit' | 'shot_dart' | 'shot_spear' | 'shot_chime' | 'shot_beetle' | 'shot_cannon' | 'shot_enemy';
 export type BoonId =
   | 'apolaki'
   | 'mayari'
@@ -83,6 +96,32 @@ export const HEROES: HeroDef[] = [
     skill: { name: 'Tambal', desc: 'Heal 2 and restore every amulet' },
     color: '#f08428',
   },
+  {
+    id: 'banog',
+    name: 'Banog',
+    title: 'Bagani of Bukidnon',
+    home: 'Bukidnon, Mindanao',
+    lore: 'Earned the red tangkulo of a bagani defending the highland villages.',
+    hp: 7,
+    armor: 6,
+    speed: 68,
+    weapons: ['panabas', 'baston'],
+    skill: { name: 'Kalasag', desc: 'Raise the shield: untouchable, and shots bounce back' },
+    color: '#c0382c',
+  },
+  {
+    id: 'dalisay',
+    name: 'Dalisay',
+    title: 'Pearl Diver of Sulu',
+    home: 'Jolo, Sulu',
+    lore: 'Dives the reefs on one breath and sails with the lantaka crews.',
+    hp: 5,
+    armor: 3,
+    speed: 86,
+    weapons: ['buntot_pagi', 'lantaka'],
+    skill: { name: 'Daluyong', desc: 'A tidal surge: hurls foes back and washes away shots' },
+    color: '#4270c4',
+  },
 ];
 
 export interface WeaponDef {
@@ -101,7 +140,13 @@ export interface WeaponDef {
   count?: number; // shots per attack, fanned across `spread`
   homing?: boolean; // shots turn toward the nearest creature
   arc?: number; // melee swing arc in degrees (each side of the aim)
+  explode?: number; // blast radius when the shot lands
+  knock?: number; // melee knockback distance
 }
+
+/** Each whetstone (hasaan) adds a level; every level adds this much damage. */
+export const WEAPON_LV_MAX = 5;
+export const WEAPON_LV_BONUS = 0.2;
 
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
   kampilan: { id: 'kampilan', name: 'Kampilan', desc: 'Long blade. Cuts through enemy shots.', melee: true, damage: 7, rate: 0.38, speed: 0, spread: 0, radius: 26, pierce: true },
@@ -111,8 +156,16 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
   kris: { id: 'kris', name: 'Kris', desc: 'Wavy blade. Quick, close cuts; also parries shots.', melee: true, damage: 4, rate: 0.22, speed: 0, spread: 0, radius: 20, pierce: true, arc: 60 },
   bangkaw: { id: 'bangkaw', name: 'Bangkaw', desc: 'Throwing spear. Slow, heavy, runs through foes.', melee: false, damage: 7, rate: 0.55, speed: 230, spread: 0.02, sprite: 'shot_spear', radius: 3, pierce: true },
   lingganay: { id: 'lingganay', name: 'Lingganay', desc: 'Bronze bell. Rings out three chimes in a fan.', melee: false, damage: 3, rate: 0.5, speed: 170, spread: 0.32, sprite: 'shot_chime', radius: 3.5, pierce: false, count: 3 },
+  panabas: { id: 'panabas', name: 'Panabas', desc: 'Heavy chopping blade. Slow, huge sweeping cuts.', melee: true, damage: 11, rate: 0.6, speed: 0, spread: 0, radius: 30, pierce: true, arc: 100 },
+  balaraw: { id: 'balaraw', name: 'Balaraw', desc: 'Dagger. Very fast stabs at close range.', melee: true, damage: 3, rate: 0.13, speed: 0, spread: 0, radius: 16, pierce: true, arc: 50 },
+  baston: { id: 'baston', name: 'Baston', desc: 'Arnis sticks. Quick strikes that knock foes back.', melee: true, damage: 4, rate: 0.2, speed: 0, spread: 0, radius: 22, pierce: true, arc: 80, knock: 12 },
+  buntot_pagi: { id: 'buntot_pagi', name: 'Buntot Pagi', desc: 'Stingray-tail whip. Long, narrow lash; the barbs poison.', melee: true, damage: 3, rate: 0.32, speed: 0, spread: 0, radius: 40, pierce: true, arc: 22, poison: 2 },
+  lantaka: { id: 'lantaka', name: 'Lantaka', desc: 'Bronze swivel cannon. Slow shots that explode.', melee: false, damage: 6, rate: 0.85, speed: 150, spread: 0.03, sprite: 'shot_cannon', radius: 3.5, pierce: false, explode: 24 },
   barang: { id: 'barang', name: 'Barang', desc: 'Spirit beetles that seek foes and poison them.', melee: false, damage: 2, rate: 0.42, speed: 120, spread: 0.3, sprite: 'shot_beetle', radius: 3, pierce: false, poison: 1.6, homing: true },
 };
+
+/** Everything a kaban (chest) can hold besides gold and herbs. */
+export const LOOT_WEAPONS = Object.keys(WEAPONS) as WeaponId[];
 
 export interface EnemyDef {
   name: string;
