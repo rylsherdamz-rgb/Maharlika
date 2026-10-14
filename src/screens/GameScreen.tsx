@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { GestureResponderEvent, Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
-import { BOONS, BOSS_NAME, ENEMIES, HeroId, LIGHT_MAX, WeaponId, WEAPONS } from '../game/data';
-import { advanceDialog, chooseBoon, DODGE_TIME, FX_FRAMES, FX_LIFE, Game, Hero, Input, newGame, ROOM_H, ROOM_W, sigbinVisible, stageLabel, update } from '../game/engine';
+import { BOONS, BOSS_NAME, ENEMIES, LIGHT_MAX, WEAPONS, xpToNext } from '../game/data';
+import { advanceDialog, alive, chooseBoon, DODGE_TIME, FX_FRAMES, FX_LIFE, Game, Hero, Input, newGame, REVIVE_TIME, ROOM_H, ROOM_W, Setup, sigbinVisible, stageLabel, update } from '../game/engine';
+import { CAVE_BOSS } from '../game/story';
 import { BaybayinText, COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
 import { RunStats } from './ResultScreen';
 
 type Control = 'stick' | 'attack' | 'skill' | 'dodge' | 'pause';
+type Btn = { x: number; y: number; r: number };
+type Stick = { ox: number; oy: number; kx: number; ky: number };
 const STICK_R = 44;
 const SEA = '#0c2c3e';
+/** Player colors for co-op markers, HUDs and controls. */
+const P_COLORS = ['#ffba48', '#82eed6'];
+const newInput = (): Input => ({ mx: 0, my: 0, attack: false, skill: false, dodge: false });
 
 /** A row of diamond beads: filled up to `value`, empty up to `max`. */
 function Pips({ value, max, full, empty }: { value: number; max: number; full: ImgKey; empty: ImgKey }) {
@@ -21,8 +27,53 @@ function Pips({ value, max, full, empty }: { value: number; max: number; full: I
   );
 }
 
+/** One player's HUD: medallion, health and amulet beads, light, weapon and level. */
+function HeroHud({ h, right, label }: { h: Hero; right?: boolean; label?: string }) {
+  const lightFrac = h.light / LIGHT_MAX;
+  const ready = h.light >= LIGHT_MAX;
+  const weapon = WEAPONS[h.weapon];
+  return (
+    <View pointerEvents="none" style={[styles.hud, right ? { right: 8, flexDirection: 'row-reverse' } : { left: 8 }, h.down && { opacity: 0.5 }]}>
+      <View style={styles.medal}>
+        <Image source={IMG.ui_medallion} fadeDuration={0} style={styles.medalFrame} />
+        <Image source={IMG[`portraits_${h.def.id}` as ImgKey]} fadeDuration={0} style={styles.medalPortrait} />
+        {label && (
+          <PixelText size={7} color={P_COLORS[h.idx]} style={styles.medalLabel}>
+            {label}
+          </PixelText>
+        )}
+      </View>
+      <View style={{ marginHorizontal: 6, gap: 3, alignItems: right ? 'flex-end' : 'flex-start' }}>
+        <Pips value={h.hp} max={h.maxHp} full="ui_pip_hp" empty="ui_pip_hp_empty" />
+        <Pips value={h.armor} max={h.maxArmor} full="ui_pip_armor" empty="ui_pip_armor_empty" />
+        <View style={[styles.lamp, right && { flexDirection: 'row-reverse' }]}>
+          <Sprite name="ui_energy" size={12} />
+          <View style={styles.lampTrack}>
+            <View style={[styles.lampFill, { width: `${lightFrac * 100}%`, backgroundColor: ready ? COLORS.gold : COLORS.light }]} />
+          </View>
+        </View>
+        <View style={[styles.lamp, right && { flexDirection: 'row-reverse' }]}>
+          <PixelText size={7} color={COLORS.gold}>
+            {`ANTAS ${h.lv}`}
+          </PixelText>
+          <View style={[styles.lampTrack, { width: 52, height: 5 }]}>
+            <View style={[styles.lampFill, { width: `${Math.min(1, h.xp / xpToNext(h.lv)) * 100}%`, backgroundColor: COLORS.armor }]} />
+          </View>
+        </View>
+        <View style={[styles.lamp, right && { flexDirection: 'row-reverse' }]}>
+          <Sprite name={`weapons_${h.weapon}` as ImgKey} size={18} />
+          <PixelText size={7} color={COLORS.light}>
+            {`${weapon.name.toUpperCase()}${h.weaponLv ? ` +${h.weaponLv}` : ''}`}
+          </PixelText>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 /** Which pose the hero is in this frame: roll, hurt, attack, walk or idle. */
 function heroFrame(h: Hero, time: number) {
+  if (h.down) return 'hurt_0';
   if (h.dash > 0) return `roll_${Math.min(3, Math.floor(((DODGE_TIME - h.dash) / DODGE_TIME) * 4))}`;
   if (h.sinceHit < 0.25) return 'hurt_0';
   if (h.atkAnim > 0) return h.atkAnim > 0.08 ? 'attack_1' : 'attack_0';
@@ -30,44 +81,41 @@ function heroFrame(h: Hero, time: number) {
   return `idle_${Math.floor(time * 2) % 2}`;
 }
 
-export default function GameScreen({
-  heroId,
-  weaponId,
-  onEnd,
-  onQuit,
-}: {
-  heroId: HeroId;
-  weaponId?: WeaponId;
-  onEnd: (s: RunStats) => void;
-  onQuit: () => void;
-}) {
+export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onEnd: (s: RunStats) => void; onQuit: () => void }) {
   const { width: W, height: H } = useWindowDimensions();
   const gameRef = useRef<Game>(null as unknown as Game);
-  if (!gameRef.current) gameRef.current = newGame(heroId, weaponId);
-  const input = useRef<Input>({ mx: 0, my: 0, attack: false, skill: false, dodge: false }).current;
-  const keys = useRef({ mx: 0, my: 0, attack: false }).current;
-  const touches = useRef(new Map<number, Control>()).current;
-  const [stick, setStick] = useState<{ ox: number; oy: number; kx: number; ky: number } | null>(null);
+  if (!gameRef.current) gameRef.current = newGame(setup);
+  const coop = gameRef.current.heroes.length > 1;
+  const inputs = useRef<Input[]>(gameRef.current.heroes.map(newInput)).current;
+  const keys = useRef(gameRef.current.heroes.map(() => ({ mx: 0, my: 0, attack: false }))).current;
+  const touches = useRef(new Map<number, { c: Control; p: number }>()).current;
+  const [sticks, setSticks] = useState<(Stick | null)[]>(() => inputs.map(() => null));
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [, setFrame] = useState(0);
   const endRef = useRef({ onEnd, done: false });
   endRef.current.onEnd = onEnd;
 
-  // controls layout (screen space)
-  const attackBtn = { x: W - 80, y: H - 80, r: 48 };
-  const dodgeBtn = { x: W - 178, y: H - 50, r: 30 };
-  const skillBtn = { x: W - 66, y: H - 182, r: 34 };
-  const pauseBtn = { x: W - 28, y: 26, r: 22 };
+  // controls layout (screen space). Solo: stick on the left, buttons on the right.
+  // Co-op: each player owns half the screen, attacks on their own, and has dodge and skill in their corner.
+  const pauseBtn: Btn = coop ? { x: W / 2, y: 24, r: 20 } : { x: W - 28, y: 26, r: 22 };
+  const attackBtn: Btn = { x: W - 80, y: H - 80, r: 48 };
+  const dodgeBtns: Btn[] = coop ? [{ x: 46, y: H - 50, r: 28 }, { x: W - 46, y: H - 50, r: 28 }] : [{ x: W - 178, y: H - 50, r: 30 }];
+  const skillBtns: Btn[] = coop ? [{ x: 46, y: H - 124, r: 28 }, { x: W - 46, y: H - 124, r: 28 }] : [{ x: W - 66, y: H - 182, r: 34 }];
+
+  const setStick = (p: number, v: Stick | null | ((s: Stick | null) => Stick | null)) =>
+    setSticks((all) => all.map((s, i) => (i === p ? (typeof v === 'function' ? v(s) : v) : s)));
 
   const setPause = (p: boolean) => {
     pausedRef.current = p;
     setPaused(p);
     if (p) {
       touches.clear();
-      input.attack = false;
-      input.mx = input.my = 0;
-      setStick(null);
+      for (const i of inputs) {
+        i.attack = false;
+        i.mx = i.my = 0;
+      }
+      setSticks(inputs.map(() => null));
     }
   };
 
@@ -81,18 +129,23 @@ export default function GameScreen({
       last = now;
       const g = gameRef.current;
       if (!pausedRef.current) {
-        const frameInput = { ...input, mx: input.mx + keys.mx, my: input.my + keys.my, attack: input.attack || keys.attack };
-        update(g, frameInput, dt);
-        input.skill = frameInput.skill;
-        input.dodge = frameInput.dodge;
+        const frame = inputs.map((inp, i) => ({ ...inp, mx: inp.mx + keys[i].mx, my: inp.my + keys[i].my, attack: inp.attack || keys[i].attack }));
+        update(g, frame, dt);
+        frame.forEach((f, i) => {
+          inputs[i].skill = f.skill;
+          inputs[i].dodge = f.dodge;
+        });
         if (g.result && !endRef.current.done) {
           endRef.current.done = true;
           setTimeout(
             () =>
               endRef.current.onEnd({
-                hero: heroId,
-                weapon: g.hero.weapon,
+                setup,
+                heroes: g.heroes.map((h) => h.def.id),
                 victory: g.result === 'victory',
+                island: g.stage,
+                level: Math.max(...g.heroes.map((h) => h.lv)),
+                caves: g.caves,
                 stage: stageLabel(g),
                 kills: g.kills,
                 coins: g.coins,
@@ -114,10 +167,18 @@ export default function GameScreen({
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const down = new Set<string>();
+    // solo: WASD or arrows. Co-op: P1 on WASD, P2 on the arrow keys.
+    const axis = (pos: string[], neg: string[]) => (pos.some((k) => down.has(k)) ? 1 : 0) - (neg.some((k) => down.has(k)) ? 1 : 0);
     const sync = () => {
-      keys.mx = (down.has('d') || down.has('arrowright') ? 1 : 0) - (down.has('a') || down.has('arrowleft') ? 1 : 0);
-      keys.my = (down.has('s') || down.has('arrowdown') ? 1 : 0) - (down.has('w') || down.has('arrowup') ? 1 : 0);
-      keys.attack = down.has('j') || down.has(' ');
+      const p1Arrows = coop ? [] : ['arrowright', 'arrowleft', 'arrowdown', 'arrowup'];
+      keys[0].mx = axis(['d', ...p1Arrows.slice(0, 1)], ['a', ...p1Arrows.slice(1, 2)]);
+      keys[0].my = axis(['s', ...p1Arrows.slice(2, 3)], ['w', ...p1Arrows.slice(3, 4)]);
+      keys[0].attack = down.has('j') || down.has(' ');
+      if (coop) {
+        keys[1].mx = axis(['arrowright'], ['arrowleft']);
+        keys[1].my = axis(['arrowdown'], ['arrowup']);
+        keys[1].attack = down.has('enter');
+      }
     };
     const kd = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
@@ -132,8 +193,10 @@ export default function GameScreen({
           const id = g.choice[Number(k) - 1];
           if (id) chooseBoon(g, id);
         }
-        if (k === 'k') input.skill = true;
-        if (k === 'shift' || k === 'l') input.dodge = true;
+        if (k === 'k') inputs[0].skill = true;
+        if (k === 'shift' || k === 'l') inputs[0].dodge = true;
+        if (coop && k === '.') inputs[1].skill = true;
+        if (coop && k === '/') inputs[1].dodge = true;
       }
       if (!down.has(k) && (k === 'escape' || k === 'p')) setPause(!pausedRef.current);
       down.add(k);
@@ -164,26 +227,30 @@ export default function GameScreen({
     for (const t of e.nativeEvent.changedTouches) {
       const { pageX: x, pageY: y } = t;
       const id = Number(t.identifier);
+      // which player this touch belongs to: in co-op, by screen half
+      const p = coop && x >= W / 2 ? 1 : 0;
+      const hasStick = [...touches.values()].some((v) => v.c === 'stick' && v.p === p);
       let c: Control | null = null;
       if (hit(pauseBtn, x, y)) c = 'pause';
-      else if (hit(attackBtn, x, y)) c = 'attack';
-      else if (hit(skillBtn, x, y)) c = 'skill';
-      else if (hit(dodgeBtn, x, y)) c = 'dodge';
-      else if (x < W * 0.5 && ![...touches.values()].includes('stick')) c = 'stick';
+      else if (!coop && hit(attackBtn, x, y)) c = 'attack';
+      else if (hit(skillBtns[p], x, y)) c = 'skill';
+      else if (hit(dodgeBtns[p], x, y)) c = 'dodge';
+      else if ((coop || x < W * 0.5) && !hasStick) c = 'stick';
       if (!c) continue;
-      touches.set(id, c);
-      if (c === 'attack') input.attack = true;
-      if (c === 'skill') input.skill = true;
-      if (c === 'dodge') input.dodge = true;
+      touches.set(id, { c, p });
+      if (c === 'attack') inputs[p].attack = true;
+      if (c === 'skill') inputs[p].skill = true;
+      if (c === 'dodge') inputs[p].dodge = true;
       if (c === 'pause') setPause(true);
-      if (c === 'stick') setStick({ ox: x, oy: y, kx: x, ky: y });
+      if (c === 'stick') setStick(p, { ox: x, oy: y, kx: x, ky: y });
     }
   };
 
   const onTouchMove = (e: GestureResponderEvent) => {
     for (const t of e.nativeEvent.changedTouches) {
-      if (touches.get(Number(t.identifier)) !== 'stick') continue;
-      setStick((s) => {
+      const v = touches.get(Number(t.identifier));
+      if (v?.c !== 'stick') continue;
+      setStick(v.p, (s) => {
         if (!s) return s;
         let dx = t.pageX - s.ox;
         let dy = t.pageY - s.oy;
@@ -192,8 +259,8 @@ export default function GameScreen({
           dx = (dx / d) * STICK_R;
           dy = (dy / d) * STICK_R;
         }
-        input.mx = dx / STICK_R;
-        input.my = dy / STICK_R;
+        inputs[v.p].mx = dx / STICK_R;
+        inputs[v.p].my = dy / STICK_R;
         return { ...s, kx: s.ox + dx, ky: s.oy + dy };
       });
     }
@@ -202,19 +269,18 @@ export default function GameScreen({
   const onTouchEnd = (e: GestureResponderEvent) => {
     for (const t of e.nativeEvent.changedTouches) {
       const id = Number(t.identifier);
-      const c = touches.get(id);
+      const v = touches.get(id);
       touches.delete(id);
-      if (c === 'attack') input.attack = false;
-      if (c === 'stick') {
-        input.mx = input.my = 0;
-        setStick(null);
+      if (v?.c === 'attack') inputs[v.p].attack = false;
+      if (v?.c === 'stick') {
+        inputs[v.p].mx = inputs[v.p].my = 0;
+        setStick(v.p, null);
       }
     }
   };
 
   // ------------------------------------------------------------ render
   const g = gameRef.current;
-  const h = g.hero;
   const s = Math.min(W / ROOM_W, H / ROOM_H);
   const shake = g.shake > 0 ? (Math.random() - 0.5) * 6 * g.shake * s : 0;
   const ox = (W - ROOM_W * s) / 2 + shake;
@@ -239,44 +305,86 @@ export default function GameScreen({
   );
 
   const layers: { y: number; node: React.ReactNode[] }[] = [];
-  const weapon = WEAPONS[h.weapon];
 
-  // hero, weapon and blade effects
-  {
-    const blink = h.invuln > 0 && h.dash <= 0 && Math.floor(g.time * 20) % 2 === 0;
+  // heroes, weapons and blade effects
+  for (const hero of g.heroes) {
+    const k = `h${hero.idx}`;
+    const weapon = WEAPONS[hero.weapon];
+    if (hero.down) {
+      // fallen: lying down, with how far a teammate has got lifting them up
+      const frac = hero.revive / REVIVE_TIME;
+      layers.push({
+        y: hero.y,
+        node: [
+          sprite(`heroes_${hero.def.id}_hurt_0`, hero.x, hero.y + 3, 16, { transform: [{ rotate: '90deg' }], opacity: 0.7 }, `${k}down`),
+          <View key={`${k}rv`} style={[styles.reviveTrack, { left: (hero.x - 10) * s, top: (hero.y - 12) * s, width: 20 * s, height: 2.5 * s }]}>
+            <View style={[styles.lampFill, { width: `${frac * 100}%`, backgroundColor: COLORS.armor }]} />
+          </View>,
+        ],
+      });
+      continue;
+    }
+    const blink = hero.invuln > 0 && hero.dash <= 0 && Math.floor(g.time * 20) % 2 === 0;
     // blades sweep through their arc while a swing shows; ranged weapons kick back on each shot
-    let aim = h.aim;
-    if (weapon.melee && h.swing > 0) {
-      const p = 1 - h.swing / 0.14;
-      aim = h.swingAim + ((p * 2 - 1) * (weapon.arc ?? 75) * Math.PI) / 180;
+    let aim = hero.aim;
+    if (weapon.melee && hero.swing > 0) {
+      const p = 1 - hero.swing / 0.14;
+      aim = hero.swingAim + ((p * 2 - 1) * (weapon.arc ?? 75) * Math.PI) / 180;
     }
     const deg = (aim * 180) / Math.PI;
-    const reach = (weapon.melee ? 7 : 5) - (weapon.melee ? 0 : h.atkAnim * 12);
-    const wx = h.x + Math.cos(aim) * reach;
-    const wy = h.y + 3 + Math.sin(aim) * reach;
+    const reach = (weapon.melee ? 7 : 5) - (weapon.melee ? 0 : hero.atkAnim * 12);
+    const wx = hero.x + Math.cos(aim) * reach;
+    const wy = hero.y + 3 + Math.sin(aim) * reach;
     const nodes: React.ReactNode[] = [
-      shadow(h.x, h.y + 8, 10, 'hs'),
-      sprite(`heroes_${h.def.id}_${heroFrame(h, g.time)}`, h.x, h.y, 16, { transform: [{ scaleX: h.facing }], opacity: blink ? 0.35 : 1 }, 'hero'),
+      shadow(hero.x, hero.y + 8, 10, `${k}s`),
+      sprite(`heroes_${hero.def.id}_${heroFrame(hero, g.time)}`, hero.x, hero.y, 16, { transform: [{ scaleX: hero.facing }], opacity: blink ? 0.35 : 1 }, `${k}b`),
     ];
-    if (h.dash <= 0) nodes.push(sprite(`weapons_${weapon.id}`, wx, wy, 14, { transform: [{ rotate: `${deg}deg` }, { scaleY: h.facing }] }, 'weapon'));
-    if (h.swing > 0) {
-      const sa = (h.swingAim * 180) / Math.PI;
-      nodes.push(sprite('fx_slash_0', h.x + Math.cos(h.swingAim) * 8, h.y + 3 + Math.sin(h.swingAim) * 8, 34, { transform: [{ rotate: `${sa}deg` }], opacity: Math.min(1, h.swing * 10) }, 'slash'));
+    if (coop) {
+      nodes.push(
+        <PixelText key={`${k}tag`} size={Math.max(6, 2.4 * s)} color={P_COLORS[hero.idx]} style={{ position: 'absolute', left: hero.x * s - 20, width: 40, textAlign: 'center', top: (hero.y - 16) * s }}>
+          {`P${hero.idx + 1}`}
+        </PixelText>,
+      );
     }
-    if (h.shield > 0) {
+    if (hero.dash <= 0) nodes.push(sprite(`weapons_${weapon.id}`, wx, wy, 14, { transform: [{ rotate: `${deg}deg` }, { scaleY: hero.facing }] }, `${k}w`));
+    if (hero.swing > 0) {
+      const sa = (hero.swingAim * 180) / Math.PI;
+      nodes.push(sprite('fx_slash_0', hero.x + Math.cos(hero.swingAim) * 8, hero.y + 3 + Math.sin(hero.swingAim) * 8, 34, { transform: [{ rotate: `${sa}deg` }], opacity: Math.min(1, hero.swing * 10) }, `${k}slash`));
+    }
+    if (hero.shield > 0) {
       const pulse = 30 + Math.sin(g.time * 12) * 2;
-      nodes.push(sprite('fx_ring_shield', h.x, h.y + 2, pulse, { opacity: h.shield < 0.6 && Math.floor(g.time * 10) % 2 ? 0.3 : 0.9 }, 'shieldRing'));
+      nodes.push(sprite('fx_ring_shield', hero.x, hero.y + 2, pulse, { opacity: hero.shield < 0.6 && Math.floor(g.time * 10) % 2 ? 0.3 : 0.9 }, `${k}shield`));
     }
-    if (h.spin > 0) {
+    if (hero.spin > 0) {
       for (let i = 0; i < 4; i++) {
-        nodes.push(sprite('fx_slash_1', h.x, h.y + 3, 70, { transform: [{ rotate: `${g.time * 1400 + i * 90}deg` }] }, `spin${i}`));
+        nodes.push(sprite('fx_slash_1', hero.x, hero.y + 3, 70, { transform: [{ rotate: `${g.time * 1400 + i * 90}deg` }] }, `${k}spin${i}`));
       }
     }
-    layers.push({ y: h.y, node: nodes });
+    layers.push({ y: hero.y, node: nodes });
+  }
+
+  // the way down into a cave, and the steps on inside it
+  for (const [spot, key, label] of [
+    [g.caveDoor, 'deco_yungib', 'YUNGIB'],
+    [g.exit, 'deco_hagdan', g.cave && g.cave.depth >= 3 ? 'PALABAS' : 'PABABA'],
+  ] as const) {
+    if (!spot) continue;
+    const glow = 0.25 + 0.2 * Math.sin(g.time * 3);
+    layers.push({
+      y: spot.y - 8,
+      node: [
+        <View key={`${key}g`} style={{ position: 'absolute', left: (spot.x - 12) * s, top: (spot.y - 4) * s, width: 24 * s, height: 14 * s, borderRadius: 12 * s, backgroundColor: `rgba(130,238,214,${glow})` }} />,
+        sprite(key, spot.x, spot.y, 18, undefined, key),
+        <PixelText key={`${key}t`} size={Math.max(6, 2.6 * s)} color={COLORS.armor} style={{ position: 'absolute', left: spot.x * s - 50, width: 100, textAlign: 'center', top: (spot.y - 17) * s }}>
+          {label}
+        </PixelText>,
+      ],
+    });
   }
 
   for (const e of g.enemies) {
     const def = ENEMIES[e.type];
+    const size = def.size * (e.scale ?? 1);
     const spawning = e.spawn > 0;
     const tint = e.flash > 0 ? '#ffffff' : e.poison > 0 && Math.floor(g.time * 6) % 2 === 0 ? '#9be36d' : undefined;
     // creature-specific looks: the tiyanak's disguise, the bungisngis mid-laugh,
@@ -293,8 +401,8 @@ export default function GameScreen({
     layers.push({
       y: e.y,
       node: [
-        !hidden && shadow(e.x, e.y + def.size / 2 + (floating ? 4 : 0), def.size * (floating ? 0.4 : 0.6), `es${e.id}`),
-        sprite(key, e.x, e.y + bob, def.size, {
+        !hidden && shadow(e.x, e.y + size / 2 + (floating ? 4 : 0), size * (floating ? 0.4 : 0.6), `es${e.id}`),
+        sprite(key, e.x, e.y + bob, size, {
           transform: [{ scaleX: flip }, { scale: spawning ? 1 - e.spawn * 0.6 : 1 }],
           opacity,
           tintColor: tint,
@@ -322,7 +430,7 @@ export default function GameScreen({
       y: g.npc.y,
       node: [
         shadow(g.npc.x, g.npc.y + 8, 10, 'npcs'),
-        sprite(`npc_haliya_${Math.floor(g.time * 1.5) % 2}`, g.npc.x, g.npc.y, 16, { transform: [{ scaleX: h.x < g.npc.x ? -1 : 1 }] }, 'npc'),
+        sprite(`npc_haliya_${Math.floor(g.time * 1.5) % 2}`, g.npc.x, g.npc.y, 16, { transform: [{ scaleX: g.hero.x < g.npc.x ? -1 : 1 }] }, 'npc'),
       ],
     });
   }
@@ -374,9 +482,31 @@ export default function GameScreen({
   }
   layers.sort((a, b) => a.y - b.y);
 
-  const boss = g.enemies.find((e) => e.type === 'bakunawa');
-  const lightFrac = h.light / LIGHT_MAX;
-  const ready = h.light >= LIGHT_MAX;
+  const boss = g.enemies.find((e) => e.type === 'bakunawa' || e.boss);
+
+  // caves are dark: a pool of light around the party, black beyond it
+  let darkness: React.ReactNode = null;
+  if (g.cave) {
+    const standing = alive(g).length ? alive(g) : g.heroes;
+    const cx = standing.reduce((a, o) => a + o.x, 0) / standing.length;
+    const cy = standing.reduce((a, o) => a + o.y, 0) / standing.length;
+    const spread = Math.max(...standing.map((o) => Math.hypot(o.x - cx, o.y - cy)));
+    // the clear middle of the light pool is a fifth of its size; keep every hero inside it
+    const half = Math.max(200, (spread + 30) / 0.2);
+    const l = (cx - half) * s;
+    const t = (cy - half) * s;
+    const size = half * 2 * s;
+    const black = 'rgba(4,2,10,0.94)';
+    darkness = (
+      <>
+        <Image source={IMG.fx_darkness} fadeDuration={0} resizeMode="stretch" style={{ position: 'absolute', left: l, top: t, width: size, height: size }} />
+        <View style={{ position: 'absolute', left: 0, right: 0, top: 0, height: Math.max(0, t), backgroundColor: black }} />
+        <View style={{ position: 'absolute', left: 0, right: 0, top: t + size, bottom: 0, backgroundColor: black }} />
+        <View style={{ position: 'absolute', left: 0, width: Math.max(0, l), top: t, height: size, backgroundColor: black }} />
+        <View style={{ position: 'absolute', left: l + size, right: 0, top: t, height: size, backgroundColor: black }} />
+      </>
+    );
+  }
 
   return (
     <View style={styles.root} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
@@ -385,6 +515,8 @@ export default function GameScreen({
         <Image source={IMG[`rooms_${g.room}` as ImgKey]} style={{ width: ROOM_W * s, height: ROOM_H * s }} resizeMode="stretch" fadeDuration={0} />
         {g.boat && img(`deco_balangay_${Math.floor(g.time * 2) % 2}`, g.boat.x + 14, g.boat.y - 2, 32, 20, undefined, 'boat')}
         {layers.map((l) => l.node)}
+        {/* shots and numbers stay readable above the cave darkness */}
+        {darkness}
         {g.bullets.map((b) => {
           const rot = b.sprite === 'shot_arrow' || b.sprite === 'shot_dart' || b.sprite === 'shot_spear' || b.sprite === 'shot_beetle';
           const deg = (Math.atan2(b.vy, b.vx) * 180) / Math.PI;
@@ -429,51 +561,31 @@ export default function GameScreen({
         </View>
       )}
 
-      {/* HUD: portrait medallion with bead rows */}
-      <View pointerEvents="none" style={styles.hud}>
-        <View style={styles.medal}>
-          <Image source={IMG.ui_medallion} fadeDuration={0} style={styles.medalFrame} />
-          <Image source={IMG[`portraits_${h.def.id}` as ImgKey]} fadeDuration={0} style={styles.medalPortrait} />
+      {/* HUDs: one per player */}
+      <HeroHud h={g.heroes[0]} label={coop ? 'P1' : undefined} />
+      {coop && <HeroHud h={g.heroes[1]} right label="P2" />}
+      {g.boons.length > 0 && (
+        <View pointerEvents="none" style={[styles.pips, styles.boons]}>
+          {g.boons.map((b) => (
+            <Sprite key={b} name={`ui_boon_${b}` as ImgKey} size={16} />
+          ))}
         </View>
-        <View style={{ marginLeft: 6, gap: 3 }}>
-          <Pips value={h.hp} max={h.maxHp} full="ui_pip_hp" empty="ui_pip_hp_empty" />
-          <Pips value={h.armor} max={h.maxArmor} full="ui_pip_armor" empty="ui_pip_armor_empty" />
-          <View style={styles.lamp}>
-            <Sprite name="ui_energy" size={12} />
-            <View style={styles.lampTrack}>
-              <View style={[styles.lampFill, { width: `${lightFrac * 100}%`, backgroundColor: ready ? COLORS.gold : COLORS.light }]} />
-            </View>
-          </View>
-          <View style={styles.lamp}>
-            <Sprite name={`weapons_${h.weapon}` as ImgKey} size={18} />
-            <PixelText size={7} color={COLORS.light}>
-              {`${weapon.name.toUpperCase()}${h.weaponLv ? ` +${h.weaponLv}` : ''}`}
-            </PixelText>
-          </View>
-          {g.boons.length > 0 && (
-            <View style={styles.pips}>
-              {g.boons.map((b) => (
-                <Sprite key={b} name={`ui_boon_${b}` as ImgKey} size={16} />
-              ))}
-            </View>
-          )}
-        </View>
-      </View>
-      <View style={styles.topRight} pointerEvents="none">
+      )}
+      <View style={coop ? styles.topCenter : styles.topRight} pointerEvents="none">
         <Sprite name="items_coin" size={20} />
         <PixelText size={10} color={COLORS.gold} style={{ marginRight: 14 }}>
           {g.coins}
         </PixelText>
-        <PixelText size={9} style={{ marginRight: 52 }}>
-          {`${stageLabel(g)}  ${g.stage}/${g.route.length - 1}`}
+        <PixelText size={9} style={{ marginRight: coop ? 0 : 52 }}>
+          {g.cave ? stageLabel(g) : g.mode === 'endless' ? `${stageLabel(g)}  ISLA ${g.stage}` : `${stageLabel(g)}  ${g.stage}/${g.route.length - 1}`}
         </PixelText>
       </View>
       {button('ui_btn_pause', pauseBtn)}
 
       {boss && (
-        <View pointerEvents="none" style={[styles.bossBar, { left: W * 0.3, width: W * 0.4 }]}>
+        <View pointerEvents="none" style={[styles.bossBar, { left: W * 0.3, width: W * 0.4, top: coop ? 66 : 10 }]}>
           <PixelText size={8} color="#ff8a7a">
-            {BOSS_NAME}
+            {boss.boss ? CAVE_BOSS : BOSS_NAME}
           </PixelText>
           <View style={styles.bossTrack}>
             <View style={[styles.lampFill, { width: `${(boss.hp / boss.maxHp) * 100}%`, backgroundColor: COLORS.red }]} />
@@ -482,29 +594,39 @@ export default function GameScreen({
       )}
 
       {/* controls */}
-      {stick ? (
-        <>
-          <Image source={IMG.ui_joystick_base} fadeDuration={0} style={[styles.abs, { left: stick.ox - 60, top: stick.oy - 60, width: 120, height: 120 }]} />
-          <Image source={IMG.ui_joystick_knob} fadeDuration={0} style={[styles.abs, { left: stick.kx - 26, top: stick.ky - 26, width: 52, height: 52 }]} />
-        </>
-      ) : (
-        <View pointerEvents="none" style={[styles.abs, { left: 40, bottom: 30, opacity: 0.3 }]}>
-          <Image source={IMG.ui_joystick_base} fadeDuration={0} style={{ width: 120, height: 120 }} />
-        </View>
+      {sticks.map((st, p) =>
+        st ? (
+          <View key={`stick${p}`} pointerEvents="none" style={styles.abs}>
+            <Image source={IMG.ui_joystick_base} fadeDuration={0} style={[styles.abs, { left: st.ox - 60, top: st.oy - 60, width: 120, height: 120 }]} />
+            <Image source={IMG.ui_joystick_knob} fadeDuration={0} style={[styles.abs, { left: st.kx - 26, top: st.ky - 26, width: 52, height: 52, tintColor: coop ? P_COLORS[p] : undefined }]} />
+          </View>
+        ) : (
+          <View key={`stick${p}`} pointerEvents="none" style={[styles.abs, p === 0 ? { left: coop ? 100 : 40 } : { right: 100 }, { bottom: 30, opacity: 0.3 }]}>
+            <Image source={IMG.ui_joystick_base} fadeDuration={0} style={{ width: 120, height: 120 }} />
+          </View>
+        ),
       )}
-      {button('ui_btn_attack', attackBtn, input.attack ? 0.75 : 1)}
-      {button('ui_btn_dodge', dodgeBtn, h.dodgeCd > 0 ? 0.45 : 1)}
-      {button('ui_btn_skill', skillBtn, ready ? 1 : 0.4, ready ? 1 + 0.06 * Math.sin(g.time * 8) : 1)}
-      {!ready && (
-        <View pointerEvents="none" style={[styles.abs, { left: skillBtn.x - 24, top: skillBtn.y - 8, width: 48, alignItems: 'center' }]}>
-          <PixelText size={9}>{`${Math.floor(lightFrac * 100)}%`}</PixelText>
-        </View>
-      )}
-      <View pointerEvents="none" style={[styles.abs, { left: skillBtn.x - 50, top: skillBtn.y + skillBtn.r, width: 100, alignItems: 'center' }]}>
-        <PixelText size={7} color={ready ? COLORS.gold : COLORS.dim}>
-          {h.def.skill.name.toUpperCase()}
-        </PixelText>
-      </View>
+      {!coop && button('ui_btn_attack', attackBtn, inputs[0].attack ? 0.75 : 1)}
+      {g.heroes.map((hero) => {
+        const ready = hero.light >= LIGHT_MAX;
+        const sk = skillBtns[hero.idx];
+        return (
+          <View key={`ctl${hero.idx}`} pointerEvents="none" style={styles.abs}>
+            {button('ui_btn_dodge', dodgeBtns[hero.idx], hero.dodgeCd > 0 || hero.down ? 0.45 : 1, 1, `dodge${hero.idx}`)}
+            {button('ui_btn_skill', sk, ready && !hero.down ? 1 : 0.4, ready ? 1 + 0.06 * Math.sin(g.time * 8) : 1, `skill${hero.idx}`)}
+            {!ready && (
+              <View style={[styles.abs, { left: sk.x - 24, top: sk.y - 8, width: 48, alignItems: 'center' }]}>
+                <PixelText size={coop ? 7 : 9}>{`${Math.floor((hero.light / LIGHT_MAX) * 100)}%`}</PixelText>
+              </View>
+            )}
+            <View style={[styles.abs, { left: sk.x - 50, top: sk.y + sk.r, width: 100, alignItems: 'center' }]}>
+              <PixelText size={coop ? 6 : 7} color={ready ? COLORS.gold : COLORS.dim}>
+                {hero.def.skill.name.toUpperCase()}
+              </PixelText>
+            </View>
+          </View>
+        );
+      })}
 
       {/* the dambana: choose a blessing */}
       {g.choice && (
@@ -514,10 +636,11 @@ export default function GameScreen({
             DAMBANA
           </PixelText>
           <PixelText size={8} color={COLORS.text} style={{ marginBottom: 12 }}>
-            An old god answers your offering. Choose one blessing.
+            {coop ? 'An old god answers your offering. Choose one blessing for you both.' : 'An old god answers your offering. Choose one blessing.'}
           </PixelText>
           <View style={styles.cards}>
             {g.choice.map((id, i) => {
+              // anyone in the party may choose; blessings apply to everyone
               const b = BOONS[id];
               return (
                 <Pressable key={id} onPress={() => chooseBoon(g, id)} style={({ pressed }) => [styles.card, pressed && { borderColor: COLORS.gold }]}>
@@ -584,10 +707,10 @@ export default function GameScreen({
     </View>
   );
 
-  function button(key: ImgKey, b: { x: number; y: number; r: number }, opacity = 1, scale = 1) {
+  function button(key: ImgKey, b: Btn, opacity = 1, scale = 1, k?: string) {
     return (
       <Image
-        key={key}
+        key={k ?? key}
         source={IMG[key]}
         fadeDuration={0}
         style={[styles.abs, { left: b.x - b.r, top: b.y - b.r, width: b.r * 2, height: b.r * 2, opacity, transform: [{ scale }] }]}
@@ -600,7 +723,11 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: SEA },
   abs: { position: 'absolute' },
   banner: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
-  hud: { position: 'absolute', left: 8, top: 8, flexDirection: 'row', alignItems: 'flex-start' },
+  hud: { position: 'absolute', top: 8, flexDirection: 'row', alignItems: 'flex-start' },
+  medalLabel: { position: 'absolute', bottom: -4, left: 0, right: 0, textAlign: 'center' },
+  boons: { position: 'absolute', left: 8, top: 104 },
+  topCenter: { position: 'absolute', top: 44, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  reviveTrack: { position: 'absolute', backgroundColor: 'rgba(8,18,24,0.85)' },
   medal: { width: 56, height: 56 },
   medalFrame: { position: 'absolute', width: 56, height: 56 },
   medalPortrait: { position: 'absolute', left: 12, top: 10, width: 32, height: 32 },

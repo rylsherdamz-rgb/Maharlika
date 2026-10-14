@@ -210,3 +210,27 @@ export const BOONS: Record<BoonId, BoonDef> = {
   aman_sinaya: { id: 'aman_sinaya', deity: 'Aman Sinaya', domain: 'Goddess of the sea', name: 'Alon', desc: 'Attack 20% faster' },
   lakan_bakod: { id: 'lakan_bakod', deity: 'Lakan Bakod', domain: 'Protector of fences and harvests', name: 'Bakod', desc: 'Amulets recharge twice as fast' },
 };
+
+// ---------------------------------------------------------------- modes, difficulty, levels
+export type Mode = 'voyage' | 'endless';
+
+export interface Difficulty {
+  id: 0 | 1 | 2;
+  name: string; // Filipino
+  en: string;
+  desc: string;
+  hp: number; // creature health multiplier
+  extra: number; // creatures added to each wave
+  shot: number; // creature shot speed multiplier
+  legs: number; // islands in a voyage before the shore of Albay
+}
+
+export const DIFFICULTIES: Difficulty[] = [
+  { id: 0, name: 'MADALI', en: 'Easy', desc: '4 islands. Weaker creatures, slower shots.', hp: 0.75, extra: -1, shot: 0.85, legs: 4 },
+  { id: 1, name: 'KATAMTAMAN', en: 'Normal', desc: '5 islands. The voyage as it was meant.', hp: 1, extra: 0, shot: 1, legs: 5 },
+  { id: 2, name: 'MAHIRAP', en: 'Hard', desc: '6 islands. Tougher, faster, more of them. Win once to unlock.', hp: 1.35, extra: 2, shot: 1.2, legs: 6 },
+];
+
+/** Hero levels (antas): XP from every banished creature, shared by the whole party. */
+export const LEVEL_MAX = 15;
+export const xpToNext = (lv: number) => 18 + lv * 14;

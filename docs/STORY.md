@@ -43,6 +43,7 @@ noise.
 | Kris, bangkaw, panabas, balaraw, baston (arnis), buntot pagi, lantaka (real weapons); barang (Visayan insect sorcery) | **History / Folklore** | The lingganay bell and agimat rod as weapons are invented. |
 | Bagani (Manobo and other Mindanao highland warriors, red headcloth); Sulu pearl divers | **History** | Banog and Dalisay are invented characters in these real roles. |
 | Sulu Sea stilt villages; Ifugao rice terraces and bulul rice guardians | **History / living tradition** | |
+| The bungisngis guarding a cave (yungib) | **Invented** | The bungisngis is folklore; placing a giant one under an island is the game's. |
 | Battle of Mactan, Lapulapu, Magellan's death (1521) | **History** | |
 | Balangay boats of Butuan (from about 320 CE); "barangay" from "balangay" | **History** | |
 | Maharlika as the Tagalog freeborn warrior class | **History** | Precolonial social class. |

@@ -17,6 +17,20 @@ it is folklore, history or invented for the game.
 
 ## How it plays
 
+- **Modes:** *Paglalayag* (Voyage) to the Bakunawa, or *Walang Katapusan* (Endless): islands keep
+  coming and get harder until the party falls; the furthest island is saved as your record.
+- **Difficulty:** *Madali* (Easy, 4 islands), *Katamtaman* (Normal, 5 islands) or *Mahirap* (Hard,
+  6 islands, tougher and faster creatures). Win a voyage once to unlock Mahirap. Progress is saved
+  on the device.
+- **2-player co-op on one device:** each player takes half of the touch screen (on web, P1 uses
+  WASD and P2 the arrow keys). Heroes attack on their own in co-op. A fallen hero can be lifted
+  back up by standing beside them; the run ends when both fall. Online play is planned in
+  [`docs/ONLINE_MULTIPLAYER.md`](docs/ONLINE_MULTIPLAYER.md).
+- **Antas (levels):** every banished creature gives XP to the whole party. Each level adds health,
+  damage and a little speed (up to level 15).
+- **Yungib (caves):** at least one island per voyage opens a cave once it is cleared. Three dark
+  rooms lit only around the heroes, then a giant bungisngis guarding a big chest (a weapon and two
+  whetstones). Climb out and the island is waiting with its boat.
 - **Islands, not rooms:** each stage is an island in the sea. You walk on land, shots fly over water.
   Clear the island, open its **kaban** (chest), visit its **dambana** (shrine), then board the
   **balangay** to sail on.
@@ -74,6 +88,7 @@ and the **Alamat** (Legends) codex (Maharlika · Nilalang · Mga Diyos · Daigdi
 | Cards at a dambana | Choose a blessing |
 
 Web build: `WASD` move, `Space` attack, `Shift` dodge, `K` skill, `1-3` choose a blessing, `Esc` pause.
+Co-op P2: arrow keys move, `Enter` attack, `/` dodge, `.` skill.
 On the home screen, `Enter` plays and `H` opens How to Play.
 
 ## Running it
@@ -100,6 +115,8 @@ small procedural routines (Baybayin is rendered from Noto Sans Tagalog). Run
 - six heroes in five poses (idle, walk, attack, roll, hurt), eight creatures, the Bakunawa, Haliya,
   13 weapons, shots, the kaban chest and hasaan whetstone; effects (slash, dust, hit, boom, poof,
   sparkle, heal, shield and wave rings); `assets/brand/animation_sheet.png`
+- three cave maps (rock walls, stalagmites, glowing crystals, underground pools), the cave mouth,
+  the steps, and the darkness that surrounds the heroes underground
 - island maps (sea, surf, sand, themed ground and props such as punso, banana, balete, rocks,
   bronze lamp posts, coral, stilt houses, rice and bulul, terrace walls) for six island themes, with
   collision grids in `src/game/rooms.json`
@@ -111,12 +128,14 @@ small procedural routines (Baybayin is rendered from Noto Sans Tagalog). Run
 ## Project layout
 
 ```
-App.tsx                    screen flow: title → story → select → game → ending → result; codex
+App.tsx                    screen flow: loading → title → story → select → game → ending → result; codex
 src/game/data.ts           heroes, weapons, creatures, the gods' blessings
 src/game/story.ts          all story text, bios with sources, island names in Baybayin
 src/game/engine.ts         simulation: islands, melee and ranged combat, dodge, light, blessings, AI
-src/screens/               Loading, Title, Story, Codex, Select, Game, Result
+src/screens/               Loading, Title, Story, Codex, Select (mode, players, difficulty), Game, Result
+src/save.ts                saved progress: wins, Mahirap unlock, endless record
 src/ui.tsx                 palette, pixel and Baybayin text, buttons, panels
 tools/generate_assets.py   all art
 docs/STORY.md              story bible and sources
+docs/ONLINE_MULTIPLAYER.md plan for online co-op
 ```

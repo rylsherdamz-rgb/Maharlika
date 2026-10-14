@@ -1,9 +1,10 @@
 import { NotoSansTagalog_400Regular } from '@expo-google-fonts/noto-sans-tagalog';
 import { PixelifySans_500Medium, PixelifySans_700Bold, useFonts } from '@expo-google-fonts/pixelify-sans';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { HeroId, WeaponId } from './src/game/data';
+import { Setup } from './src/game/engine';
+import { loadProgress, Progress, saveProgress } from './src/save';
 import { ENDING, EPILOGUE, INTRO } from './src/game/story';
 import CodexScreen from './src/screens/CodexScreen';
 import GameScreen from './src/screens/GameScreen';
@@ -15,11 +16,11 @@ import TitleScreen from './src/screens/TitleScreen';
 
 type Screen =
   | { name: 'boot' }
-  | { name: 'sailing'; hero: HeroId; weapon: WeaponId }
+  | { name: 'sailing'; setup: Setup }
   | { name: 'title' }
   | { name: 'select' }
-  | { name: 'game'; hero: HeroId; weapon: WeaponId; run: number }
-  | { name: 'result'; stats: RunStats }
+  | { name: 'game'; setup: Setup; run: number }
+  | { name: 'result'; stats: RunStats; best?: number }
   | { name: 'intro'; then: 'select' | 'title' }
   | { name: 'ending'; stats: RunStats }
   | { name: 'codex'; entry?: string; back: Screen };
@@ -29,22 +30,42 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'boot' });
   const [run, setRun] = useState(0);
   const [seenIntro, setSeenIntro] = useState(false);
+  const [progress, setProgress] = useState<Progress>({ wins: 0, hardUnlocked: false, bestEndless: 0 });
+  const [progressReady, setProgressReady] = useState(false);
+  useEffect(() => {
+    loadProgress().then((p) => {
+      setProgress(p);
+      setProgressReady(true);
+    });
+  }, []);
 
-  const start = (hero: HeroId, weapon: WeaponId) => setScreen({ name: 'sailing', hero, weapon });
-  const launch = (hero: HeroId, weapon: WeaponId) => {
+  const start = (setup: Setup) => setScreen({ name: 'sailing', setup });
+  const launch = (setup: Setup) => {
     setRun((r) => r + 1);
-    setScreen({ name: 'game', hero, weapon, run: run + 1 });
+    setScreen({ name: 'game', setup, run: run + 1 });
+  };
+  /** Record a finished run: wins unlock Mahirap, endless keeps the best island. */
+  const finish = (stats: RunStats) => {
+    const best = progress.bestEndless;
+    const next: Progress = {
+      wins: progress.wins + (stats.victory ? 1 : 0),
+      hardUnlocked: progress.hardUnlocked || stats.victory,
+      bestEndless: stats.setup.mode === 'endless' ? Math.max(best, stats.island) : best,
+    };
+    setProgress(next);
+    saveProgress(next);
+    setScreen(stats.victory ? { name: 'ending', stats } : { name: 'result', stats, best });
   };
 
   let content: React.ReactNode = null;
   if (screen.name === 'boot') {
     // shown from the first frame, before the fonts are in, until the fonts are ready
-    content = <LoadingScreen ready={fontsLoaded} fontsReady={fontsLoaded} onDone={() => setScreen({ name: 'title' })} />;
+    content = <LoadingScreen ready={fontsLoaded && progressReady} fontsReady={fontsLoaded} onDone={() => setScreen({ name: 'title' })} />;
   } else if (fontsLoaded) {
     switch (screen.name) {
       case 'sailing': {
-        const { hero, weapon } = screen;
-        content = <LoadingScreen ready minMs={1100} onDone={() => launch(hero, weapon)} />;
+        const { setup } = screen;
+        content = <LoadingScreen ready minMs={1100} onDone={() => launch(setup)} />;
         break;
       }
       case 'title':
@@ -70,7 +91,11 @@ export default function App() {
         break;
       case 'ending': {
         const stats = screen.stats;
-        const panels = [...ENDING, { art: ENDING[ENDING.length - 1].art, title: 'Epilogue', text: EPILOGUE[stats.hero] }];
+        // one epilogue panel per hero in the party
+        const panels = [
+          ...ENDING,
+          ...stats.heroes.map((h) => ({ art: ENDING[ENDING.length - 1].art, title: `Epilogue · ${h[0].toUpperCase()}${h.slice(1)}`, text: EPILOGUE[h] })),
+        ];
         content = <StoryScreen panels={panels} doneLabel="SEE THE WATCH" onDone={() => setScreen({ name: 'result', stats })} />;
         break;
       }
@@ -80,8 +105,9 @@ export default function App() {
       case 'select':
         content = (
           <SelectScreen
+            progress={progress}
             onBack={() => setScreen({ name: 'title' })}
-            onPick={start}
+            onStart={start}
             onStory={(id) => setScreen({ name: 'codex', entry: id, back: { name: 'select' } })}
           />
         );
@@ -90,9 +116,8 @@ export default function App() {
         content = (
           <GameScreen
             key={screen.run}
-            heroId={screen.hero}
-            weaponId={screen.weapon}
-            onEnd={(stats) => setScreen(stats.victory ? { name: 'ending', stats } : { name: 'result', stats })}
+            setup={screen.setup}
+            onEnd={finish}
             onQuit={() => setScreen({ name: 'title' })}
           />
         );
@@ -101,7 +126,8 @@ export default function App() {
         content = (
           <ResultScreen
             stats={screen.stats}
-            onRetry={() => start(screen.stats.hero, screen.stats.weapon)}
+            best={screen.best}
+            onRetry={() => start(screen.stats.setup)}
             onMenu={() => setScreen({ name: 'title' })}
           />
         );

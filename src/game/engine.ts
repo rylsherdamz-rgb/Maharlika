@@ -3,19 +3,24 @@ import {
   BoonId,
   BOONS,
   BulletSprite,
+  DIFFICULTIES,
+  Difficulty,
   ENEMIES,
   EnemyType,
   HEROES,
   HeroDef,
   HeroId,
+  LEVEL_MAX,
   LIGHT_MAX,
   LOOT_WEAPONS,
+  Mode,
   WEAPON_LV_BONUS,
   WEAPON_LV_MAX,
   WeaponId,
   WEAPONS,
+  xpToNext,
 } from './data';
-import { bossDialogue, DialogueLine, HALIYA_LINES, PORT, ROUTE_SLOTS, SHORE, STAGES } from './story';
+import { bossDialogue, CAVE, DialogueLine, ENDLESS, HALIYA_LINES, PORT, ROUTE_SLOTS, SHORE, STAGES } from './story';
 
 export const TILE = roomData.tile;
 export const ROOM_W = roomData.width * TILE;
@@ -27,6 +32,12 @@ const WATER = 4;
 const ENTRY = { x: 2.5 * TILE, y: 7.5 * TILE };
 const CENTER = { x: 11.5 * TILE, y: 7.5 * TILE };
 const DOCK = { x: 20.5 * TILE, y: 7.5 * TILE };
+/** Seconds a teammate must stand by a fallen hero to lift them back up. */
+export const REVIVE_TIME = 2.2;
+/** Rooms in a yungib; the last holds the cave's guardian. */
+export const CAVE_DEPTH = 3;
+/** In endless mode, every this-many islands has a cave for sure. */
+const ENDLESS_CAVE_EVERY = 4;
 
 export interface Mods {
   dmg: number;
@@ -41,6 +52,7 @@ export interface Mods {
 }
 
 export interface Hero {
+  idx: number; // player slot: 0 = P1, 1 = P2
   def: HeroDef;
   weapon: WeaponId;
   weaponLv: number; // whetstones applied (0..WEAPON_LV_MAX)
@@ -56,7 +68,7 @@ export interface Hero {
   aim: number;
   moving: boolean;
   atkCd: number;
-  swing: number; // >0 while a kampilan slash is showing
+  swing: number; // >0 while a melee slash is showing
   swingAim: number;
   spin: number; // >0 while the Bagyo whirl is showing
   invuln: number;
@@ -69,6 +81,10 @@ export interface Hero {
   walk: number;
   atkAnim: number; // >0 while the attack pose is showing
   dustAt: number; // walk time of the last footstep puff
+  lv: number; // antas (level), from 1
+  xp: number; // toward the next level
+  down: boolean; // fallen in co-op, waiting for a teammate
+  revive: number; // seconds of help received while down
   mods: Mods;
 }
 
@@ -88,6 +104,10 @@ export interface Enemy {
   poisonTick: number;
   /** Per-creature phase: tiyanak 0 = disguised; sigbin 1 = backing off; bungisngis 1 = winding up a slam. */
   state: number;
+  /** Size multiplier: 1 for most, larger for a cave guardian. */
+  scale?: number;
+  /** Cave guardian (mini-boss): its own health bar, a big chest when it falls. */
+  boss?: boolean;
 }
 
 export interface Bullet {
@@ -98,6 +118,7 @@ export interface Bullet {
   vy: number;
   dmg: number;
   fromHero: boolean;
+  owner?: number; // hero slot that fired it
   sprite: BulletSprite;
   r: number;
   life: number;
@@ -117,18 +138,19 @@ export interface Pickup {
   y: number;
   t: number;
   weapon?: WeaponId;
-  /** false for a weapon the hero just put down, until they step away from it */
+  /** false for a weapon a hero just put down, until every hero steps away from it */
   armed?: boolean;
 }
 
-/** A kaban: a chest that appears once an island is safe. */
+/** A kaban: a chest that appears once an island is safe (a big one guards the deepest cave). */
 export interface Chest {
   x: number;
   y: number;
   open: boolean;
+  big?: boolean;
 }
 
-/** Short-lived sprite effects: footstep dust and impact sparks. */
+/** Short-lived sprite effects: footstep dust, impact sparks, blasts and the rest. */
 export type FxKind = 'dust' | 'hit' | 'boom' | 'poof' | 'sparkle' | 'heal' | 'wave';
 export interface Fx {
   id: number;
@@ -138,6 +160,7 @@ export interface Fx {
   t: number; // seconds since it appeared
   size?: number; // final size for rings and blasts
 }
+
 /** Seconds a dodge roll lasts. */
 export const DODGE_TIME = 0.2;
 export const FX_LIFE: Record<FxKind, number> = { dust: 0.36, hit: 0.18, boom: 0.4, poof: 0.36, sparkle: 0.5, heal: 0.6, wave: 0.45 };
@@ -161,8 +184,24 @@ export interface Input {
   dodge: boolean; // edge-triggered, cleared by engine
 }
 
+/** What the island looked like when the party went down into its cave. */
+interface Surface {
+  room: RoomName;
+  grid: number[][];
+  chest: Chest | null;
+  shrine: { x: number; y: number; used: boolean } | null;
+  boat: { x: number; y: number } | null;
+  cave: { x: number; y: number };
+}
+
 export interface Game {
+  heroes: Hero[];
+  /** Player 1; kept as a shortcut for single-player code and the HUD. */
   hero: Hero;
+  mode: Mode;
+  diff: Difficulty;
+  /** Co-op: heroes attack by themselves whenever a creature is in reach. */
+  autoAttack: boolean;
   enemies: Enemy[];
   bullets: Bullet[];
   pickups: Pickup[];
@@ -173,6 +212,14 @@ export interface Game {
   choice: BoonId[] | null;
   boons: BoonId[];
   boat: { x: number; y: number } | null;
+  /** A yungib entrance on a cleared island. */
+  caveDoor: { x: number; y: number } | null;
+  /** Inside a cave: how deep, and the island to return to. */
+  cave: { depth: number; surface: Surface } | null;
+  /** The way on inside a cave (deeper, or back up after the guardian). */
+  exit: { x: number; y: number } | null;
+  /** Route indexes of islands that will have a cave (voyage mode). */
+  caveStages: number[];
   route: RoomName[];
   stage: number;
   room: RoomName;
@@ -181,6 +228,7 @@ export interface Game {
   waves: number;
   coins: number;
   kills: number;
+  caves: number; // caves cleared
   time: number;
   shake: number;
   banner: { text: string; baybayin?: string; sub?: string; t: number } | null;
@@ -190,62 +238,114 @@ export interface Game {
   nextId: number;
 }
 
+export interface Setup {
+  players: { hero: HeroId; weapon?: WeaponId }[];
+  mode?: Mode;
+  difficulty?: 0 | 1 | 2;
+}
+
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const dist = (ax: number, ay: number, bx: number, by: number) => Math.hypot(ax - bx, ay - by);
 const pick = <T>(a: T[]) => a[Math.floor(Math.random() * a.length)];
+const radius = (e: Enemy) => ENEMIES[e.type].radius * (e.scale ?? 1);
+
+/** Heroes still standing. */
+export const alive = (g: Game) => g.heroes.filter((h) => !h.down);
+
+function nearestHero(g: Game, x: number, y: number) {
+  let best = g.hero;
+  let bd = Infinity;
+  for (const h of alive(g)) {
+    const d = dist(x, y, h.x, h.y);
+    if (d < bd) {
+      bd = d;
+      best = h;
+    }
+  }
+  return best;
+}
 
 /** The island theme of the current room, e.g. 'pulo2' or 'sulu'. */
 function stageInfo(g: Game) {
-  return STAGES[g.room.replace(/_[ab]$/, '')];
+  return STAGES[g.route[g.stage].replace(/_[ab]$/, '')] ?? STAGES.pulo1;
 }
 
 export function stageLabel(g: Game) {
+  if (g.cave) return `${CAVE.title} ${g.cave.depth}/${CAVE_DEPTH}`;
   if (g.room === 'port') return 'TONDO';
   if (g.room === 'shore') return 'ALBAY';
   return stageInfo(g).title;
 }
 
-export function newGame(heroId: HeroId, weapon?: WeaponId): Game {
+/** Voyage legs for a difficulty; the extra legs visit the islands the first legs passed over. */
+function voyageRoute(legs: number): RoomName[] {
+  const chosen = ROUTE_SLOTS.map((slot) => pick(slot));
+  const skipped = ROUTE_SLOTS.flatMap((slot, i) => slot.filter((t) => t !== chosen[i]));
+  const themes = [...chosen.slice(0, -1), ...skipped, chosen[chosen.length - 1]];
+  // keep the first legs and the last one (Ibalong, before the shore); trim the middle to fit
+  const middle = themes.slice(0, -1).slice(0, legs - 1);
+  return ['port', ...[...middle, themes[themes.length - 1]].map((t) => `${t}_${pick(['a', 'b'])}` as RoomName), 'shore'];
+}
+
+const ALL_THEMES = ['pulo1', 'pulo2', 'sulu', 'pulo3', 'ifugao', 'pulo4'];
+
+function makeHero(idx: number, heroId: HeroId, weapon?: WeaponId): Hero {
   const def = HEROES.find((h) => h.id === heroId)!;
-  // each leg of the voyage picks one of its islands, then one of that island's two maps
-  const route: RoomName[] = ['port'];
-  for (const slot of ROUTE_SLOTS) {
-    const theme = pick(slot);
-    route.push(`${theme}_${pick(['a', 'b'])}` as RoomName);
-  }
-  route.push('shore');
+  return {
+    idx,
+    def,
+    weapon: weapon && LOOT_WEAPONS.includes(weapon) ? weapon : def.weapons[0],
+    weaponLv: 0,
+    shield: 0,
+    x: ENTRY.x,
+    y: ENTRY.y + idx * 14,
+    hp: def.hp,
+    maxHp: def.hp,
+    armor: def.armor,
+    maxArmor: def.armor,
+    light: 0,
+    facing: 1,
+    aim: 0,
+    moving: false,
+    atkCd: 0,
+    swing: 0,
+    swingAim: 0,
+    spin: 0,
+    invuln: 0,
+    sinceHit: 10,
+    armorTick: 0,
+    dodgeCd: 0,
+    dash: 0,
+    dashDx: 0,
+    dashDy: 0,
+    walk: 0,
+    atkAnim: 0,
+    dustAt: 0,
+    lv: 1,
+    xp: 0,
+    down: false,
+    revive: 0,
+    mods: { dmg: 1, rate: 1, speed: 1, pierce: false, reach: 1, regen: 1, dodgeCd: 1, herbs: 0, harvest: false },
+  };
+}
+
+/** Start a run. The two-argument form is kept for single-player callers and tests. */
+export function newGame(setup: Setup | HeroId, weapon?: WeaponId): Game {
+  const s: Setup = typeof setup === 'string' ? { players: [{ hero: setup, weapon }] } : setup;
+  const mode = s.mode ?? 'voyage';
+  const diff = DIFFICULTIES[s.difficulty ?? 1];
+  const heroes = s.players.map((p, i) => makeHero(i, p.hero, p.weapon));
+  const route = mode === 'endless' ? (['port', `${pick(['pulo1', 'pulo2'])}_a`] as RoomName[]) : voyageRoute(diff.legs);
+  // one island in every voyage hides a cave; sometimes a second
+  const islands = route.map((_, i) => i).filter((i) => i > 0 && i < route.length - 1);
+  const caveStages = [pick(islands)];
+  if (Math.random() < 0.5) caveStages.push(pick(islands));
   const g: Game = {
-    hero: {
-      def,
-      weapon: weapon && def.weapons.includes(weapon) ? weapon : def.weapons[0],
-      weaponLv: 0,
-      shield: 0,
-      x: ENTRY.x,
-      y: ENTRY.y,
-      hp: def.hp,
-      maxHp: def.hp,
-      armor: def.armor,
-      maxArmor: def.armor,
-      light: 0,
-      facing: 1,
-      aim: 0,
-      moving: false,
-      atkCd: 0,
-      swing: 0,
-      swingAim: 0,
-      spin: 0,
-      invuln: 0,
-      sinceHit: 10,
-      armorTick: 0,
-      dodgeCd: 0,
-      dash: 0,
-      dashDx: 0,
-      dashDy: 0,
-      walk: 0,
-      atkAnim: 0,
-      dustAt: 0,
-      mods: { dmg: 1, rate: 1, speed: 1, pierce: false, reach: 1, regen: 1, dodgeCd: 1, herbs: 0, harvest: false },
-    },
+    heroes,
+    hero: heroes[0],
+    mode,
+    diff,
+    autoAttack: heroes.length > 1,
     enemies: [],
     bullets: [],
     pickups: [],
@@ -256,6 +356,10 @@ export function newGame(heroId: HeroId, weapon?: WeaponId): Game {
     choice: null,
     boons: [],
     boat: null,
+    caveDoor: null,
+    cave: null,
+    exit: null,
+    caveStages,
     route,
     stage: 0,
     room: 'port',
@@ -264,6 +368,7 @@ export function newGame(heroId: HeroId, weapon?: WeaponId): Game {
     waves: 0,
     coins: 0,
     kills: 0,
+    caves: 0,
     time: 0,
     shake: 0,
     banner: null,
@@ -276,11 +381,15 @@ export function newGame(heroId: HeroId, weapon?: WeaponId): Game {
   return g;
 }
 
-function enterRoom(g: Game, stage: number) {
-  const h = g.hero;
-  g.stage = stage;
-  g.room = g.route[stage];
-  g.grid = roomData.rooms[g.room].grid;
+function placeParty(g: Game, x: number, y: number) {
+  for (const h of g.heroes) {
+    h.x = x;
+    h.y = y + (g.heroes.length > 1 ? (h.idx ? 8 : -8) : 0);
+    h.spin = h.swing = h.dash = h.atkAnim = h.shield = 0;
+  }
+}
+
+function resetRoom(g: Game) {
   g.enemies = [];
   g.bullets = [];
   g.pickups = [];
@@ -289,32 +398,94 @@ function enterRoom(g: Game, stage: number) {
   g.shrine = null;
   g.boat = null;
   g.npc = null;
-  h.x = ENTRY.x;
-  h.y = ENTRY.y;
-  h.spin = h.swing = h.dash = h.atkAnim = h.shield = 0;
+  g.caveDoor = null;
+  g.exit = null;
   g.wave = 0;
-  if (h.mods.harvest && stage > 0) {
-    h.hp = Math.min(h.maxHp, h.hp + 1);
-    addText(g, h.x, h.y - 12, '+1 LAKAPATI', '#62b24a');
-    addFx(g, 'heal', h.x, h.y - 4);
+}
+
+function enterRoom(g: Game, stage: number) {
+  // endless mode lays the route down one island ahead
+  if (g.mode === 'endless') while (g.route.length <= stage) g.route.push(`${pick(ALL_THEMES)}_${pick(['a', 'b'])}` as RoomName);
+  g.stage = stage;
+  g.room = g.route[stage];
+  g.grid = roomData.rooms[g.room].grid;
+  resetRoom(g);
+  placeParty(g, ENTRY.x, ENTRY.y);
+  // a fallen hero gets back up on the next island with a little health
+  for (const h of g.heroes) {
+    if (h.down) {
+      h.down = false;
+      h.hp = Math.max(1, Math.floor(h.maxHp / 3));
+    }
+    if (h.mods.harvest && stage > 0) {
+      h.hp = Math.min(h.maxHp, h.hp + 1);
+      addText(g, h.x, h.y - 12, '+1 LAKAPATI', '#62b24a');
+      addFx(g, 'heal', h.x, h.y - 4);
+    }
   }
   if (g.room === 'port') {
     g.waves = 0;
     g.boat = { ...DOCK };
-    g.banner = { text: PORT.title, baybayin: PORT.baybayin, sub: PORT.line, t: 3 };
+    const intro = g.mode === 'endless' ? ENDLESS : PORT;
+    g.banner = { text: intro.title, baybayin: intro.baybayin, sub: intro.line, t: 3 };
     g.npc = { x: 5.5 * TILE, y: 6.2 * TILE, talking: false, line: HALIYA_LINES[0] };
   } else if (g.room === 'shore') {
     g.waves = 1;
     g.banner = { text: SHORE.title, baybayin: SHORE.baybayin, sub: SHORE.line, t: 3 };
-    g.dialog = { lines: bossDialogue(h.def.id), i: 0 };
+    g.dialog = { lines: bossDialogue(g.hero.def.id), i: 0 };
     spawnEnemy(g, 'bakunawa', 17 * TILE, 7 * TILE);
     g.wave = 1;
   } else {
     g.waves = 2;
     const info = stageInfo(g);
-    g.banner = { text: info.title, baybayin: info.baybayin, sub: info.line, t: 3.2 };
+    const title = g.mode === 'endless' ? `${info.title} · ${stage}` : info.title;
+    g.banner = { text: title, baybayin: info.baybayin, sub: info.line, t: 3.2 };
     spawnWave(g);
   }
+}
+
+/** Go down into the cave (depth 1) or one level deeper. */
+function enterCave(g: Game) {
+  if (!g.cave) {
+    g.cave = { depth: 1, surface: { room: g.room, grid: g.grid, chest: g.chest, shrine: g.shrine, boat: g.boat, cave: g.caveDoor! } };
+  } else {
+    g.cave.depth++;
+  }
+  const rooms: RoomName[] = ['yungib_a', 'yungib_b', 'yungib_c'];
+  g.room = rooms[(g.cave.depth - 1) % rooms.length];
+  g.grid = roomData.rooms[g.room].grid;
+  resetRoom(g);
+  placeParty(g, ENTRY.x, ENTRY.y);
+  g.banner = { text: `${CAVE.title} ${g.cave.depth}/${CAVE_DEPTH}`, baybayin: CAVE.baybayin, sub: g.cave.depth === 1 ? CAVE.line : undefined, t: 2.4 };
+  if (g.cave.depth === CAVE_DEPTH) {
+    // the guardian: a huge bungisngis, with a couple of hangers-on
+    g.waves = 1;
+    g.wave = 1;
+    spawnEnemy(g, 'bungisngis', 16 * TILE, 7.5 * TILE, true);
+    for (let i = 0; i < 2; i++) {
+      const p = randomFloor(g, 80);
+      spawnEnemy(g, pick(stageInfo(g).pool), p.x, p.y);
+    }
+  } else {
+    g.waves = 2;
+    spawnWave(g);
+  }
+}
+
+/** Climb back out to the island, which is just as the party left it (minus the cave). */
+function leaveCave(g: Game) {
+  const s = g.cave!.surface;
+  g.cave = null;
+  g.caves++;
+  g.room = s.room;
+  g.grid = s.grid;
+  resetRoom(g);
+  g.chest = s.chest;
+  g.shrine = s.shrine;
+  g.boat = s.boat;
+  g.wave = g.waves = 2;
+  placeParty(g, s.cave.x, s.cave.y + 14);
+  g.banner = { text: 'BALIK SA ISLA', sub: 'Back on the island. The balangay is waiting.', t: 2 };
 }
 
 // ---------------------------------------------------------------- map helpers
@@ -359,24 +530,28 @@ function lineOfSight(g: Game, ax: number, ay: number, bx: number, by: number) {
   return true;
 }
 
-function randomFloor(g: Game, minDistFromHero: number) {
+/** A free floor tile at least `minDist` from every hero (and clear of the given spots). */
+function randomFloor(g: Game, minDist: number, avoid: { x: number; y: number }[] = []) {
   for (let i = 0; i < 300; i++) {
     const tx = 3 + Math.floor(Math.random() * (roomData.width - 6));
     const ty = 2 + Math.floor(Math.random() * (roomData.height - 4));
     if (g.grid[ty][tx] !== FLOOR || g.grid[ty + 1]?.[tx] !== FLOOR) continue;
     const x = (tx + 0.5) * TILE;
     const y = (ty + 0.5) * TILE;
-    if (dist(x, y, g.hero.x, g.hero.y) < minDistFromHero) continue;
+    if (g.heroes.some((h) => dist(x, y, h.x, h.y) < minDist)) continue;
+    if (avoid.some((a) => dist(x, y, a.x, a.y) < 28)) continue;
     return { x, y };
   }
   return { x: CENTER.x, y: CENTER.y };
 }
 
 // ---------------------------------------------------------------- spawning
-function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
+function spawnEnemy(g: Game, type: EnemyType, x: number, y: number, boss = false) {
   const def = ENEMIES[type];
-  const scale = 1 + (g.stage - 1) * 0.15;
-  const hp = type === 'bakunawa' ? def.hp : Math.round(def.hp * scale);
+  const depth = g.cave ? 0.3 * g.cave.depth : 0;
+  const scale = (1 + (g.stage - 1) * 0.15 + depth) * g.diff.hp * (g.heroes.length > 1 ? 1.4 : 1);
+  let hp = type === 'bakunawa' ? Math.round(def.hp * g.diff.hp * (g.heroes.length > 1 ? 1.5 : 1)) : Math.round(def.hp * scale);
+  if (boss) hp = Math.round(hp * 5);
   g.enemies.push({
     id: g.nextId++,
     type,
@@ -386,19 +561,21 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
     maxHp: hp,
     cd: rand(0.8, 2),
     t: Math.random() * 10,
-    spawn: type === 'bakunawa' ? 1.2 : 0.7,
+    spawn: type === 'bakunawa' || boss ? 1.2 : 0.7,
     flash: 0,
     facing: -1,
     poison: 0,
     poisonTick: 0,
     state: 0,
+    scale: boss ? 1.9 : 1,
+    boss,
   });
 }
 
 function spawnWave(g: Game) {
   g.wave++;
-  const pool = stageInfo(g).pool;
-  const n = 3 + g.stage + (g.wave - 1);
+  const pool = g.cave ? [...stageInfo(g).pool, 'tiyanak', 'sigbin'] as EnemyType[] : stageInfo(g).pool;
+  const n = Math.min(16, Math.max(2, 3 + Math.min(g.stage, 8) + (g.wave - 1) + g.diff.extra + (g.heroes.length - 1) * 2));
   for (let i = 0; i < n; i++) {
     const p = randomFloor(g, 90);
     spawnEnemy(g, pick(pool), p.x, p.y);
@@ -417,31 +594,36 @@ function dropPickup(g: Game, kind: PickupKind, x: number, y: number, weapon?: We
   g.pickups.push({ id: g.nextId++, kind, x: x + rand(-4, 4), y: y + rand(-4, 4), t: 0, weapon, armed });
 }
 
-/** Open a kaban: gold, fireflies, maybe herbs, and either a weapon or a whetstone. */
+/** Open a kaban: gold, fireflies, maybe herbs, and a weapon or a whetstone (a big one holds both). */
 function openChest(g: Game, c: Chest) {
   c.open = true;
   addFx(g, 'sparkle', c.x, c.y - 6);
-  addText(g, c.x, c.y - 14, 'KABAN!', '#ffe882');
-  for (let i = 0; i < 4 + Math.floor(Math.random() * 4); i++) dropPickup(g, 'coin', c.x, c.y + 8);
-  for (let i = 0; i < 2; i++) dropPickup(g, 'energy_orb', c.x, c.y + 8);
-  if (Math.random() < 0.4) dropPickup(g, 'potion_health', c.x, c.y + 8);
-  if (Math.random() < 0.55) {
-    const options = LOOT_WEAPONS.filter((w) => w !== g.hero.weapon);
-    dropPickup(g, 'weapon', c.x, c.y + 12, pick(options));
-  } else {
-    dropPickup(g, 'whetstone', c.x, c.y + 12);
-  }
+  addText(g, c.x, c.y - 14, c.big ? 'MALAKING KABAN!' : 'KABAN!', '#ffe882');
+  const coins = (c.big ? 12 : 4) + Math.floor(Math.random() * 4);
+  for (let i = 0; i < coins; i++) dropPickup(g, 'coin', c.x, c.y + 8);
+  for (let i = 0; i < (c.big ? 5 : 2); i++) dropPickup(g, 'energy_orb', c.x, c.y + 8);
+  if (c.big || Math.random() < 0.4) dropPickup(g, 'potion_health', c.x, c.y + 8);
+  const held = g.heroes.map((h) => h.weapon);
+  const newWeapon = () => dropPickup(g, 'weapon', c.x + rand(-10, 10), c.y + 12, pick(LOOT_WEAPONS.filter((w) => !held.includes(w))));
+  if (c.big) {
+    newWeapon();
+    dropPickup(g, 'whetstone', c.x - 8, c.y + 14);
+    dropPickup(g, 'whetstone', c.x + 8, c.y + 14);
+  } else if (Math.random() < 0.55) newWeapon();
+  else dropPickup(g, 'whetstone', c.x, c.y + 12);
 }
 
-function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg: number, fromHero: boolean, sprite: BulletSprite, r = 2.5, pierce = false, poison?: number, homing = false, explode?: number) {
+function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg: number, fromHero: boolean, sprite: BulletSprite, r = 2.5, pierce = false, poison?: number, homing = false, explode?: number, owner?: number) {
+  const v = fromHero ? speed : speed * g.diff.shot;
   g.bullets.push({
     id: g.nextId++,
     x,
     y,
-    vx: Math.cos(angle) * speed,
-    vy: Math.sin(angle) * speed,
+    vx: Math.cos(angle) * v,
+    vy: Math.sin(angle) * v,
     dmg,
     fromHero,
+    owner,
     sprite,
     r,
     life: 2.5,
@@ -453,9 +635,8 @@ function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg:
   });
 }
 
-function hurtHero(g: Game, dmg: number) {
-  const h = g.hero;
-  if (h.invuln > 0 || h.dash > 0 || g.result) return;
+function hurtHero(g: Game, h: Hero, dmg: number) {
+  if (h.down || h.invuln > 0 || h.dash > 0 || g.result) return;
   let left = dmg;
   const absorbed = Math.min(h.armor, left);
   h.armor -= absorbed;
@@ -467,18 +648,39 @@ function hurtHero(g: Game, dmg: number) {
   addText(g, h.x, h.y - 10, `-${dmg}`, left > 0 ? '#ff5a5a' : '#82eed6');
   if (h.hp <= 0) {
     h.hp = 0;
-    g.result = 'dead';
+    h.down = true;
+    h.revive = 0;
+    if (g.heroes.length > 1 && alive(g).length > 0) addText(g, h.x, h.y - 16, 'TULONG!', '#ff8a7a');
+    if (alive(g).length === 0) g.result = 'dead';
   }
 }
 
-function damageEnemy(g: Game, e: Enemy, dmg: number) {
+/** XP for the whole party; each level adds health, damage and a little speed. */
+function gainXp(g: Game, amount: number) {
+  for (const h of g.heroes) {
+    if (h.lv >= LEVEL_MAX) continue;
+    h.xp += amount;
+    while (h.lv < LEVEL_MAX && h.xp >= xpToNext(h.lv)) {
+      h.xp -= xpToNext(h.lv);
+      h.lv++;
+      h.maxHp += 1;
+      if (!h.down) h.hp = Math.min(h.maxHp, h.hp + 1);
+      h.mods.dmg *= 1.08;
+      h.mods.speed *= 1.02;
+      addText(g, h.x, h.y - 18, `ANTAS ${h.lv}!`, '#ffe882');
+      addFx(g, 'sparkle', h.x, h.y - 8);
+    }
+  }
+}
+
+function damageEnemy(g: Game, e: Enemy, dmg: number, by: Hero = g.hero) {
   if (e.hp <= 0) return;
-  const d = Math.round(dmg * g.hero.mods.dmg * (1 + g.hero.weaponLv * WEAPON_LV_BONUS) * 10) / 10;
+  const d = Math.round(dmg * by.mods.dmg * (1 + by.weaponLv * WEAPON_LV_BONUS) * 10) / 10;
   e.hp -= d;
   e.flash = 0.1;
   if (e.type === 'tiyanak' && e.state === 0) revealTiyanak(g, e);
   addFx(g, 'hit', e.x + rand(-3, 3), e.y + rand(-3, 3));
-  g.hero.light = Math.min(LIGHT_MAX, g.hero.light + d * 1.3);
+  by.light = Math.min(LIGHT_MAX, by.light + d * 1.3);
   addText(g, e.x, e.y - 10, `${Math.round(d)}`, '#ffffff');
   if (e.hp <= 0) killEnemy(g, e);
 }
@@ -489,19 +691,24 @@ function revealTiyanak(g: Game, e: Enemy) {
   addText(g, e.x, e.y - 12, 'TIYANAK!', '#ff8a7a');
 }
 
-/** The sigbin can only be seen, and so only be targeted, when it is close. */
+/** The sigbin can only be seen, and so only be targeted, when a hero is close. */
 export function sigbinVisible(g: Game, e: Enemy) {
-  return e.type !== 'sigbin' || e.flash > 0 || dist(e.x, e.y, g.hero.x, g.hero.y) < 56;
+  return e.type !== 'sigbin' || e.flash > 0 || alive(g).some((h) => dist(e.x, e.y, h.x, h.y) < 56);
 }
 
 function killEnemy(g: Game, e: Enemy) {
   g.kills++;
-  addFx(g, 'poof', e.x, e.y);
+  addFx(g, 'poof', e.x, e.y, e.boss ? 36 : undefined);
   const def = ENEMIES[e.type];
-  for (let i = 0; i < def.coins; i++) dropPickup(g, 'coin', e.x, e.y);
-  const orbs = e.type === 'bakunawa' ? 10 : 1 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < def.coins * (e.boss ? 4 : 1); i++) dropPickup(g, 'coin', e.x, e.y);
+  const orbs = e.type === 'bakunawa' || e.boss ? 10 : 1 + Math.floor(Math.random() * 2);
   for (let i = 0; i < orbs; i++) dropPickup(g, 'energy_orb', e.x, e.y);
   if (Math.random() < 0.06 + g.hero.mods.herbs) dropPickup(g, 'potion_health', e.x, e.y);
+  gainXp(g, Math.ceil(e.maxHp / 3));
+  if (e.boss) {
+    g.chest = { x: e.x, y: e.y, open: false, big: true };
+    g.banner = { text: 'NATALO ANG BANTAY', sub: 'The cave guardian is down. Open the big kaban.', t: 2.4 };
+  }
 }
 
 // ---------------------------------------------------------------- blessings
@@ -512,44 +719,45 @@ function boonOptions(g: Game): BoonId[] {
   return out;
 }
 
-/** Apply the blessing the player picked at the dambana. */
+/** Apply the blessing the player picked at the dambana. Blessings are for the whole party. */
 export function chooseBoon(g: Game, id: BoonId) {
-  const h = g.hero;
-  const m = h.mods;
   g.boons.push(id);
   g.choice = null;
-  switch (id) {
-    case 'apolaki':
-      m.dmg *= 1.25;
-      break;
-    case 'mayari':
-      m.pierce = true;
-      m.reach *= 1.3;
-      break;
-    case 'tala':
-      h.maxHp += 1;
-      h.hp = Math.min(h.maxHp, h.hp + 1);
-      break;
-    case 'anitun_tabu':
-      m.speed *= 1.15;
-      m.dodgeCd *= 0.7;
-      break;
-    case 'dumakulem':
-      h.maxArmor += 2;
-      h.armor = h.maxArmor;
-      break;
-    case 'lakapati':
-      m.harvest = true;
-      m.herbs += 0.1;
-      break;
-    case 'aman_sinaya':
-      m.rate *= 0.8;
-      break;
-    case 'lakan_bakod':
-      m.regen *= 2;
-      break;
+  for (const h of g.heroes) {
+    const m = h.mods;
+    switch (id) {
+      case 'apolaki':
+        m.dmg *= 1.25;
+        break;
+      case 'mayari':
+        m.pierce = true;
+        m.reach *= 1.3;
+        break;
+      case 'tala':
+        h.maxHp += 1;
+        h.hp = Math.min(h.maxHp, h.hp + 1);
+        break;
+      case 'anitun_tabu':
+        m.speed *= 1.15;
+        m.dodgeCd *= 0.7;
+        break;
+      case 'dumakulem':
+        h.maxArmor += 2;
+        h.armor = h.maxArmor;
+        break;
+      case 'lakapati':
+        m.harvest = true;
+        m.herbs += 0.1;
+        break;
+      case 'aman_sinaya':
+        m.rate *= 0.8;
+        break;
+      case 'lakan_bakod':
+        m.regen *= 2;
+        break;
+    }
+    addText(g, h.x, h.y - 14, BOONS[id].deity.toUpperCase(), '#ffe882');
   }
-  addText(g, h.x, h.y - 14, BOONS[id].deity.toUpperCase(), '#ffe882');
 }
 
 /** Moves the open dialogue on by one line; closes it after the last. */
@@ -560,10 +768,14 @@ export function advanceDialog(g: Game) {
 }
 
 // ---------------------------------------------------------------- update
-export function update(g: Game, input: Input, dt: number) {
+const NO_INPUT: Input = { mx: 0, my: 0, attack: false, skill: false, dodge: false };
+
+/** Advance the world. `inputs` holds one entry per player (a single Input works for one player). */
+export function update(g: Game, inputs: Input | Input[], dt: number) {
+  const ins = Array.isArray(inputs) ? inputs : [inputs];
   if (g.result) return;
   if (g.dialog || g.choice) {
-    input.skill = input.dodge = false;
+    for (const i of ins) i.skill = i.dodge = false;
     return;
   }
   g.time += dt;
@@ -572,12 +784,13 @@ export function update(g: Game, input: Input, dt: number) {
     g.banner.t -= dt;
     if (g.banner.t <= 0) g.banner = null;
   }
-  updateHero(g, input, dt);
+  for (const h of g.heroes) updateHero(g, h, ins[h.idx] ?? NO_INPUT, dt);
+  updateRevives(g, dt);
   updateEnemies(g, dt);
   updateBullets(g, dt);
   updatePickups(g, dt);
   if (g.npc) {
-    g.npc.talking = dist(g.hero.x, g.hero.y, g.npc.x, g.npc.y) < 36;
+    g.npc.talking = alive(g).some((h) => dist(h.x, h.y, g.npc!.x, g.npc!.y) < 36);
     if (g.npc.talking) g.npc.line = HALIYA_LINES[Math.floor(g.time / 4) % HALIYA_LINES.length];
   }
   for (const t of g.texts) {
@@ -588,33 +801,72 @@ export function update(g: Game, input: Input, dt: number) {
   for (const f of g.fx) f.t += dt;
   g.fx = g.fx.filter((f) => f.t < FX_LIFE[f.kind]);
 
-  // island flow: waves, then the shrine and the boat
-  if (g.room !== 'port' && !g.boat && g.enemies.length === 0) {
+  // island flow: waves, then the chest, the shrine, maybe a cave, and the boat
+  if (g.room !== 'port' && !g.boat && !g.exit && g.enemies.length === 0) {
     if (g.wave < g.waves) {
       spawnWave(g);
+    } else if (g.cave) {
+      g.exit = { ...DOCK };
+      if (g.cave.depth < CAVE_DEPTH) g.banner = { text: 'MAY DAAN PABABA', sub: 'A way down. Take the steps to go deeper.', t: 2 };
     } else if (g.room === 'shore') {
       g.result = 'victory';
     } else {
       g.boat = { ...DOCK };
       g.shrine = { x: CENTER.x, y: CENTER.y - TILE, used: false };
-      const spot = randomFloor(g, 40);
+      const spot = randomFloor(g, 40, [g.shrine, g.boat]);
       g.chest = { x: spot.x, y: spot.y, open: false };
-      g.banner = { text: 'THE ISLAND IS SAFE', sub: 'Open the kaban, visit the dambana, then sail on.', t: 2.4 };
+      const hasCave = g.mode === 'endless' ? g.stage % ENDLESS_CAVE_EVERY === 0 || Math.random() < 0.25 : g.caveStages.includes(g.stage);
+      if (hasCave) {
+        const door = randomFloor(g, 40, [g.shrine, g.boat, g.chest]);
+        g.caveDoor = door;
+      }
+      g.banner = {
+        text: 'THE ISLAND IS SAFE',
+        sub: hasCave ? 'Open the kaban, visit the dambana. A cave opens below the island.' : 'Open the kaban, visit the dambana, then sail on.',
+        t: 2.6,
+      };
     }
   }
-  if (g.chest && !g.chest.open && dist(g.hero.x, g.hero.y, g.chest.x, g.chest.y) < 14) openChest(g, g.chest);
-  if (g.shrine && !g.shrine.used && dist(g.hero.x, g.hero.y, g.shrine.x, g.shrine.y) < 20) {
+  const touching = (o: { x: number; y: number } | null, r: number) => !!o && alive(g).some((h) => dist(h.x, h.y, o.x, o.y) < r);
+  if (g.chest && !g.chest.open && touching(g.chest, 14)) openChest(g, g.chest);
+  if (g.shrine && !g.shrine.used && touching(g.shrine, 20)) {
     g.shrine.used = true;
     const opts = boonOptions(g);
     if (opts.length) g.choice = opts;
   }
-  if (g.boat && dist(g.hero.x, g.hero.y, g.boat.x, g.boat.y) < 10) {
-    enterRoom(g, g.stage + 1);
+  if (g.caveDoor && touching(g.caveDoor, 10)) {
+    enterCave(g);
+    return;
+  }
+  if (g.exit && touching(g.exit, 10)) {
+    if (g.cave && g.cave.depth < CAVE_DEPTH) enterCave(g);
+    else leaveCave(g);
+    return;
+  }
+  if (g.boat && touching(g.boat, 10)) {
+    if (g.mode === 'voyage' && g.stage + 1 >= g.route.length) g.result = 'victory';
+    else enterRoom(g, g.stage + 1);
   }
 }
 
-function nearestTarget(g: Game) {
-  const h = g.hero;
+/** A fallen hero stands back up after a teammate stays beside them long enough. */
+function updateRevives(g: Game, dt: number) {
+  for (const h of g.heroes) {
+    if (!h.down) continue;
+    const helper = alive(g).find((o) => dist(o.x, o.y, h.x, h.y) < 18);
+    h.revive = helper ? h.revive + dt : Math.max(0, h.revive - dt * 0.5);
+    if (h.revive >= REVIVE_TIME) {
+      h.down = false;
+      h.revive = 0;
+      h.hp = Math.max(1, Math.ceil(h.maxHp / 2));
+      h.invuln = 1.5;
+      addText(g, h.x, h.y - 16, 'BUHAY!', '#62b24a');
+      addFx(g, 'heal', h.x, h.y - 4);
+    }
+  }
+}
+
+function nearestTarget(g: Game, h: Hero) {
   let best: Enemy | null = null;
   let bd = 190;
   for (const e of g.enemies) {
@@ -636,19 +888,18 @@ function angleDiff(a: number, b: number) {
 }
 
 /** Melee strike: hits creatures in an arc and cuts enemy shots out of the air. */
-function slash(g: Game, aim: number, reach: number, arc: number, dmg: number, poison?: number, knock?: number) {
-  const h = g.hero;
+function slash(g: Game, h: Hero, aim: number, reach: number, arc: number, dmg: number, poison?: number, knock?: number) {
   const cy = h.y + 3;
   for (const e of g.enemies) {
     if (e.spawn > 0 || e.hp <= 0) continue;
     const d = dist(h.x, cy, e.x, e.y);
-    if (d < reach + ENEMIES[e.type].radius && angleDiff(Math.atan2(e.y - cy, e.x - h.x), aim) < arc) {
-      damageEnemy(g, e, dmg);
+    if (d < reach + radius(e) && angleDiff(Math.atan2(e.y - cy, e.x - h.x), aim) < arc) {
+      damageEnemy(g, e, dmg, h);
       if (poison) {
         e.poison = poison;
         if (e.poisonTick <= 0) e.poisonTick = 0.5;
       }
-      if (knock && e.type !== 'bakunawa') push(g, e, h.x, cy, knock);
+      if (knock && e.type !== 'bakunawa' && !e.boss) push(g, e, h.x, cy, knock);
     }
   }
   for (const b of g.bullets) {
@@ -661,21 +912,24 @@ function slash(g: Game, aim: number, reach: number, arc: number, dmg: number, po
 function push(g: Game, e: Enemy, fx: number, fy: number, amount: number) {
   const d = dist(e.x, e.y, fx, fy) || 1;
   const steps = 4;
-  for (let i = 0; i < steps; i++) moveBody(g, e, ((e.x - fx) / d) * (amount / steps), ((e.y - fy) / d) * (amount / steps), ENEMIES[e.type].radius - 1);
+  for (let i = 0; i < steps; i++) moveBody(g, e, ((e.x - fx) / d) * (amount / steps), ((e.y - fy) / d) * (amount / steps), radius(e) - 1);
 }
 
 /** A lantaka ball bursting: hurts everything in the blast. */
-function blast(g: Game, x: number, y: number, radius: number, dmg: number) {
-  addFx(g, 'boom', x, y, radius * 1.4);
+function blast(g: Game, x: number, y: number, r: number, dmg: number, by: Hero) {
+  addFx(g, 'boom', x, y, r * 1.4);
   g.shake = Math.max(g.shake, 0.12);
   for (const e of g.enemies) {
     if (e.spawn > 0 || e.hp <= 0) continue;
-    if (dist(x, y, e.x, e.y) < radius + ENEMIES[e.type].radius) damageEnemy(g, e, dmg);
+    if (dist(x, y, e.x, e.y) < r + radius(e)) damageEnemy(g, e, dmg, by);
   }
 }
 
-function updateHero(g: Game, input: Input, dt: number) {
-  const h = g.hero;
+function updateHero(g: Game, h: Hero, input: Input, dt: number) {
+  if (h.down) {
+    input.skill = input.dodge = false;
+    return;
+  }
   const m = h.mods;
   h.invuln = Math.max(0, h.invuln - dt);
   h.atkCd = Math.max(0, h.atkCd - dt);
@@ -688,6 +942,7 @@ function updateHero(g: Game, input: Input, dt: number) {
     for (const b of g.bullets) {
       if (b.fromHero || dist(b.x, b.y, h.x, h.y + 2) > 22) continue;
       b.fromHero = true;
+      b.owner = h.idx;
       b.vx *= -1.4;
       b.vy *= -1.4;
       b.dmg = 3;
@@ -743,20 +998,21 @@ function updateHero(g: Game, input: Input, dt: number) {
     addFx(g, 'dust', h.x - h.facing * 3, h.y + 8);
   }
 
-  const target = nearestTarget(g);
+  const target = nearestTarget(g, h);
   if (target) h.aim = Math.atan2(target.y - h.y, target.x - h.x);
   else if (mag > 0.15) h.aim = Math.atan2(my, mx);
   h.facing = Math.cos(h.aim) < 0 ? -1 : 1;
 
   if (input.skill) {
     input.skill = false;
-    if (h.light >= LIGHT_MAX) useSkill(g, mx, my);
+    if (h.light >= LIGHT_MAX) useSkill(g, h);
   }
 
   const w = WEAPONS[h.weapon];
-  if (input.attack && h.atkCd <= 0) {
+  const wantsAttack = input.attack || (g.autoAttack && !!target && dist(h.x, h.y, target.x, target.y) < (w.melee ? w.radius * m.reach + 20 : 170));
+  if (wantsAttack && h.atkCd <= 0) {
     if (w.melee) {
-      slash(g, h.aim, w.radius * m.reach, ((w.arc ?? 75) * Math.PI) / 180, w.damage, w.poison, w.knock);
+      slash(g, h, h.aim, w.radius * m.reach, ((w.arc ?? 75) * Math.PI) / 180, w.damage, w.poison, w.knock);
       h.swing = 0.14;
       h.swingAim = h.aim;
     } else {
@@ -768,7 +1024,7 @@ function updateHero(g: Game, input: Input, dt: number) {
       for (let i = 0; i < n; i++) {
         // a fan spreads evenly across the arc; a single shot wobbles inside it
         const a = n > 1 ? h.aim + w.spread * ((i / (n - 1)) * 2 - 1) : h.aim + rand(-w.spread, w.spread);
-        shoot(g, gx, gy, a, w.speed, w.damage, true, w.sprite!, w.radius, w.pierce || m.pierce, w.poison, w.homing, w.explode);
+        shoot(g, gx, gy, a, w.speed, w.damage, true, w.sprite!, w.radius, w.pierce || m.pierce, w.poison, w.homing, w.explode, h.idx);
       }
     }
     h.atkCd = w.rate * m.rate;
@@ -776,12 +1032,11 @@ function updateHero(g: Game, input: Input, dt: number) {
   }
 }
 
-function useSkill(g: Game, mx: number, my: number) {
-  const h = g.hero;
+function useSkill(g: Game, h: Hero) {
   h.light = 0;
   switch (h.def.id) {
     case 'kidlat':
-      slash(g, 0, 46 * h.mods.reach, Math.PI + 0.01, 14);
+      slash(g, h, 0, 46 * h.mods.reach, Math.PI + 0.01, 14);
       h.spin = 0.35;
       h.invuln = Math.max(h.invuln, 0.4);
       g.shake = 0.2;
@@ -790,19 +1045,23 @@ function useSkill(g: Game, mx: number, my: number) {
     case 'liksi':
       for (let i = 0; i < 24; i++) {
         const a = (i / 24) * Math.PI * 2;
-        shoot(g, h.x, h.y + 2, a, 260, 4, true, 'shot_arrow', 2.5, true);
-        shoot(g, h.x, h.y + 2, a + Math.PI / 24, 200, 4, true, 'shot_arrow', 2.5, true);
+        shoot(g, h.x, h.y + 2, a, 260, 4, true, 'shot_arrow', 2.5, true, undefined, false, undefined, h.idx);
+        shoot(g, h.x, h.y + 2, a + Math.PI / 24, 200, 4, true, 'shot_arrow', 2.5, true, undefined, false, undefined, h.idx);
       }
       break;
     case 'mayumi':
-      for (let i = 0; i < 16; i++) shoot(g, h.x, h.y + 2, (i / 16) * Math.PI * 2, 150, 7, true, 'shot_spirit', 4, true);
+      for (let i = 0; i < 16; i++) shoot(g, h.x, h.y + 2, (i / 16) * Math.PI * 2, 150, 7, true, 'shot_spirit', 4, true, undefined, false, undefined, h.idx);
       g.shake = 0.15;
       break;
     case 'amihan':
-      h.hp = Math.min(h.maxHp, h.hp + 2);
-      h.armor = h.maxArmor;
-      addText(g, h.x, h.y - 14, '+2 TAMBAL', '#62b24a');
-      addFx(g, 'heal', h.x, h.y - 4);
+      // Tambal heals the healer and every teammate nearby
+      for (const o of alive(g)) {
+        if (o !== h && dist(o.x, o.y, h.x, h.y) > 60) continue;
+        o.hp = Math.min(o.maxHp, o.hp + 2);
+        o.armor = o.maxArmor;
+        addText(g, o.x, o.y - 14, '+2 TAMBAL', '#62b24a');
+        addFx(g, 'heal', o.x, o.y - 4);
+      }
       break;
     case 'banog':
       h.shield = 2.5;
@@ -814,8 +1073,8 @@ function useSkill(g: Game, mx: number, my: number) {
       g.shake = 0.2;
       for (const e of g.enemies) {
         if (e.spawn > 0 || e.hp <= 0 || dist(h.x, h.y, e.x, e.y) > 75) continue;
-        damageEnemy(g, e, 8);
-        if (e.type !== 'bakunawa') push(g, e, h.x, h.y, 34);
+        damageEnemy(g, e, 8, h);
+        if (e.type !== 'bakunawa' && !e.boss) push(g, e, h.x, h.y, 34);
       }
       for (const b of g.bullets) if (!b.fromHero && dist(h.x, h.y, b.x, b.y) < 75) b.life = 0;
       addText(g, h.x, h.y - 14, 'DALUYONG!', '#82eed6');
@@ -824,16 +1083,19 @@ function useSkill(g: Game, mx: number, my: number) {
 }
 
 // ---------------------------------------------------------------- creatures
-/** BFS distance (in tiles) from the hero's tile to every walkable tile. */
+/** BFS distance (in tiles) from the nearest standing hero to every walkable tile. */
 function flowField(g: Game) {
   const H = g.grid.length;
   const W = g.grid[0].length;
   const field = new Array<number>(W * H).fill(Infinity);
-  const sx = Math.floor(g.hero.x / TILE);
-  const sy = Math.floor((g.hero.y + 3) / TILE);
-  if (g.grid[sy]?.[sx] !== FLOOR) return field;
-  const queue = [sy * W + sx];
-  field[queue[0]] = 0;
+  const queue: number[] = [];
+  for (const h of alive(g)) {
+    const sx = Math.floor(h.x / TILE);
+    const sy = Math.floor((h.y + 3) / TILE);
+    if (g.grid[sy]?.[sx] !== FLOOR) continue;
+    field[sy * W + sx] = 0;
+    queue.push(sy * W + sx);
+  }
   for (let i = 0; i < queue.length; i++) {
     const c = queue[i];
     const cx = c % W;
@@ -851,9 +1113,19 @@ function flowField(g: Game) {
   return field;
 }
 
-/** Walk straight at the hero when in sight, otherwise down the flow field. */
-function chaseDir(g: Game, e: Enemy, field: number[], ux: number, uy: number): [number, number] {
-  if (lineOfSight(g, e.x, e.y + 3, g.hero.x, g.hero.y + 3)) return [ux, uy];
+/** True when a body of half-width `hw` could walk the straight line between two points (no water or obstacles). */
+function walkLine(g: Game, ax: number, ay: number, bx: number, by: number, hw: number) {
+  const steps = Math.ceil(dist(ax, ay, bx, by) / 4);
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps;
+    if (!boxFree(g, ax + (bx - ax) * t, ay + (by - ay) * t, hw)) return false;
+  }
+  return true;
+}
+
+/** Walk straight at the hero when the way is clear, otherwise down the flow field (around water and obstacles). */
+function chaseDir(g: Game, e: Enemy, h: Hero, field: number[], ux: number, uy: number): [number, number] {
+  if (walkLine(g, e.x, e.y, h.x, h.y, radius(e) - 1)) return [ux, uy];
   const W = g.grid[0].length;
   const tx = Math.floor(e.x / TILE);
   const ty = Math.floor((e.y + 3) / TILE);
@@ -876,7 +1148,6 @@ function chaseDir(g: Game, e: Enemy, field: number[], ux: number, uy: number): [
 }
 
 function updateEnemies(g: Game, dt: number) {
-  const h = g.hero;
   const field = flowField(g);
   for (const e of g.enemies) {
     e.flash = Math.max(0, e.flash - dt);
@@ -896,12 +1167,14 @@ function updateEnemies(g: Game, dt: number) {
     e.t += dt;
     e.cd -= dt;
     const def = ENEMIES[e.type];
+    const h = nearestHero(g, e.x, e.y);
     const dx = h.x - e.x;
     const dy = h.y - e.y;
     const d = Math.hypot(dx, dy) || 1;
-    const [ux, uy] = chaseDir(g, e, field, dx / d, dy / d);
+    const [ux, uy] = chaseDir(g, e, h, field, dx / d, dy / d);
     e.facing = dx < 0 ? -1 : 1;
-    const hw = def.radius - 1;
+    const r = radius(e);
+    const hw = r - 1;
     const aim = Math.atan2(dy, dx);
 
     switch (e.type) {
@@ -959,7 +1232,7 @@ function updateEnemies(g: Game, dt: number) {
         } else {
           const weave = Math.sin(e.t * 4) * 0.7;
           moveBody(g, e, (ux - uy * weave) * def.speed * dt, (uy + ux * weave) * def.speed * dt, hw);
-          if (d < def.radius + 7) {
+          if (d < r + 7) {
             e.state = 1;
             e.cd = 1.1;
           }
@@ -984,18 +1257,20 @@ function updateEnemies(g: Game, dt: number) {
         // lumbers in, laughs while winding up, then slams out a ring of shots
         if (e.state === 1) {
           if (e.cd <= 0) {
-            for (let i = 0; i < 12; i++) shoot(g, e.x, e.y + 4, (i / 12) * Math.PI * 2 + e.t, 80, 1, false, 'shot_enemy', 3);
-            g.shake = Math.max(g.shake, 0.2);
+            const n = e.boss ? 20 : 12;
+            for (let i = 0; i < n; i++) shoot(g, e.x, e.y + 4, (i / n) * Math.PI * 2 + e.t, e.boss ? 90 : 80, 1, false, 'shot_enemy', 3);
+            if (e.boss) for (const off of [-0.2, 0, 0.2]) shoot(g, e.x, e.y + 4, aim + off, 120, 1, false, 'shot_enemy', 3);
+            g.shake = Math.max(g.shake, e.boss ? 0.35 : 0.2);
             e.state = 0;
-            e.cd = rand(2.4, 3);
+            e.cd = e.boss ? rand(1.4, 1.9) : rand(2.4, 3);
           }
           break;
         }
-        moveBody(g, e, ux * def.speed * dt, uy * def.speed * dt, hw);
-        if (e.cd <= 0 && d < 90) {
+        moveBody(g, e, ux * def.speed * (e.boss ? 1.3 : 1) * dt, uy * def.speed * (e.boss ? 1.3 : 1) * dt, hw);
+        if (e.cd <= 0 && d < (e.boss ? 140 : 90)) {
           e.state = 1;
           e.cd = 0.7;
-          addText(g, e.x, e.y - 16, 'HA HA HA!', '#ffe882');
+          addText(g, e.x, e.y - 16 * (e.scale ?? 1), 'HA HA HA!', '#ffe882');
         }
         break;
       }
@@ -1004,7 +1279,7 @@ function updateEnemies(g: Game, dt: number) {
         break;
     }
     const harmless = e.type === 'tiyanak' && e.state === 0;
-    if (!harmless && d < def.radius + 5) hurtHero(g, def.contact);
+    if (!harmless) for (const o of alive(g)) if (dist(o.x, o.y, e.x, e.y) < r + 5) hurtHero(g, o, def.contact);
   }
   g.enemies = g.enemies.filter((e) => e.hp > 0);
 }
@@ -1062,22 +1337,22 @@ function steer(g: Game, b: Bullet, dt: number) {
 }
 
 function updateBullets(g: Game, dt: number) {
-  const h = g.hero;
   for (const b of g.bullets) {
+    const by = g.heroes[b.owner ?? 0] ?? g.hero;
     if (b.homing) steer(g, b, dt);
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     b.life -= dt;
     if (shotBlocked(g, b.x, b.y)) {
       b.life = 0;
-      if (b.explode) blast(g, b.x, b.y, b.explode, b.dmg * 0.7);
+      if (b.explode) blast(g, b.x, b.y, b.explode, b.dmg * 0.7, by);
       continue;
     }
     if (b.fromHero) {
       for (const e of g.enemies) {
         if (e.spawn > 0 || e.hp <= 0 || b.hit?.has(e.id)) continue;
-        if (dist(b.x, b.y, e.x, e.y) < ENEMIES[e.type].radius + b.r) {
-          damageEnemy(g, e, b.dmg);
+        if (dist(b.x, b.y, e.x, e.y) < radius(e) + b.r) {
+          damageEnemy(g, e, b.dmg, by);
           if (b.poison) {
             e.poison = b.poison;
             if (e.poisonTick <= 0) e.poisonTick = 0.5;
@@ -1085,14 +1360,19 @@ function updateBullets(g: Game, dt: number) {
           if (b.pierce) b.hit!.add(e.id);
           else {
             b.life = 0;
-            if (b.explode) blast(g, b.x, b.y, b.explode, b.dmg * 0.7);
+            if (b.explode) blast(g, b.x, b.y, b.explode, b.dmg * 0.7, by);
             break;
           }
         }
       }
-    } else if (dist(b.x, b.y, h.x, h.y + 2) < b.r + 4) {
-      b.life = 0;
-      hurtHero(g, b.dmg);
+    } else {
+      for (const h of alive(g)) {
+        if (dist(b.x, b.y, h.x, h.y + 2) < b.r + 4) {
+          b.life = 0;
+          hurtHero(g, h, b.dmg);
+          break;
+        }
+      }
     }
   }
   g.bullets = g.bullets.filter((b) => b.life > 0);
@@ -1100,16 +1380,21 @@ function updateBullets(g: Game, dt: number) {
 }
 
 function updatePickups(g: Game, dt: number) {
-  const h = g.hero;
   const keep: Pickup[] = [];
+  const standing = alive(g);
   for (const p of g.pickups) {
     p.t += dt;
+    if (!standing.length) {
+      keep.push(p);
+      continue;
+    }
+    const h = nearestHero(g, p.x, p.y);
     const d = dist(h.x, h.y, p.x, p.y);
     if ((p.kind === 'coin' || p.kind === 'energy_orb') && d < 44) {
       p.x += ((h.x - p.x) / d) * 120 * dt;
       p.y += ((h.y - p.y) / d) * 120 * dt;
     }
-    if (p.kind === 'weapon' && !p.armed && d > 14) p.armed = true;
+    if (p.kind === 'weapon' && !p.armed && standing.every((o) => dist(o.x, o.y, p.x, p.y) > 14)) p.armed = true;
     if (d < 8 && p.kind === 'weapon') {
       if (!p.armed) {
         keep.push(p);

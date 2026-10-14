@@ -461,6 +461,10 @@ export const STAGES: Record<string, StageInfo> = {
 /** The four legs of the voyage; each run picks one island per leg. */
 export const ROUTE_SLOTS: string[][] = [['pulo1'], ['pulo2', 'sulu'], ['pulo3', 'ifugao'], ['pulo4']];
 
+export const CAVE = { title: 'YUNGIB', baybayin: 'ᜌᜓᜅᜒᜊ᜔', line: 'A cave under the island. Something laughs in the dark below.' };
+export const CAVE_BOSS = 'BUNGISNGIS NG YUNGIB';
+export const ENDLESS = { title: 'WALANG KATAPUSAN', baybayin: 'ᜏᜎᜅ᜔ ᜃᜆᜉᜓᜐᜈ᜔', line: 'Endless islands. How far can you sail before the night takes you?' };
+
 export const PORT = { title: 'PORT OF TONDO', baybayin: 'ᜆᜓᜈ᜔ᜇᜓ', line: 'Haliya waits by the balangay.' };
 export const SHORE = { title: 'SHORE OF ALBAY', baybayin: 'ᜀᜎ᜔ᜊᜌ᜔', line: 'Beneath Mayon, the sea is the color of blood.' };
 

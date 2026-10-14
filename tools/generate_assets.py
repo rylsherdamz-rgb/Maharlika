@@ -1959,6 +1959,160 @@ def render_island(g, seed, theme):
         img.alpha_composite(fx)
     return img
 
+# ---------------------------------------------------------------- yungib (caves)
+def make_cave(seed):
+    """An underground chamber: rock walls, stalagmites, a still pool. Entry left, exit right."""
+    rnd = random.Random(seed)
+    g = [[WALL] * ROOM_W for _ in range(ROOM_H)]
+    cx, cy = ROOM_W // 2, ROOM_H // 2 + 1
+    ph = [rnd.random() * 6.28 for _ in range(3)]
+    for y in range(ROOM_H):
+        for x in range(ROOM_W):
+            a = math.atan2(y - cy, x - cx)
+            wob = 0.18 * math.sin(4 * a + ph[0]) + 0.1 * math.sin(7 * a + ph[1])
+            if ((x - cx + 0.5) / 10.4) ** 2 + ((y - cy + 0.5) / 5.6) ** 2 < 1 + wob:
+                g[y][x] = FLOOR
+    for x in range(1, ROOM_W - 1):
+        g[cy][x] = FLOOR
+    for y in (cy - 1, cy + 1):
+        for x in (1, 2, ROOM_W - 3, ROOM_W - 2):
+            g[y][x] = FLOOR
+    for x in range(ROOM_W):
+        g[0][x] = g[ROOM_H - 1][x] = WALL
+    for y in range(ROOM_H):
+        g[y][0] = g[y][ROOM_W - 1] = WALL
+    # an underground pool (shots cross it) and a few stalagmites and rock columns
+    px, py = rnd.randrange(7, ROOM_W - 7), rnd.choice([3, ROOM_H - 4])
+    for dx in range(-2, 2):
+        for dy in (0, 1):
+            if g[py + dy][px + dx] == FLOOR and py + dy != cy:
+                g[py + dy][px + dx] = WATER
+    for _ in range(rnd.randint(5, 8)):
+        x, y = rnd.randrange(4, ROOM_W - 4), rnd.randrange(3, ROOM_H - 2)
+        if g[y][x] == FLOOR and y != cy and not (cx - 1 <= x <= cx + 2 and abs(y - cy) <= 1):
+            g[y][x] = rnd.choice([CRATE, CRATE, PILLAR])
+    seen, stack = {(2, cy)}, [(2, cy)]
+    while stack:
+        x, y = stack.pop()
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if 0 <= nx < ROOM_W and 0 <= ny < ROOM_H and (nx, ny) not in seen and g[ny][nx] == FLOOR:
+                seen.add((nx, ny))
+                stack.append((nx, ny))
+    for y in range(ROOM_H):
+        for x in range(ROOM_W):
+            if g[y][x] == FLOOR and (x, y) not in seen:
+                g[y][x] = WALL
+    return g
+
+
+STALAGMITE = [
+    "", "", "",
+    ".......s........",
+    "......sSs.......",
+    "......sSs.......",
+    ".....sSSSs......",
+    ".....sSWSs...s..",
+    "....sSSSSSs.sSs.",
+    "....sSSSSSs.sSs.",
+    "...sssssssss....",
+]
+CRYSTAL = [
+    "", "",
+    ".......C........",
+    "......CVC.......",
+    "...C..CVC.......",
+    "..CVC.CVC..C....",
+    "..CVC.CVCC.CC...",
+    "..CVCCCVCCCVC...",
+    "...ssssssssss...",
+]
+# yungib: the cave mouth that opens on a cleared island
+YUNGIB = [
+    "", "",
+    "....ssssssss....",
+    "...sSSSSSSSSs...",
+    "..sSSkkkkkkSSs..",
+    ".sSSkKKKKKKkSSs.",
+    ".sSkKKKKKKKKkSs.",
+    ".sSkKKKKKKKKkSs.",
+    ".sSkKKKKKKKKkSs.",
+    "sSSkKKKKKKKKkSSs",
+    "sssssssssssssss.",
+]
+# hagdan: the way on, deeper or back up to the island
+HAGDAN = [
+    "", "",
+    "..nnnnnnnnnnnn..",
+    "..nNNNNNNNNNNn..",
+    "..n..........n..",
+    "..nNNNNNNNNNNn..",
+    "..n..........n..",
+    "..nNNNNNNNNNNn..",
+    "..n..........n..",
+    "..nNNNNNNNNNNn..",
+    "..nn........nn..",
+]
+
+
+def tile_cave_floor(seed):
+    rnd = random.Random(seed)
+    img = Image.new("RGBA", (16, 16), (40, 36, 46, 255))
+    for _ in range(14):
+        img.putpixel((rnd.randrange(16), rnd.randrange(16)), rnd.choice([(52, 46, 58), (30, 26, 36)]) + (255,))
+    return img
+
+
+def tile_cave_wall(seed):
+    rnd = random.Random(seed)
+    img = Image.new("RGBA", (16, 16), (18, 14, 22, 255))
+    d = ImageDraw.Draw(img)
+    for _ in range(4):
+        x, y = rnd.randrange(16), rnd.randrange(16)
+        d.line([(x, y), (x + rnd.randrange(2, 6), y + rnd.randrange(-1, 2))], fill=(34, 28, 40))
+    return img
+
+
+def render_cave(g, seed):
+    rnd = random.Random(seed)
+    img = Image.new("RGBA", (ROOM_W * 16, ROOM_H * 16), (0, 0, 0, 255))
+    stal, crys, rock = rows_to_img(STALAGMITE), rows_to_img(CRYSTAL), rows_to_img(BIG["boulder"])
+    for y in range(ROOM_H):
+        for x in range(ROOM_W):
+            pos = (x * 16, y * 16)
+            t = g[y][x]
+            if t == WALL:
+                img.alpha_composite(tile_cave_wall(rnd.randrange(999)), pos)
+                # a lit rock edge where the wall meets the floor below it
+                if y + 1 < ROOM_H and g[y + 1][x] != WALL:
+                    ImageDraw.Draw(img).line([(pos[0], pos[1] + 15), (pos[0] + 15, pos[1] + 15)], fill=(70, 62, 76, 255))
+                continue
+            if t == WATER:
+                img.alpha_composite(tile_water(rnd.randrange(999), deep=True), pos)
+                continue
+            img.alpha_composite(tile_cave_floor(rnd.randrange(999)), pos)
+            if t == FLOOR and rnd.random() < 0.08:
+                dx, dy = pos[0] + rnd.randrange(3, 12), pos[1] + rnd.randrange(3, 12)
+                img.putpixel((dx, dy), PAL["C"] + (255,))           # glowworm
+            if t == CRATE:
+                img.alpha_composite(stal if rnd.random() < 0.6 else crys, pos)
+            elif t == PILLAR:
+                img.alpha_composite(rock, pos)
+    return img
+
+
+def darkness(size=64):
+    """A soft hole of light, dark at the edges; drawn huge around the heroes in caves."""
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    px = img.load()
+    c = (size - 1) / 2
+    for y in range(size):
+        for x in range(size):
+            r = math.hypot(x - c, y - c) / c
+            a = 0 if r < 0.2 else min(1, (r - 0.2) / 0.34)
+            px[x, y] = (4, 2, 10, int(240 * a))
+    return img
+
+
 # ---------------------------------------------------------------- app icon / splash / brand
 def hero_frame(name, f):
     h = HEROES[name]
@@ -2576,6 +2730,9 @@ def main():
         save(heal_fx(f), f"sprites/fx/heal_{f}.png")
     save(ring_fx((236, 200, 120), 3), "sprites/fx/ring_shield.png", 4)
     save(ring_fx((130, 238, 214)), "sprites/fx/ring_wave.png", 4)
+    save(rows_to_img(YUNGIB), "sprites/deco/yungib.png")
+    save(rows_to_img(HAGDAN), "sprites/deco/hagdan.png")
+    save(darkness(), "sprites/fx/darkness.png", 4)
     save(rows_to_img(CHEST), "sprites/deco/chest_0.png")
     save(rows_to_img(CHEST_OPEN), "sprites/deco/chest_1.png")
     for name, rows in ITEMS.items():
@@ -2637,6 +2794,10 @@ def main():
     for i, theme in enumerate(("sulu", "ifugao")):
         for v, sfx in enumerate("ab"):
             plan.append((f"{theme}_{sfx}", "combat", theme, 400 + i * 10 + v))
+    for i, sfx in enumerate("abc"):
+        g = make_cave(500 + i)
+        layouts[f"yungib_{sfx}"] = {"kind": "cave", "grid": g}
+        save(render_cave(g, 500 + i), f"rooms/yungib_{sfx}.png", ROOM_SCALE)
     plan.append(("shore", "shore", "shore", 300))
     for name, kind, theme, seed in plan:
         g = make_island(seed, kind)

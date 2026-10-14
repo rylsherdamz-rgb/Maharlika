@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { HEROES } from '../game/data';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
@@ -35,11 +35,14 @@ function MenuItem({ icon, label, en, hint, onPress, primary }: { icon: ImgKey; l
 }
 
 const HOW_TO: { icon: ImgKey; title: string; text: string }[] = [
-  { icon: 'ui_joystick_knob', title: 'MOVE', text: 'Drag anywhere on the left half of the screen.' },
+  { icon: 'ui_joystick_knob', title: 'MOVE', text: 'Drag anywhere on the left half of the screen (your half in co-op).' },
   { icon: 'ui_btn_attack', title: 'ATTACK', text: 'Hold the crossed blades. You aim at the nearest foe by yourself.' },
   { icon: 'ui_btn_dodge', title: 'DODGE', text: 'Tap the wind to roll through shots and claws.' },
   { icon: 'ui_btn_skill', title: 'SKILL', text: 'Fight and catch fireflies to fill your light, then tap the sun.' },
   { icon: 'deco_dambana', title: 'DAMBANA', text: 'Clear an island, touch its shrine and pick one blessing. Then board the boat.' },
+  { icon: 'deco_chest_0', title: 'KABAN AT ANTAS', text: 'Chests hold weapons and whetstones. Every creature gives XP; each level (antas) adds health and damage.' },
+  { icon: 'deco_yungib', title: 'YUNGIB', text: 'Some islands open a cave. Three dark rooms, a laughing giant at the bottom, and a big chest.' },
+  { icon: 'ui_heart', title: '2P CO-OP', text: 'Each player takes half the screen. Heroes attack on their own. Stand by a fallen friend to lift them up.' },
 ];
 
 export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: () => void; onStory: () => void; onCodex: () => void }) {
@@ -119,7 +122,7 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
             <PixelText size={7} color={COLORS.text} shadow={false} style={{ textAlign: 'center', marginBottom: 8 }}>
               Sail six islands, from Tondo to the shore of Albay, and drive off the Bakunawa.
             </PixelText>
-            <View style={styles.helpGrid}>
+            <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={styles.helpGrid}>
               {HOW_TO.map((r) => (
                 <View key={r.title} style={styles.helpRow}>
                   <Sprite name={r.icon} size={28} />
@@ -133,10 +136,10 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
                   </View>
                 </View>
               ))}
-            </View>
+            </ScrollView>
             {Platform.OS === 'web' && (
               <PixelText size={6} color={COLORS.dim} shadow={false} style={{ textAlign: 'center', marginTop: 6 }}>
-                Keyboard: WASD move · Space attack · Shift dodge · K skill · 1-3 blessing · Esc pause
+                Keyboard: WASD move · Space attack · Shift dodge · K skill · 1-3 blessing · Esc pause. Co-op P2: arrows move · Enter attack · / dodge · . skill
               </PixelText>
             )}
             <PixelButton label="SIGE · GOT IT" onPress={() => setHelp(false)} size={10} style={{ alignSelf: 'center', marginTop: 10 }} />
