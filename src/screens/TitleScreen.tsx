@@ -4,20 +4,25 @@ import { IMG, ImgKey } from '../assets';
 import { HEROES } from '../game/data';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
-/** A labelled menu entry: icon, name and a one-line hint so every choice explains itself. */
-function MenuItem({ icon, label, hint, onPress, primary }: { icon: ImgKey; label: string; hint: string; onPress: () => void; primary?: boolean }) {
+/** A menu entry: icon, Filipino name with its English translation beside it, and a one-line hint. */
+function MenuItem({ icon, label, en, hint, onPress, primary }: { icon: ImgKey; label: string; en: string; hint: string; onPress: () => void; primary?: boolean }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.item, primary && styles.itemPrimary, pressed && styles.itemPressed]}
       accessibilityRole="button"
-      accessibilityLabel={`${label}. ${hint}`}
+      accessibilityLabel={`${label} (${en}). ${hint}`}
     >
       <Sprite name={icon} size={primary ? 30 : 22} />
       <View style={{ marginLeft: 10, flex: 1 }}>
-        <PixelText size={primary ? 13 : 10} color={primary ? COLORS.gold : COLORS.text}>
-          {label}
-        </PixelText>
+        <View style={styles.labelRow}>
+          <PixelText size={primary ? 13 : 10} color={primary ? COLORS.gold : COLORS.text}>
+            {label}
+          </PixelText>
+          <PixelText size={primary ? 8 : 7} color={COLORS.light} shadow={false}>
+            {en}
+          </PixelText>
+        </View>
         <PixelText size={6} color={COLORS.dim} shadow={false}>
           {hint}
         </PixelText>
@@ -91,13 +96,13 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
       </View>
 
       <Panel style={[styles.menu, { width: Math.min(270, width * 0.38), top: height * 0.1, bottom: height * 0.08 }]}>
-        <MenuItem icon="deco_balangay_0" label="PLAY" hint="Choose a maharlika and a weapon, then set sail" onPress={onStart} primary />
-        <MenuItem icon="ui_moon" label="STORY" hint="Watch the prologue" onPress={onStory} />
-        <MenuItem icon="ui_star" label="KWENTO" hint="Codex: heroes, creatures, gods, world" onPress={onCodex} />
-        <MenuItem icon="ui_btn_attack" label="HOW TO PLAY" hint="Controls and the goal of a run" onPress={() => setHelp(true)} />
+        <MenuItem icon="deco_balangay_0" label="LARO" en="Play" hint="Choose a maharlika and a weapon, then set sail" onPress={onStart} primary />
+        <MenuItem icon="ui_moon" label="SIMULA" en="Prologue" hint="Watch how the story begins" onPress={onStory} />
+        <MenuItem icon="ui_star" label="ALAMAT" en="Legends" hint="Heroes, creatures, gods and places, with sources" onPress={onCodex} />
+        <MenuItem icon="ui_btn_attack" label="PAANO MAGLARO" en="How to Play" hint="Controls and the goal of a run" onPress={() => setHelp(true)} />
         {Platform.OS === 'web' && (
           <PixelText size={6} color={COLORS.dim} shadow={false} style={{ textAlign: 'center', marginTop: 2 }}>
-            ENTER play · H how to play
+            ENTER laro (play) · H paano maglaro (how to play)
           </PixelText>
         )}
       </Panel>
@@ -106,7 +111,10 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
         <View style={styles.overlay}>
           <Panel style={[styles.help, { maxWidth: Math.min(560, width - 32), maxHeight: height - 24 }]}>
             <PixelText size={13} color={COLORS.gold} style={{ textAlign: 'center' }}>
-              HOW TO PLAY
+              PAANO MAGLARO
+            </PixelText>
+            <PixelText size={8} color={COLORS.light} shadow={false} style={{ textAlign: 'center' }}>
+              How to Play
             </PixelText>
             <PixelText size={7} color={COLORS.text} shadow={false} style={{ textAlign: 'center', marginBottom: 8 }}>
               Sail six islands, from Tondo to the shore of Albay, and drive off the Bakunawa.
@@ -131,7 +139,7 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
                 Keyboard: WASD move · Space attack · Shift dodge · K skill · 1-3 blessing · Esc pause
               </PixelText>
             )}
-            <PixelButton label="GOT IT" onPress={() => setHelp(false)} size={10} style={{ alignSelf: 'center', marginTop: 10 }} />
+            <PixelButton label="SIGE · GOT IT" onPress={() => setHelp(false)} size={10} style={{ alignSelf: 'center', marginTop: 10 }} />
           </Panel>
         </View>
       )}
@@ -145,6 +153,7 @@ const styles = StyleSheet.create({
   logoWrap: { position: 'absolute', left: 16, alignItems: 'center' },
   parade: { position: 'absolute', left: 16, flexDirection: 'row', justifyContent: 'center' },
   menu: { position: 'absolute', right: 20, justifyContent: 'center', gap: 6, paddingVertical: 8 },
+  labelRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 6 },
   item: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -124,5 +124,5 @@ serpent off alone. She needs the people's noise, and someone to clear their way.
 ## Where it lives in the code
 
 - `src/game/story.ts`: all story text; `src/game/data.ts`: heroes, weapons, gods.
-- `src/screens/StoryScreen.tsx` (cutscenes), `CodexScreen.tsx` (Kwento: Maharlika, Creatures, The Gods, The World, each entry noting its source).
+- `src/screens/StoryScreen.tsx` (cutscenes), `CodexScreen.tsx` (Alamat / Legends: Maharlika, Nilalang, Mga Diyos, Daigdig, each entry noting its source).
 - `tools/generate_assets.py`: all art, including Baybayin rendered from Noto Sans Tagalog.

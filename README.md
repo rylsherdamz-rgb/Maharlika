@@ -43,12 +43,12 @@ dodge roll and a hurt recoil, with footstep dust and hit sparks.
 
 ![Animation sheet](assets/brand/animation_sheet.png)
 
-The home screen is a labelled menu (Play, Story, Kwento, How to Play) with a one-line hint on every
-option and a How to Play guide covering the controls and the goal of a run.
+The home screen menu is in Filipino with the English beside each item (Laro · Play, Simula · Prologue,
+Alamat · Legends, Paano Maglaro · How to Play) and a one-line hint on every option and a How to Play guide covering the controls and the goal of a run.
 
 Route: Port of Tondo → Punso Fields → Siquijor → Mount Banahaw → Ibalong Forests → Shore of Albay
 (the Bakunawa). Illustrated prologue and ending, a dialogue before the boss, an epilogue per hero,
-and the **Kwento** codex (Maharlika · Creatures · The Gods · The World) with sources.
+and the **Alamat** (Legends) codex (Maharlika · Nilalang · Mga Diyos · Daigdig: heroes, creatures, gods, world) with sources.
 
 ## Controls
 

@@ -19,18 +19,18 @@ const DEITY_BIOS: Bio[] = Object.values(BOONS).map((b) => ({
   source: DEITY_SOURCE,
 }));
 
-const TABS: { id: Tab; label: string; entries: Bio[] }[] = [
-  { id: 'guardians', label: 'MAHARLIKA', entries: [...HEROES.map((h) => GUARDIAN_BIOS[h.id]), HALIYA_BIO] },
-  { id: 'creatures', label: 'CREATURES', entries: Object.values(CREATURE_BIOS) },
-  { id: 'gods', label: 'THE GODS', entries: DEITY_BIOS },
-  { id: 'world', label: 'THE WORLD', entries: WORLD_BIOS },
+const TABS: { id: Tab; label: string; en: string; entries: Bio[] }[] = [
+  { id: 'guardians', label: 'MAHARLIKA', en: 'Heroes', entries: [...HEROES.map((h) => GUARDIAN_BIOS[h.id]), HALIYA_BIO] },
+  { id: 'creatures', label: 'NILALANG', en: 'Creatures', entries: Object.values(CREATURE_BIOS) },
+  { id: 'gods', label: 'MGA DIYOS', en: 'The Gods', entries: DEITY_BIOS },
+  { id: 'world', label: 'DAIGDIG', en: 'The World', entries: WORLD_BIOS },
 ];
 
 export function codexTabFor(id: string): Tab {
   return TABS.find((t) => t.entries.some((e) => e.id === id))?.id ?? 'guardians';
 }
 
-/** Kwento ("stories"): readable bios for every guardian, creature and place. */
+/** Alamat ("legends"): readable bios for every guardian, creature, god and place. */
 export default function CodexScreen({ initial, onBack }: { initial?: string; onBack: () => void }) {
   const [tab, setTab] = useState<Tab>(initial ? codexTabFor(initial) : 'guardians');
   const entries = TABS.find((t) => t.id === tab)!.entries;
@@ -43,9 +43,14 @@ export default function CodexScreen({ initial, onBack }: { initial?: string; onB
       <CoverImage name="screen_select_bg" />
       <View style={styles.shade} />
       <View style={styles.header}>
-        <PixelText size={14} color={COLORS.gold}>
-          KWENTO
-        </PixelText>
+        <View>
+          <PixelText size={14} color={COLORS.gold}>
+            ALAMAT
+          </PixelText>
+          <PixelText size={7} color={COLORS.light} shadow={false}>
+            Legends
+          </PixelText>
+        </View>
         <View style={styles.tabs}>
           {TABS.map((t) => (
             <Pressable
@@ -56,13 +61,16 @@ export default function CodexScreen({ initial, onBack }: { initial?: string; onB
               }}
               style={[styles.tab, t.id === tab && styles.tabOn]}
             >
-              <PixelText size={8} color={t.id === tab ? COLORS.bg : COLORS.dim} shadow={false}>
+              <PixelText size={8} color={t.id === tab ? COLORS.bg : COLORS.dim} shadow={false} style={{ textAlign: 'center' }}>
                 {t.label}
+              </PixelText>
+              <PixelText size={6} color={t.id === tab ? COLORS.panel : COLORS.dim} shadow={false} style={{ textAlign: 'center', opacity: 0.85 }}>
+                {t.en}
               </PixelText>
             </Pressable>
           ))}
         </View>
-        <PixelButton label="BACK" onPress={onBack} color="#5a4a78" size={8} />
+        <PixelButton label="BALIK · BACK" onPress={onBack} color="#5a4a78" size={8} />
       </View>
 
       <View style={styles.body}>
