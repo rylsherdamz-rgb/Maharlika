@@ -25,6 +25,7 @@ import {
   WEAPONS,
   xpToNext,
 } from './data';
+import type { SfxId } from '../sounds';
 import { bossDialogue, CAVE, DialogueLine, ENDLESS, HALIYA_LINES, PORT, ROUTE_SLOTS, SHORE, STAGES } from './story';
 
 export const TILE = roomData.tile;
@@ -215,6 +216,8 @@ export interface Game {
   pickups: Pickup[];
   texts: FloatText[];
   fx: Fx[];
+  /** Sounds that happened this frame; the screen plays and clears them. */
+  sfx: SfxId[];
   chest: Chest | null;
   shrine: { x: number; y: number; used: boolean } | null;
   choice: BoonId[] | null;
@@ -312,6 +315,7 @@ function applyRelic(g: Game, id: RelicId) {
     return;
   }
   g.relics.push(id);
+  snd(g, 'relic');
   for (const h of g.heroes) {
     const m = h.mods;
     switch (id) {
@@ -399,6 +403,7 @@ export function newGame(setup: Setup | HeroId, weapon?: WeaponId): Game {
     pickups: [],
     texts: [],
     fx: [],
+    sfx: [],
     chest: null,
     shrine: null,
     choice: null,
@@ -465,6 +470,7 @@ function enterRoom(g: Game, stage: number) {
   g.grid = roomData.rooms[g.room].grid;
   resetRoom(g);
   placeParty(g, ENTRY.x, ENTRY.y);
+  if (stage > 0) snd(g, 'sail');
   // a fallen hero gets back up on the next island with a little health
   for (const h of g.heroes) {
     if (h.down) {
@@ -493,6 +499,7 @@ function enterRoom(g: Game, stage: number) {
     // the full exchange plays once; in endless the serpent just comes back
     if (g.mode === 'voyage' || stage === ENDLESS_BOSS_EVERY) g.dialog = { lines: bossDialogue(g.hero.def.id), i: 0 };
     spawnEnemy(g, 'bakunawa', 17 * TILE, 7 * TILE);
+    snd(g, 'roar');
     g.wave = 1;
   } else {
     g.waves = 2;
@@ -515,6 +522,7 @@ function enterCave(g: Game) {
   g.grid = roomData.rooms[g.room].grid;
   resetRoom(g);
   placeParty(g, ENTRY.x, ENTRY.y);
+  snd(g, 'door');
   g.banner = { text: `${CAVE.title} ${g.cave.depth}/${CAVE_DEPTH}`, baybayin: CAVE.baybayin, sub: g.cave.depth === 1 ? CAVE.line : undefined, t: 2.4 };
   if (g.cave.depth === CAVE_DEPTH) {
     // the guardian depends on the island above: a laughing giant, a tikbalang chief or a kapre king
@@ -522,6 +530,7 @@ function enterCave(g: Game) {
     g.wave = 1;
     const guardian = CAVE_GUARDIANS[THEME_GUARDIAN[g.route[g.stage].replace(/_[ab]$/, '')] ?? 'bungisngis'];
     spawnEnemy(g, guardian.type, 16 * TILE, 7.5 * TILE, true);
+    snd(g, 'roar');
     for (let i = 0; i < 2; i++) {
       const p = randomFloor(g, 80);
       spawnEnemy(g, pick(stageInfo(g).pool), p.x, p.y);
@@ -545,6 +554,7 @@ function leaveCave(g: Game) {
   g.boat = s.boat;
   g.wave = g.waves = 2;
   placeParty(g, s.cave.x, s.cave.y + 14);
+  snd(g, 'door');
   g.banner = { text: 'BALIK SA ISLA', sub: 'Back on the island. The balangay is waiting.', t: 2 };
 }
 
@@ -647,6 +657,10 @@ function addText(g: Game, x: number, y: number, text: string, color: string) {
   g.texts.push({ id: g.nextId++, x, y, text, color, t: 0.8 });
 }
 
+function snd(g: Game, id: SfxId) {
+  if (g.sfx.length < 24 && !g.sfx.includes(id)) g.sfx.push(id);
+}
+
 function addFx(g: Game, kind: FxKind, x: number, y: number, size?: number) {
   g.fx.push({ id: g.nextId++, kind, x, y, t: 0, size });
 }
@@ -658,6 +672,7 @@ function dropPickup(g: Game, kind: PickupKind, x: number, y: number, weapon?: We
 /** Open a kaban: gold, fireflies, maybe herbs, and a weapon or a whetstone (a big one holds both). */
 function openChest(g: Game, c: Chest) {
   c.open = true;
+  snd(g, 'chest');
   addFx(g, 'sparkle', c.x, c.y - 6);
   addText(g, c.x, c.y - 14, c.big ? 'MALAKING KABAN!' : 'KABAN!', '#ffe882');
   const coins = (c.big ? 12 : 4) + Math.floor(Math.random() * 4);
@@ -706,6 +721,7 @@ function hurtHero(g: Game, h: Hero, dmg: number) {
   h.invuln = 0.8;
   h.sinceHit = 0;
   g.shake = 0.25;
+  snd(g, 'hurt');
   addText(g, h.x, h.y - 10, `-${dmg}`, left > 0 ? '#ff5a5a' : '#82eed6');
   if (h.hp <= 0) {
     h.hp = 0;
@@ -729,6 +745,7 @@ function gainXp(g: Game, amount: number) {
       h.mods.dmg *= 1.08;
       h.mods.speed *= 1.02;
       addText(g, h.x, h.y - 18, `ANTAS ${h.lv}!`, '#ffe882');
+      snd(g, 'levelup');
       addFx(g, 'sparkle', h.x, h.y - 8);
     }
   }
@@ -739,6 +756,7 @@ function damageEnemy(g: Game, e: Enemy, dmg: number, by: Hero = g.hero) {
   const d = Math.round(dmg * by.mods.dmg * (1 + by.weaponLv * WEAPON_LV_BONUS) * 10) / 10;
   e.hp -= d;
   e.flash = 0.1;
+  snd(g, 'hit');
   if (e.type === 'tiyanak' && e.state === 0) revealTiyanak(g, e);
   addFx(g, 'hit', e.x + rand(-3, 3), e.y + rand(-3, 3));
   by.light = Math.min(LIGHT_MAX, by.light + d * 1.3);
@@ -759,6 +777,7 @@ export function sigbinVisible(g: Game, e: Enemy) {
 
 function killEnemy(g: Game, e: Enemy) {
   g.kills++;
+  snd(g, 'kill');
   addFx(g, 'poof', e.x, e.y, e.boss ? 36 : undefined);
   const def = ENEMIES[e.type];
   for (let i = 0; i < def.coins * (e.boss ? 4 : 1); i++) dropPickup(g, 'coin', e.x, e.y);
@@ -930,6 +949,7 @@ function updateRevives(g: Game, dt: number) {
       h.hp = Math.max(1, Math.ceil(h.maxHp / 2));
       h.invuln = 1.5;
       addText(g, h.x, h.y - 16, 'BUHAY!', '#62b24a');
+      snd(g, 'heal');
       addFx(g, 'heal', h.x, h.y - 4);
     }
   }
@@ -987,6 +1007,7 @@ function push(g: Game, e: Enemy, fx: number, fy: number, amount: number) {
 /** A lantaka ball bursting: hurts everything in the blast. */
 function blast(g: Game, x: number, y: number, r: number, dmg: number, by: Hero) {
   addFx(g, 'boom', x, y, r * 1.4);
+  snd(g, 'boom');
   g.shake = Math.max(g.shake, 0.12);
   for (const e of g.enemies) {
     if (e.spawn > 0 || e.hp <= 0) continue;
@@ -1052,6 +1073,7 @@ function updateHero(g: Game, h: Hero, input: Input, dt: number) {
       h.invuln = Math.max(h.invuln, 0.3);
       h.dodgeCd = 0.9 * m.dodgeCd;
       addFx(g, 'dust', h.x, h.y + 7);
+      snd(g, 'dodge');
     }
   }
   if (h.dash > 0) {
@@ -1098,11 +1120,13 @@ function updateHero(g: Game, h: Hero, input: Input, dt: number) {
     }
     h.atkCd = w.rate * m.rate;
     h.atkAnim = Math.min(0.2, h.atkCd);
+    snd(g, w.melee ? 'slash' : w.explode ? 'cannon' : w.sprite === 'shot_spirit' || w.sprite === 'shot_chime' ? 'magic' : 'shoot');
   }
 }
 
 function useSkill(g: Game, h: Hero) {
   h.light = 0;
+  snd(g, 'skill');
   switch (h.def.id) {
     case 'kidlat':
       slash(g, h, 0, 46 * h.mods.reach, Math.PI + 0.01, 14);
@@ -1491,6 +1515,7 @@ function updatePickups(g: Game, dt: number) {
       h.weapon = p.weapon!;
       g.pickups.push({ id: g.nextId++, kind: 'weapon', x: p.x, y: p.y, t: 0, weapon: old, armed: false });
       addText(g, h.x, h.y - 14, WEAPONS[h.weapon].name.toUpperCase(), '#ffba48');
+      snd(g, 'pickup');
       addFx(g, 'sparkle', h.x, h.y - 6);
       continue;
     }
@@ -1499,9 +1524,14 @@ function updatePickups(g: Game, dt: number) {
       continue;
     }
     if (d < 8) {
-      if (p.kind === 'coin') g.coins++;
-      else if (p.kind === 'energy_orb') h.light = Math.min(LIGHT_MAX, h.light + 6);
-      else if (p.kind === 'whetstone') {
+      if (p.kind === 'coin') {
+        g.coins++;
+        snd(g, 'coin');
+      } else if (p.kind === 'energy_orb') {
+        h.light = Math.min(LIGHT_MAX, h.light + 6);
+        snd(g, 'pickup');
+      } else if (p.kind === 'whetstone') {
+        snd(g, 'levelup');
         if (h.weaponLv < WEAPON_LV_MAX) {
           h.weaponLv++;
           addText(g, h.x, h.y - 14, `HASA +${h.weaponLv}`, '#ffe882');
@@ -1514,6 +1544,7 @@ function updatePickups(g: Game, dt: number) {
         h.hp = Math.min(h.maxHp, h.hp + 2);
         addText(g, h.x, h.y - 12, '+2', '#62b24a');
         addFx(g, 'heal', h.x, h.y - 4);
+        snd(g, 'heal');
       }
       continue;
     }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
+import { playSfx } from '../audio';
 import { HEROES } from '../game/data';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
@@ -8,7 +9,10 @@ import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } 
 function MenuItem({ icon, label, en, hint, onPress, primary }: { icon: ImgKey; label: string; en: string; hint: string; onPress: () => void; primary?: boolean }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        playSfx('click');
+        onPress();
+      }}
       style={({ pressed }) => [styles.item, primary && styles.itemPrimary, pressed && styles.itemPressed]}
       accessibilityRole="button"
       accessibilityLabel={`${label} (${en}). ${hint}`}
@@ -45,7 +49,21 @@ const HOW_TO: { icon: ImgKey; title: string; text: string }[] = [
   { icon: 'ui_heart', title: '2P CO-OP', text: 'Each player takes half the screen. Heroes attack on their own. Stand by a fallen friend to lift them up.' },
 ];
 
-export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: () => void; onStory: () => void; onCodex: () => void }) {
+type Sound = { musicOn: boolean; sfxOn: boolean };
+
+export default function TitleScreen({
+  onStart,
+  onStory,
+  onCodex,
+  sound,
+  onSound,
+}: {
+  onStart: () => void;
+  onStory: () => void;
+  onCodex: () => void;
+  sound: Sound;
+  onSound: (s: Sound) => void;
+}) {
   const { width, height } = useWindowDimensions();
   const t = useTicker(120);
   const [help, setHelp] = useState(false);
@@ -110,6 +128,20 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
         )}
       </Panel>
 
+      {/* music and sound toggles */}
+      <View style={styles.soundRow}>
+        <Pressable onPress={() => onSound({ ...sound, musicOn: !sound.musicOn })} style={[styles.soundBtn, !sound.musicOn && styles.soundOff]} accessibilityRole="switch" accessibilityState={{ checked: sound.musicOn }} accessibilityLabel="Music">
+          <PixelText size={7} color={sound.musicOn ? COLORS.gold : COLORS.dim} shadow={false}>
+            {`♪ MUSIKA ${sound.musicOn ? 'ON' : 'OFF'}`}
+          </PixelText>
+        </Pressable>
+        <Pressable onPress={() => onSound({ ...sound, sfxOn: !sound.sfxOn })} style={[styles.soundBtn, !sound.sfxOn && styles.soundOff]} accessibilityRole="switch" accessibilityState={{ checked: sound.sfxOn }} accessibilityLabel="Sound effects">
+          <PixelText size={7} color={sound.sfxOn ? COLORS.gold : COLORS.dim} shadow={false}>
+            {`TUNOG ${sound.sfxOn ? 'ON' : 'OFF'}`}
+          </PixelText>
+        </Pressable>
+      </View>
+
       {help && (
         <View style={styles.overlay}>
           <Panel style={[styles.help, { maxWidth: Math.min(560, width - 32), maxHeight: height - 24 }]}>
@@ -157,6 +189,9 @@ const styles = StyleSheet.create({
   parade: { position: 'absolute', left: 16, flexDirection: 'row', justifyContent: 'center' },
   menu: { position: 'absolute', right: 20, justifyContent: 'center', gap: 6, paddingVertical: 8 },
   labelRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 6 },
+  soundRow: { position: 'absolute', left: 16, bottom: 8, flexDirection: 'row', gap: 6 },
+  soundBtn: { paddingHorizontal: 8, paddingVertical: 3, borderWidth: 2, borderColor: COLORS.edge, backgroundColor: 'rgba(18,14,32,0.85)' },
+  soundOff: { opacity: 0.6 },
   item: {
     flexDirection: 'row',
     alignItems: 'center',

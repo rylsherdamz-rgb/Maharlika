@@ -7,10 +7,13 @@ export interface Progress {
   hardUnlocked: boolean;
   bestEndless: number; // furthest island reached in endless mode
   relics: RelicId[]; // every mutya ever found, for the collection in the codex
+  musicOn: boolean;
+  sfxOn: boolean;
 }
 
 const KEY = 'maharlika.progress.v1';
-const EMPTY: Progress = { wins: 0, hardUnlocked: false, bestEndless: 0, relics: [] };
+const EMPTY: Progress = { wins: 0, hardUnlocked: false, bestEndless: 0, relics: [], musicOn: true, sfxOn: true };
+export const NEW_PROGRESS = EMPTY;
 
 export async function loadProgress(): Promise<Progress> {
   try {

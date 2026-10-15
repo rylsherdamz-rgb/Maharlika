@@ -101,4 +101,16 @@ assert(weapons > 60 && stones > 40);
   assert(g.fx.some((f) => f.kind === 'boom') || true);
   console.log('lantaka blast ok');
 }
+// 7. sound events: a fight, a chest and a level-up all ask for their sounds
+{
+  const g = E.newGame('dalisay', 'lantaka');
+  g.dialog = null;
+  const heard = new Set();
+  g.enemies.push({ id: 31, type: 'kapre', x: g.hero.x + 50, y: g.hero.y, hp: 3, maxHp: 120, cd: 9, t: 0, spawn: 0, flash: 0, facing: -1, poison: 0, poisonTick: 0, state: 0 });
+  for (let i = 0; i < 90; i++) { E.update(g, { ...idle, attack: true }, 1 / 60); g.sfx.forEach((s) => heard.add(s)); g.sfx.length = 0; }
+  g.chest = { x: g.hero.x, y: g.hero.y, open: false };
+  E.update(g, idle, 1 / 60); g.sfx.forEach((s) => heard.add(s));
+  for (const s of ['cannon', 'boom', 'hit', 'kill', 'levelup', 'chest']) assert(heard.has(s), `no '${s}' sound (heard: ${[...heard].join(' ')})`);
+  console.log('sound events ok:', [...heard].join(' '));
+}
 console.log('ALL LOOT TESTS PASSED');

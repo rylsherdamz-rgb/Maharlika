@@ -85,6 +85,32 @@ Route: Port of Tondo → **Punso Fields or the Chocolate Hills of Bohol** → **
 and each island has two maps. Nine island themes in all. Illustrated prologue and ending, a dialogue before the boss, an epilogue per hero,
 and the **Alamat** (Legends) codex (Maharlika · Nilalang · Mga Diyos · Daigdig: heroes, creatures, gods, world) with sources.
 
+## Music and sound
+
+All music and effects are synthesized by [`tools/generate_audio.py`](tools/generate_audio.py)
+(numpy + ffmpeg) from approximations of the islands' instruments: the **kulintang** (a row of
+small gongs), the deep **agung** gong, the **dabakan** drum, bamboo percussion, the **kubing**
+jaw harp and the **suling** flute. Nothing is sampled, so there is nothing to license.
+
+- **Music:** four looping tracks, about 1.2 MB in total with the effects.
+  - *Gabi ng Bakunawa* (title and menus)
+  - *Paglalayag* (islands)
+  - *Yungib* (caves: drone, distant gongs, dripping water)
+  - *Laban* (bosses)
+  The game switches track by itself when you enter a cave or a boss appears.
+- **Effects:** 22 sounds, including:
+  - attacks: slash, bowstring, spirit chime, cannon and blast
+  - fighting: hits, banishing a creature, getting hurt, dodging
+  - rewards: coins, pickups, chests, level-ups, mutya, skills, healing
+  - places: the cave door, sailing, a boss roar
+  - menus: button clicks, plus victory and defeat jingles
+- **Settings:** music and effects switch on and off separately, from the title screen
+  (*Musika*, *Tunog*) or the pause menu, and the choice is saved. Sound follows the phone's
+  silent switch and mixes with other apps' audio. On the web, audio starts after the first tap
+  or key press, as browsers require.
+- **Playback:** uses `expo-audio`, configured without microphone or background-audio
+  permissions.
+
 ## Controls
 
 | Touch | Action |
@@ -135,6 +161,9 @@ small procedural routines (Baybayin is rendered from Noto Sans Tagalog). Run
   and Baybayin logo; loading screen; 8 story panels; 8 dialogue portraits; brand sheet; the app icon
   (a red crescent moon, the Bakunawa's coil and a kampilan) with Android adaptive and monochrome layers
 
+Run `python3 tools/generate_audio.py` to regenerate the music and sound effects (writes
+`assets/audio/` and `src/sounds.ts`).
+
 ## Project layout
 
 ```
@@ -143,7 +172,9 @@ src/game/data.ts           heroes, weapons, creatures, the gods' blessings
 src/game/story.ts          all story text, bios with sources, island names in Baybayin
 src/game/engine.ts         simulation: islands, melee and ranged combat, dodge, light, blessings, AI
 src/screens/               Loading, Title, Story, Codex, Select (mode, players, difficulty), Game, Result
-src/save.ts                saved progress: wins, Mahirap unlock, endless record
+src/save.ts                saved progress: wins, Mahirap unlock, endless record, mutya, sound settings
+src/audio.ts               music and sound effects (expo-audio)
+tools/generate_audio.py    all music and sound, synthesized
 src/ui.tsx                 palette, pixel and Baybayin text, buttons, panels
 tools/generate_assets.py   all art
 docs/STORY.md              story bible and sources

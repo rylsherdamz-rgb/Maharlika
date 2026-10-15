@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { GestureResponderEvent, Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
+import { audioSettings, playMusic, playSfx, setMusicOn, setSfxOn } from '../audio';
 import { BOONS, ENEMIES, LIGHT_MAX, RELICS, WEAPONS, xpToNext } from '../game/data';
 import { advanceDialog, alive, bossName, chooseBoon, DODGE_TIME, FX_FRAMES, FX_LIFE, Game, Hero, Input, newGame, REVIVE_TIME, ROOM_H, ROOM_W, Setup, sigbinVisible, stageLabel, update } from '../game/engine';
 import { BaybayinText, COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
@@ -80,7 +81,18 @@ function heroFrame(h: Hero, time: number) {
   return `idle_${Math.floor(time * 2) % 2}`;
 }
 
-export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onEnd: (s: RunStats) => void; onQuit: () => void }) {
+export default function GameScreen({
+  setup,
+  onEnd,
+  onQuit,
+  onSoundChange,
+}: {
+  setup: Setup;
+  onEnd: (s: RunStats) => void;
+  onQuit: () => void;
+  /** Called when music or effects are switched in the pause menu, so the choice can be saved. */
+  onSoundChange?: (s: { musicOn: boolean; sfxOn: boolean }) => void;
+}) {
   const { width: W, height: H } = useWindowDimensions();
   const gameRef = useRef<Game>(null as unknown as Game);
   if (!gameRef.current) gameRef.current = newGame(setup);
@@ -91,6 +103,7 @@ export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onE
   const [sticks, setSticks] = useState<(Stick | null)[]>(() => inputs.map(() => null));
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
+  const [sound, setSound] = useState(audioSettings);
   const [, setFrame] = useState(0);
   const endRef = useRef({ onEnd, done: false });
   endRef.current.onEnd = onEnd;
@@ -134,6 +147,11 @@ export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onE
           inputs[i].skill = f.skill;
           inputs[i].dodge = f.dodge;
         });
+        // sounds of this frame, and music that follows the fight: island, cave, or a boss
+        for (const id of g.sfx) playSfx(id);
+        g.sfx.length = 0;
+        playMusic(g.result ? null : g.enemies.some((e) => e.type === 'bakunawa' || e.boss) ? 'boss' : g.cave ? 'cave' : 'island');
+        if (g.result && !endRef.current.done) playSfx(g.result === 'victory' ? 'victory' : 'defeat');
         if (g.result && !endRef.current.done) {
           endRef.current.done = true;
           setTimeout(
@@ -721,6 +739,28 @@ export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onE
               PAUSED
             </PixelText>
             <PixelButton label="RESUME" onPress={() => setPause(false)} style={{ marginBottom: 10, width: 200 }} />
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+              <PixelButton
+                label={`MUSIKA: ${sound.musicOn ? 'ON' : 'OFF'}`}
+                size={8}
+                color="#5a4a78"
+                onPress={() => {
+                  setMusicOn(!sound.musicOn);
+                  onSoundChange?.({ ...audioSettings() });
+                  setSound({ ...audioSettings() });
+                }}
+              />
+              <PixelButton
+                label={`TUNOG: ${sound.sfxOn ? 'ON' : 'OFF'}`}
+                size={8}
+                color="#5a4a78"
+                onPress={() => {
+                  setSfxOn(!sound.sfxOn);
+                  onSoundChange?.({ ...audioSettings() });
+                  setSound({ ...audioSettings() });
+                }}
+              />
+            </View>
             <PixelButton label="RETURN TO TONDO" onPress={onQuit} color="#5a4a78" style={{ width: 200 }} />
           </Panel>
         </View>

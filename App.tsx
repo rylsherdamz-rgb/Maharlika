@@ -4,7 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Setup } from './src/game/engine';
-import { loadProgress, Progress, saveProgress } from './src/save';
+import { initAudio, playMusic, setMusicOn, setSfxOn } from './src/audio';
+import { loadProgress, NEW_PROGRESS, Progress, saveProgress } from './src/save';
 import { ENDING, EPILOGUE, INTRO } from './src/game/story';
 import CodexScreen from './src/screens/CodexScreen';
 import GameScreen from './src/screens/GameScreen';
@@ -30,14 +31,28 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'boot' });
   const [run, setRun] = useState(0);
   const [seenIntro, setSeenIntro] = useState(false);
-  const [progress, setProgress] = useState<Progress>({ wins: 0, hardUnlocked: false, bestEndless: 0, relics: [] });
+  const [progress, setProgress] = useState<Progress>(NEW_PROGRESS);
   const [progressReady, setProgressReady] = useState(false);
   useEffect(() => {
+    initAudio();
     loadProgress().then((p) => {
       setProgress(p);
+      setMusicOn(p.musicOn);
+      setSfxOn(p.sfxOn);
       setProgressReady(true);
     });
   }, []);
+  // menus, stories and results share the title theme; the game picks its own music
+  useEffect(() => {
+    if (['title', 'select', 'codex', 'intro', 'ending', 'result'].includes(screen.name)) playMusic('title');
+  }, [screen.name]);
+  const saveSound = (s: { musicOn: boolean; sfxOn: boolean }) => {
+    setProgress((p) => {
+      const next = { ...p, ...s };
+      saveProgress(next);
+      return next;
+    });
+  };
 
   const start = (setup: Setup) => setScreen({ name: 'sailing', setup });
   const launch = (setup: Setup) => {
@@ -48,6 +63,7 @@ export default function App() {
   const finish = (stats: RunStats) => {
     const best = progress.bestEndless;
     const next: Progress = {
+      ...progress,
       wins: progress.wins + (stats.victory ? 1 : 0),
       hardUnlocked: progress.hardUnlocked || stats.victory,
       bestEndless: stats.setup.mode === 'endless' ? Math.max(best, stats.island) : best,
@@ -72,6 +88,12 @@ export default function App() {
       case 'title':
         content = (
           <TitleScreen
+            sound={{ musicOn: progress.musicOn, sfxOn: progress.sfxOn }}
+            onSound={(s) => {
+              setMusicOn(s.musicOn);
+              setSfxOn(s.sfxOn);
+              saveSound(s);
+            }}
             onStart={() => setScreen(seenIntro ? { name: 'select' } : { name: 'intro', then: 'select' })}
             onStory={() => setScreen({ name: 'intro', then: 'title' })}
             onCodex={() => setScreen({ name: 'codex', back: { name: 'title' } })}
@@ -119,6 +141,7 @@ export default function App() {
             key={screen.run}
             setup={screen.setup}
             onEnd={finish}
+            onSoundChange={saveSound}
             onQuit={() => setScreen({ name: 'title' })}
           />
         );
