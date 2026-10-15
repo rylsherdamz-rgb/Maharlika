@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image, ImageStyle, Pressable, StyleProp, StyleSheet, Text, TextStyle, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { IMG, ImgKey } from './assets';
+import { playSfx } from './audio';
 
 export const FONT = 'PixelifySans_500Medium';
 export const FONT_BOLD = 'PixelifySans_700Bold';
@@ -95,7 +96,12 @@ export function PixelButton({
   size?: number;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.btnOuter, { borderColor: color }, pressed && styles.pressed, style]}>
+    <Pressable
+      onPress={() => {
+        playSfx('click');
+        onPress();
+      }}
+      style={({ pressed }) => [styles.btnOuter, { borderColor: color }, pressed && styles.pressed, style]}>
       {({ pressed }) => (
         <View style={[styles.btnInner, { backgroundColor: pressed ? COLORS.panelLight : COLORS.panel }]}>
           <PixelText size={size}>{label}</PixelText>

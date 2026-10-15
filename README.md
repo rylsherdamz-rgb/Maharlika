@@ -6,7 +6,7 @@ Philippines that was never colonized.
 > In 1521 Lapulapu turned back Magellan at Mactan, and in this history no one ever came back.
 > Five centuries later the free islands of **Maharlika** face the **Bakunawa**, the sea serpent
 > of Visayan myth that swallowed six of Bathala's seven moons and has risen for the last one.
-> Haliya, the masked Bicolano goddess of moonlight, calls four maharlika to sail the islands and
+> Haliya, the masked Bicolano goddess of moonlight, calls six maharlika to sail the islands and
 > hold the serpent back while the people beat their gongs to drive it off.
 
 ![Brand sheet](assets/brand/brand_sheet.png)
@@ -17,25 +17,99 @@ it is folklore, history or invented for the game.
 
 ## How it plays
 
+- **Modes:** *Paglalayag* (Voyage) to the Bakunawa, or *Walang Katapusan* (Endless): islands keep
+  coming and get harder until the party falls; the furthest island is saved as your record.
+- **Difficulty:** *Madali* (Easy, 4 islands), *Katamtaman* (Normal, 5 islands) or *Mahirap* (Hard,
+  6 islands, tougher and faster creatures). Win a voyage once to unlock Mahirap. Progress is saved
+  on the device.
+- **2-player co-op on one device:** each player takes half of the touch screen (on web, P1 uses
+  WASD and P2 the arrow keys). Heroes attack on their own in co-op. A fallen hero can be lifted
+  back up by standing beside them; the run ends when both fall. Online play is planned in
+  [`docs/ONLINE_MULTIPLAYER.md`](docs/ONLINE_MULTIPLAYER.md).
+- **Antas (levels):** every banished creature gives XP to the whole party. Each level adds health,
+  damage and a little speed (up to level 15).
+- **Yungib (caves):** at least one island per voyage opens a cave once it is cleared. Three dark
+  rooms lit only around the heroes, then a guardian that depends on the island above: the giant
+  **Bungisngis ng Yungib**, the galloping **Punong Tikbalang** (mountain islands) or the **Haring
+  Kapre** with its fans of cigar embers (forest islands). It guards a big chest (a weapon and two
+  whetstones). Climb out and the island is waiting with its boat.
+- **Mutya (boss charms):** every boss drops a charm that blesses the whole party for the run:
+  *Pangil ng Bungisngis* (+25% damage), *Gintong Buhok ng Tikbalang* (faster, quicker dodge),
+  *Mutya ng Kapre* (+2 health, heal on each island) and *Kaliskis ng Bakunawa* (+3 amulets that
+  recharge twice as fast). Every mutya you find is kept in the *Mga Mutya* tab of the codex. In
+  endless mode the Bakunawa rises every 8th island.
 - **Islands, not rooms:** each stage is an island in the sea. You walk on land, shots fly over water.
-  Clear the island, visit its **dambana** (shrine), then board the **balangay** to sail on.
+  Clear the island, open its **kaban** (chest), visit its **dambana** (shrine), then board the
+  **balangay** to sail on.
+- **Chests and loot:** every safe island has a kaban with gold, fireflies, sometimes herbs, and either
+  a **weapon** (any of the 13; walk over it to swap, and your old one stays on the ground) or a
+  **hasaan** whetstone (+20% damage per level, up to +5, kept when you change weapons).
 - **Blessings of the gods:** each dambana offers three of eight Tagalog deities (Apolaki, Mayari,
   Tala, Anitun Tabu, Dumakulem, Lakapati, Aman Sinaya, Lakan Bakod). Pick one; they stack for the run.
-- **One signature weapon per hero:** kampilan (melee, cuts enemy shots), pana (bow), agimat rod
-  (piercing spirit orbs), sumpit (poison darts).
+- **Two weapons per hero, picked on the select screen:** kampilan or kris (melee, both cut enemy shots),
+  pana or bangkaw (bow, or a piercing thrown spear), agimat rod or lingganay (piercing spirit orbs, or a
+  three-way fan of bell chimes), sumpit or barang (poison darts, or homing spirit beetles), panabas or
+  baston (huge slow cleaves, or quick knockback sticks), buntot pagi or lantaka (a poisoned stingray-tail
+  whip, or an exploding bronze cannon). The balaraw dagger is found only in chests.
+- **Eight folklore creatures** besides the Bakunawa, each with its own trick: duwende, manananggal,
+  tikbalang, kapre, the **tiyanak** (cries like a baby until you come close), the **sigbin** (unseen
+  until it is near), the **santelmo** (fire that floats over water) and the **bungisngis** (a laughing
+  giant whose slam sends out a ring of shots).
 - **Dodge roll** for everyone; **skills charge with light** from fighting and catching fireflies.
 - **Health beads and amulets:** amulets (anting-anting) absorb hits and recharge.
 
-| Hero | From | Weapon | Skill |
+| Hero | From | Weapons | Skill |
 |---|---|---|---|
-| **Kidlat** | Mactan, maharlika warrior | Kampilan | Bagyo: blade whirl that clears shots |
-| **Liksi** | Butuan, navigator | Pana | Ulan ng Pana: arrow storm |
-| **Mayumi** | Panay, babaylan | Agimat rod | Anito Ring: spirit orbs |
-| **Amihan** | Siquijor, mananambal | Sumpit | Tambal: heal and restore amulets |
+| **Kidlat** | Mactan, maharlika warrior | Kampilan / Kris | Bagyo: blade whirl that clears shots |
+| **Liksi** | Butuan, navigator | Pana / Bangkaw | Ulan ng Pana: arrow storm |
+| **Mayumi** | Panay, babaylan | Agimat rod / Lingganay | Anito Ring: spirit orbs |
+| **Amihan** | Siquijor, mananambal | Sumpit / Barang | Tambal: heal and restore amulets |
+| **Banog** | Bukidnon, bagani warrior | Panabas / Baston | Kalasag: shield up, untouchable, shots bounce back |
+| **Dalisay** | Sulu, pearl diver | Buntot Pagi / Lantaka | Daluyong: tidal surge that hurls foes back |
 
-Route: Port of Tondo → Punso Fields → Siquijor → Mount Banahaw → Ibalong Forests → Shore of Albay
-(the Bakunawa). Illustrated prologue and ending, a dialogue before the boss, an epilogue per hero,
-and the **Kwento** codex (Maharlika · Creatures · The Gods · The World) with sources.
+Every guardian is fully animated: idle breathing, a 4-step walk, a two-beat attack, a 4-frame
+dodge roll and a hurt recoil. Effects include footstep dust, hit sparks, a puff of smoke for each
+banished creature, lantaka blasts, healing crosses, chest and whetstone glints, the kalasag ring and
+the daluyong wave.
+
+![Animation sheet](assets/brand/animation_sheet.png)
+
+The home screen menu is in Filipino with the English beside each item (Laro · Play, Simula · Prologue,
+Alamat · Legends, Paano Maglaro · How to Play) and a one-line hint on every option and a How to Play guide covering the controls and the goal of a run.
+A loading screen (the Bakunawa coiled around the last moon) shows a folklore tip in Filipino and
+English at start-up and each time you set sail.
+
+Route: Port of Tondo → **Punso Fields or the Chocolate Hills of Bohol** → **Siquijor or the Sulu Sea**
+→ **Mount Banahaw, the Ifugao Terraces or Taal Volcano** → **Ibalong or Palawan** → Shore of Albay
+(the Bakunawa). Each run picks one island per leg (longer voyages add the islands it passed over),
+and each island has two maps. Nine island themes in all. Illustrated prologue and ending, a dialogue before the boss, an epilogue per hero,
+and the **Alamat** (Legends) codex (Maharlika · Nilalang · Mga Diyos · Daigdig: heroes, creatures, gods, world) with sources.
+
+## Music and sound
+
+All music and effects are synthesized by [`tools/generate_audio.py`](tools/generate_audio.py)
+(numpy + ffmpeg) from approximations of the islands' instruments: the **kulintang** (a row of
+small gongs), the deep **agung** gong, the **dabakan** drum, bamboo percussion, the **kubing**
+jaw harp and the **suling** flute. Nothing is sampled, so there is nothing to license.
+
+- **Music:** four looping tracks, about 1.2 MB in total with the effects.
+  - *Gabi ng Bakunawa* (title and menus)
+  - *Paglalayag* (islands)
+  - *Yungib* (caves: drone, distant gongs, dripping water)
+  - *Laban* (bosses)
+  The game switches track by itself when you enter a cave or a boss appears.
+- **Effects:** 22 sounds, including:
+  - attacks: slash, bowstring, spirit chime, cannon and blast
+  - fighting: hits, banishing a creature, getting hurt, dodging
+  - rewards: coins, pickups, chests, level-ups, mutya, skills, healing
+  - places: the cave door, sailing, a boss roar
+  - menus: button clicks, plus victory and defeat jingles
+- **Settings:** music and effects switch on and off separately, from the title screen
+  (*Musika*, *Tunog*) or the pause menu, and the choice is saved. Sound follows the phone's
+  silent switch and mixes with other apps' audio. On the web, audio starts after the first tap
+  or key press, as browsers require.
+- **Playback:** uses `expo-audio`, configured without microphone or background-audio
+  permissions.
 
 ## Controls
 
@@ -48,6 +122,8 @@ and the **Kwento** codex (Maharlika · Creatures · The Gods · The World) with 
 | Cards at a dambana | Choose a blessing |
 
 Web build: `WASD` move, `Space` attack, `Shift` dodge, `K` skill, `1-3` choose a blessing, `Esc` pause.
+Co-op P2: arrow keys move, `Enter` attack, `/` dodge, `.` skill.
+On the home screen, `Enter` plays and `H` opens How to Play.
 
 ## Running it
 
@@ -70,22 +146,37 @@ Everything is drawn in [`tools/generate_assets.py`](tools/generate_assets.py) as
 small procedural routines (Baybayin is rendered from Noto Sans Tagalog). Run
 `python3 tools/generate_assets.py` (needs Pillow and `npm install`) to regenerate:
 
-- heroes, creatures, the Bakunawa, Haliya, weapons, shots and the kampilan slash effect
+- six heroes in five poses (idle, walk, attack, roll, hurt), eight creatures, the Bakunawa, Haliya,
+  13 weapons, shots, the kaban chest and hasaan whetstone; effects (slash, dust, hit, boom, poof,
+  sparkle, heal, shield and wave rings); `assets/brand/animation_sheet.png`
+- three cave maps (rock walls, stalagmites, glowing crystals, underground pools), the cave mouth,
+  the steps, and the darkness that surrounds the heroes underground
 - island maps (sea, surf, sand, themed ground and props such as punso, banana, balete, rocks,
-  bronze lamp posts) with collision grids in `src/game/rooms.json`
+  bronze lamp posts, coral, stilt houses, rice and bulul, terrace walls, sulfur vents and glowing lava
+  rock with falling ash, the Chocolate Hills, limestone karst towers over emerald water) for nine
+  island themes, with
+  collision grids in `src/game/rooms.json`
 - balangay, dambana, agung; HUD medallion, bead pips, eight deity emblems, touch controls
 - title (Mayon, the eclipse, the Bakunawa and the fleet), select, defeat, dawn screens; logo
-  and Baybayin logo; 8 story panels; 6 dialogue portraits; brand sheet; app icons
+  and Baybayin logo; loading screen; 8 story panels; 8 dialogue portraits; brand sheet; the app icon
+  (a red crescent moon, the Bakunawa's coil and a kampilan) with Android adaptive and monochrome layers
+
+Run `python3 tools/generate_audio.py` to regenerate the music and sound effects (writes
+`assets/audio/` and `src/sounds.ts`).
 
 ## Project layout
 
 ```
-App.tsx                    screen flow: title → story → select → game → ending → result; codex
+App.tsx                    screen flow: loading → title → story → select → game → ending → result; codex
 src/game/data.ts           heroes, weapons, creatures, the gods' blessings
 src/game/story.ts          all story text, bios with sources, island names in Baybayin
 src/game/engine.ts         simulation: islands, melee and ranged combat, dodge, light, blessings, AI
-src/screens/               Title, Story, Codex, Select, Game, Result
+src/screens/               Loading, Title, Story, Codex, Select (mode, players, difficulty), Game, Result
+src/save.ts                saved progress: wins, Mahirap unlock, endless record, mutya, sound settings
+src/audio.ts               music and sound effects (expo-audio)
+tools/generate_audio.py    all music and sound, synthesized
 src/ui.tsx                 palette, pixel and Baybayin text, buttons, panels
 tools/generate_assets.py   all art
 docs/STORY.md              story bible and sources
+docs/ONLINE_MULTIPLAYER.md plan for online co-op
 ```
