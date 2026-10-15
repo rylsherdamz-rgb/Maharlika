@@ -2,7 +2,9 @@ import roomData from './rooms.json';
 import {
   BoonId,
   BOONS,
+  BOSS_NAME,
   BulletSprite,
+  CAVE_GUARDIANS,
   DIFFICULTIES,
   Difficulty,
   ENEMIES,
@@ -14,6 +16,9 @@ import {
   LIGHT_MAX,
   LOOT_WEAPONS,
   Mode,
+  RelicId,
+  RELICS,
+  THEME_GUARDIAN,
   WEAPON_LV_BONUS,
   WEAPON_LV_MAX,
   WeaponId,
@@ -38,6 +43,8 @@ export const REVIVE_TIME = 2.2;
 export const CAVE_DEPTH = 3;
 /** In endless mode, every this-many islands has a cave for sure. */
 const ENDLESS_CAVE_EVERY = 4;
+/** In endless mode, every this-many islands the Bakunawa rises. */
+export const ENDLESS_BOSS_EVERY = 8;
 
 export interface Mods {
   dmg: number;
@@ -129,7 +136,7 @@ export interface Bullet {
   hit?: Set<number>;
 }
 
-export type PickupKind = 'coin' | 'energy_orb' | 'potion_health' | 'whetstone' | 'weapon';
+export type PickupKind = 'coin' | 'energy_orb' | 'potion_health' | 'whetstone' | 'weapon' | 'relic';
 
 export interface Pickup {
   id: number;
@@ -138,6 +145,7 @@ export interface Pickup {
   y: number;
   t: number;
   weapon?: WeaponId;
+  relic?: RelicId;
   /** false for a weapon a hero just put down, until every hero steps away from it */
   armed?: boolean;
 }
@@ -211,6 +219,8 @@ export interface Game {
   shrine: { x: number; y: number; used: boolean } | null;
   choice: BoonId[] | null;
   boons: BoonId[];
+  /** Mutya (boss charms) the party carries this run. */
+  relics: RelicId[];
   boat: { x: number; y: number } | null;
   /** A yungib entrance on a cleared island. */
   caveDoor: { x: number; y: number } | null;
@@ -287,7 +297,45 @@ function voyageRoute(legs: number): RoomName[] {
   return ['port', ...[...middle, themes[themes.length - 1]].map((t) => `${t}_${pick(['a', 'b'])}` as RoomName), 'shore'];
 }
 
-const ALL_THEMES = ['pulo1', 'pulo2', 'sulu', 'pulo3', 'ifugao', 'pulo4'];
+const ALL_THEMES = ['pulo1', 'bohol', 'pulo2', 'sulu', 'pulo3', 'ifugao', 'taal', 'pulo4', 'palawan'];
+
+/** The name on a boss's health bar. */
+export function bossName(e: Enemy) {
+  return e.type === 'bakunawa' ? BOSS_NAME : (CAVE_GUARDIANS[e.type]?.name ?? 'BANTAY');
+}
+
+/** Bless the whole party with a boss's charm. A charm already carried turns into gold. */
+function applyRelic(g: Game, id: RelicId) {
+  if (g.relics.includes(id)) {
+    g.coins += 20;
+    addText(g, g.hero.x, g.hero.y - 18, '+20 BARYA', '#ffe882');
+    return;
+  }
+  g.relics.push(id);
+  for (const h of g.heroes) {
+    const m = h.mods;
+    switch (id) {
+      case 'pangil_bungisngis':
+        m.dmg *= 1.25;
+        break;
+      case 'buhok_tikbalang':
+        m.speed *= 1.2;
+        m.dodgeCd *= 0.6;
+        break;
+      case 'mutya_kapre':
+        h.maxHp += 2;
+        if (!h.down) h.hp = Math.min(h.maxHp, h.hp + 2);
+        break;
+      case 'kaliskis_bakunawa':
+        h.maxArmor += 3;
+        h.armor = h.maxArmor;
+        m.regen *= 2;
+        break;
+    }
+    addFx(g, 'sparkle', h.x, h.y - 8);
+  }
+  addText(g, g.hero.x, g.hero.y - 20, RELICS[id].name.toUpperCase(), '#82eed6');
+}
 
 function makeHero(idx: number, heroId: HeroId, weapon?: WeaponId): Hero {
   const def = HEROES.find((h) => h.id === heroId)!;
@@ -355,6 +403,7 @@ export function newGame(setup: Setup | HeroId, weapon?: WeaponId): Game {
     shrine: null,
     choice: null,
     boons: [],
+    relics: [],
     boat: null,
     caveDoor: null,
     cave: null,
@@ -405,7 +454,12 @@ function resetRoom(g: Game) {
 
 function enterRoom(g: Game, stage: number) {
   // endless mode lays the route down one island ahead
-  if (g.mode === 'endless') while (g.route.length <= stage) g.route.push(`${pick(ALL_THEMES)}_${pick(['a', 'b'])}` as RoomName);
+  if (g.mode === 'endless') {
+    while (g.route.length <= stage) {
+      const next = g.route.length;
+      g.route.push(next % ENDLESS_BOSS_EVERY === 0 ? 'shore' : (`${pick(ALL_THEMES)}_${pick(['a', 'b'])}` as RoomName));
+    }
+  }
   g.stage = stage;
   g.room = g.route[stage];
   g.grid = roomData.rooms[g.room].grid;
@@ -422,6 +476,10 @@ function enterRoom(g: Game, stage: number) {
       addText(g, h.x, h.y - 12, '+1 LAKAPATI', '#62b24a');
       addFx(g, 'heal', h.x, h.y - 4);
     }
+    if (g.relics.includes('mutya_kapre') && stage > 0 && !h.down) {
+      h.hp = Math.min(h.maxHp, h.hp + 1);
+      addFx(g, 'heal', h.x, h.y - 4);
+    }
   }
   if (g.room === 'port') {
     g.waves = 0;
@@ -431,8 +489,9 @@ function enterRoom(g: Game, stage: number) {
     g.npc = { x: 5.5 * TILE, y: 6.2 * TILE, talking: false, line: HALIYA_LINES[0] };
   } else if (g.room === 'shore') {
     g.waves = 1;
-    g.banner = { text: SHORE.title, baybayin: SHORE.baybayin, sub: SHORE.line, t: 3 };
-    g.dialog = { lines: bossDialogue(g.hero.def.id), i: 0 };
+    g.banner = { text: SHORE.title, baybayin: SHORE.baybayin, sub: g.mode === 'endless' ? `The Bakunawa rises again. Island ${stage}.` : SHORE.line, t: 3 };
+    // the full exchange plays once; in endless the serpent just comes back
+    if (g.mode === 'voyage' || stage === ENDLESS_BOSS_EVERY) g.dialog = { lines: bossDialogue(g.hero.def.id), i: 0 };
     spawnEnemy(g, 'bakunawa', 17 * TILE, 7 * TILE);
     g.wave = 1;
   } else {
@@ -458,10 +517,11 @@ function enterCave(g: Game) {
   placeParty(g, ENTRY.x, ENTRY.y);
   g.banner = { text: `${CAVE.title} ${g.cave.depth}/${CAVE_DEPTH}`, baybayin: CAVE.baybayin, sub: g.cave.depth === 1 ? CAVE.line : undefined, t: 2.4 };
   if (g.cave.depth === CAVE_DEPTH) {
-    // the guardian: a huge bungisngis, with a couple of hangers-on
+    // the guardian depends on the island above: a laughing giant, a tikbalang chief or a kapre king
     g.waves = 1;
     g.wave = 1;
-    spawnEnemy(g, 'bungisngis', 16 * TILE, 7.5 * TILE, true);
+    const guardian = CAVE_GUARDIANS[THEME_GUARDIAN[g.route[g.stage].replace(/_[ab]$/, '')] ?? 'bungisngis'];
+    spawnEnemy(g, guardian.type, 16 * TILE, 7.5 * TILE, true);
     for (let i = 0; i < 2; i++) {
       const p = randomFloor(g, 80);
       spawnEnemy(g, pick(stageInfo(g).pool), p.x, p.y);
@@ -550,7 +610,8 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number, boss = false
   const def = ENEMIES[type];
   const depth = g.cave ? 0.3 * g.cave.depth : 0;
   const scale = (1 + (g.stage - 1) * 0.15 + depth) * g.diff.hp * (g.heroes.length > 1 ? 1.4 : 1);
-  let hp = type === 'bakunawa' ? Math.round(def.hp * g.diff.hp * (g.heroes.length > 1 ? 1.5 : 1)) : Math.round(def.hp * scale);
+  const endlessBoss = g.mode === 'endless' ? 1 + (g.stage / ENDLESS_BOSS_EVERY - 1) * 0.5 : 1;
+  let hp = type === 'bakunawa' ? Math.round(def.hp * g.diff.hp * (g.heroes.length > 1 ? 1.5 : 1) * endlessBoss) : Math.round(def.hp * scale);
   if (boss) hp = Math.round(hp * 5);
   g.enemies.push({
     id: g.nextId++,
@@ -707,7 +768,15 @@ function killEnemy(g: Game, e: Enemy) {
   gainXp(g, Math.ceil(e.maxHp / 3));
   if (e.boss) {
     g.chest = { x: e.x, y: e.y, open: false, big: true };
-    g.banner = { text: 'NATALO ANG BANTAY', sub: 'The cave guardian is down. Open the big kaban.', t: 2.4 };
+    // set the mutya a little apart from the chest, on ground a hero can reach
+    const spot = [[0, -28], [0, 28], [-28, 0], [28, 0], [0, -14], [0, 0]].map(([dx, dy]) => ({ x: e.x + dx, y: e.y + dy })).find((p) => boxFree(g, p.x, p.y, 4)) ?? { x: e.x, y: e.y };
+    g.pickups.push({ id: g.nextId++, kind: 'relic', x: spot.x, y: spot.y, t: 0, relic: CAVE_GUARDIANS[e.type].relic });
+    g.banner = { text: 'NATALO ANG BANTAY', sub: 'The guardian is down. Take its mutya and open the big kaban.', t: 2.6 };
+  }
+  if (e.type === 'bakunawa') {
+    // the voyage ends the moment the serpent falls, so its scale goes straight to the party
+    if (g.mode === 'voyage') applyRelic(g, 'kaliskis_bakunawa');
+    else g.pickups.push({ id: g.nextId++, kind: 'relic', x: e.x, y: e.y, t: 0, relic: 'kaliskis_bakunawa' });
   }
 }
 
@@ -808,14 +877,14 @@ export function update(g: Game, inputs: Input | Input[], dt: number) {
     } else if (g.cave) {
       g.exit = { ...DOCK };
       if (g.cave.depth < CAVE_DEPTH) g.banner = { text: 'MAY DAAN PABABA', sub: 'A way down. Take the steps to go deeper.', t: 2 };
-    } else if (g.room === 'shore') {
+    } else if (g.room === 'shore' && g.mode === 'voyage') {
       g.result = 'victory';
     } else {
       g.boat = { ...DOCK };
       g.shrine = { x: CENTER.x, y: CENTER.y - TILE, used: false };
       const spot = randomFloor(g, 40, [g.shrine, g.boat]);
       g.chest = { x: spot.x, y: spot.y, open: false };
-      const hasCave = g.mode === 'endless' ? g.stage % ENDLESS_CAVE_EVERY === 0 || Math.random() < 0.25 : g.caveStages.includes(g.stage);
+      const hasCave = g.room === 'shore' ? false : g.mode === 'endless' ? g.stage % ENDLESS_CAVE_EVERY === 0 || Math.random() < 0.25 : g.caveStages.includes(g.stage);
       if (hasCave) {
         const door = randomFloor(g, 40, [g.shrine, g.boat, g.chest]);
         g.caveDoor = door;
@@ -1193,17 +1262,34 @@ function updateEnemies(g: Game, dt: number) {
         const side = Math.sin(e.t * 1.3);
         moveBody(g, e, (ux * want - uy * side * 0.6) * def.speed * dt, (uy * want + ux * side * 0.6) * def.speed * dt, hw);
         if (e.cd <= 0 && d < 200 && lineOfSight(g, e.x, e.y, h.x, h.y)) {
-          shoot(g, e.x, e.y + 2, aim + rand(-0.1, 0.1), 85, 1, false, 'shot_enemy');
-          e.cd = rand(1.4, 2.0);
+          if (e.boss) {
+            // the tikbalang chief: a three-shot volley, then a gallop straight at the nearest hero
+            for (const off of [-0.18, 0, 0.18]) shoot(g, e.x, e.y + 2, aim + off, 110, 1, false, 'shot_enemy', 3);
+            e.state = 1;
+            e.cd = rand(1.1, 1.5);
+          } else {
+            shoot(g, e.x, e.y + 2, aim + rand(-0.1, 0.1), 85, 1, false, 'shot_enemy');
+            e.cd = rand(1.4, 2.0);
+          }
         }
+        if (e.boss && e.state === 1 && e.cd > 0.6) moveBody(g, e, ux * def.speed * 5 * dt, uy * def.speed * 5 * dt, hw);
+        else if (e.state === 1 && e.cd <= 0.6) e.state = 0;
         break;
       }
       case 'kapre': {
         const want = d > 100 ? 1 : d < 60 ? -1 : 0;
         moveBody(g, e, ux * want * def.speed * dt, uy * want * def.speed * dt, hw);
         if (e.cd <= 0 && d < 220 && lineOfSight(g, e.x, e.y, h.x, h.y)) {
-          for (const off of [-0.25, 0, 0.25]) shoot(g, e.x, e.y + 2, aim + off, 75, 1, false, 'shot_enemy');
-          e.cd = rand(2, 2.6);
+          if (e.boss) {
+            // the kapre king: a wide fan of cigar embers, and now and then a ring
+            const n = 7;
+            for (let i = 0; i < n; i++) shoot(g, e.x, e.y + 2, aim + (i - (n - 1) / 2) * 0.16, 80, 1, false, 'shot_enemy', 3);
+            if (Math.random() < 0.35) for (let i = 0; i < 14; i++) shoot(g, e.x, e.y, (i / 14) * Math.PI * 2, 60, 1, false, 'shot_enemy', 3);
+            e.cd = rand(1.3, 1.7);
+          } else {
+            for (const off of [-0.25, 0, 0.25]) shoot(g, e.x, e.y + 2, aim + off, 75, 1, false, 'shot_enemy');
+            e.cd = rand(2, 2.6);
+          }
         }
         break;
       }
@@ -1406,6 +1492,10 @@ function updatePickups(g: Game, dt: number) {
       g.pickups.push({ id: g.nextId++, kind: 'weapon', x: p.x, y: p.y, t: 0, weapon: old, armed: false });
       addText(g, h.x, h.y - 14, WEAPONS[h.weapon].name.toUpperCase(), '#ffba48');
       addFx(g, 'sparkle', h.x, h.y - 6);
+      continue;
+    }
+    if (d < 10 && p.kind === 'relic') {
+      applyRelic(g, p.relic!);
       continue;
     }
     if (d < 8) {

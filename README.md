@@ -29,8 +29,15 @@ it is folklore, history or invented for the game.
 - **Antas (levels):** every banished creature gives XP to the whole party. Each level adds health,
   damage and a little speed (up to level 15).
 - **Yungib (caves):** at least one island per voyage opens a cave once it is cleared. Three dark
-  rooms lit only around the heroes, then a giant bungisngis guarding a big chest (a weapon and two
+  rooms lit only around the heroes, then a guardian that depends on the island above: the giant
+  **Bungisngis ng Yungib**, the galloping **Punong Tikbalang** (mountain islands) or the **Haring
+  Kapre** with its fans of cigar embers (forest islands). It guards a big chest (a weapon and two
   whetstones). Climb out and the island is waiting with its boat.
+- **Mutya (boss charms):** every boss drops a charm that blesses the whole party for the run:
+  *Pangil ng Bungisngis* (+25% damage), *Gintong Buhok ng Tikbalang* (faster, quicker dodge),
+  *Mutya ng Kapre* (+2 health, heal on each island) and *Kaliskis ng Bakunawa* (+3 amulets that
+  recharge twice as fast). Every mutya you find is kept in the *Mga Mutya* tab of the codex. In
+  endless mode the Bakunawa rises every 8th island.
 - **Islands, not rooms:** each stage is an island in the sea. You walk on land, shots fly over water.
   Clear the island, open its **kaban** (chest), visit its **dambana** (shrine), then board the
   **balangay** to sail on.
@@ -72,9 +79,10 @@ Alamat · Legends, Paano Maglaro · How to Play) and a one-line hint on every op
 A loading screen (the Bakunawa coiled around the last moon) shows a folklore tip in Filipino and
 English at start-up and each time you set sail.
 
-Route: Port of Tondo → Punso Fields → **Siquijor or the Sulu Sea** → **Mount Banahaw or the Ifugao
-Terraces** → Ibalong Forests → Shore of Albay (the Bakunawa). Each run picks one island per leg, and
-each island has two maps. Illustrated prologue and ending, a dialogue before the boss, an epilogue per hero,
+Route: Port of Tondo → **Punso Fields or the Chocolate Hills of Bohol** → **Siquijor or the Sulu Sea**
+→ **Mount Banahaw, the Ifugao Terraces or Taal Volcano** → **Ibalong or Palawan** → Shore of Albay
+(the Bakunawa). Each run picks one island per leg (longer voyages add the islands it passed over),
+and each island has two maps. Nine island themes in all. Illustrated prologue and ending, a dialogue before the boss, an epilogue per hero,
 and the **Alamat** (Legends) codex (Maharlika · Nilalang · Mga Diyos · Daigdig: heroes, creatures, gods, world) with sources.
 
 ## Controls
@@ -118,7 +126,9 @@ small procedural routines (Baybayin is rendered from Noto Sans Tagalog). Run
 - three cave maps (rock walls, stalagmites, glowing crystals, underground pools), the cave mouth,
   the steps, and the darkness that surrounds the heroes underground
 - island maps (sea, surf, sand, themed ground and props such as punso, banana, balete, rocks,
-  bronze lamp posts, coral, stilt houses, rice and bulul, terrace walls) for six island themes, with
+  bronze lamp posts, coral, stilt houses, rice and bulul, terrace walls, sulfur vents and glowing lava
+  rock with falling ash, the Chocolate Hills, limestone karst towers over emerald water) for nine
+  island themes, with
   collision grids in `src/game/rooms.json`
 - balangay, dambana, agung; HUD medallion, bead pips, eight deity emblems, touch controls
 - title (Mayon, the eclipse, the Bakunawa and the fleet), select, defeat, dawn screens; logo

@@ -417,6 +417,40 @@ export const WORLD_BIOS: Bio[] = [
     source: 'History and Ifugao tradition',
   },
   {
+    id: 'taal',
+    name: 'Taal Volcano',
+    epithet: 'A volcano in a lake',
+    sprite: 'tiles_lavarock',
+    facts: [['Where', 'Batangas, Luzon'], ['Known for', 'An island volcano inside a lake, with a lake inside its crater']],
+    story: [
+      'Taal is one of the most active volcanoes in the Philippines: a volcano island sitting in Taal Lake, with its own crater lake. Its eruptions have reshaped the land around it many times.',
+    ],
+    source: 'Geography',
+  },
+  {
+    id: 'bohol',
+    name: 'The Chocolate Hills',
+    epithet: 'Bohol',
+    sprite: 'tiles_burol',
+    facts: [['Where', 'Bohol, Visayas'], ['Count', 'More than 1,200 hills']],
+    story: [
+      'More than a thousand rounded limestone hills covered in grass, which turns brown in the dry season. A Boholano legend tells of two giants who fought for days, throwing rocks and sand, and left the hills behind.',
+      'Bohol is also one of the islands where the sigbin is most talked about.',
+    ],
+    source: 'Geography; the giants are a Boholano legend',
+  },
+  {
+    id: 'palawan',
+    name: 'Palawan',
+    epithet: 'Karst and lagoons',
+    sprite: 'tiles_karst',
+    facts: [['Where', 'Between the Sulu and South China Seas'], ['Known for', 'Limestone karst, lagoons, an underground river']],
+    story: [
+      'Sheer limestone cliffs and towers rise straight out of clear lagoons around El Nido and Coron. Puerto Princesa has an underground river that runs for kilometers under a karst mountain, a UNESCO World Heritage Site.',
+    ],
+    source: 'Geography',
+  },
+  {
     id: 'kaban',
     name: 'Kaban and Hasaan',
     epithet: 'Chests and whetstones',
@@ -455,14 +489,16 @@ export const STAGES: Record<string, StageInfo> = {
   sulu: { title: 'SULU SEA', baybayin: 'ᜐᜓᜎᜓ', line: 'Stilt houses over the reef. Fires drift on the water, and nobody is fishing.', pool: ['santelmo', 'santelmo', 'manananggal', 'sigbin', 'duwende'] },
   pulo3: { title: 'MOUNT BANAHAW', baybayin: 'ᜊᜈᜑᜏ᜔', line: 'Shirts inside out. Laughter echoes from the high trail.', pool: ['tikbalang', 'tikbalang', 'bungisngis', 'santelmo', 'duwende'] },
   ifugao: { title: 'IFUGAO TERRACES', baybayin: 'ᜁᜉᜓᜄᜏ᜔', line: 'The bulul guard the rice. Tonight something walks the terrace walls.', pool: ['tikbalang', 'bungisngis', 'duwende', 'duwende', 'tiyanak'] },
+  bohol: { title: 'CHOCOLATE HILLS', baybayin: 'ᜊᜓᜑᜓᜎ᜔', line: 'Bohol. Hundreds of round hills, and something walking backward between them.', pool: ['sigbin', 'sigbin', 'duwende', 'duwende', 'santelmo'] },
+  taal: { title: 'BULKANG TAAL', baybayin: 'ᜆᜀᜎ᜔', line: 'A volcano inside a lake. Ash falls, the vents hiss, and fires drift over the water.', pool: ['santelmo', 'santelmo', 'tikbalang', 'bungisngis', 'duwende'] },
+  palawan: { title: 'PALAWAN', baybayin: 'ᜉᜎᜏᜈ᜔', line: 'Limestone towers over an emerald lagoon. The forest here is very old.', pool: ['kapre', 'manananggal', 'tiyanak', 'tiyanak', 'duwende'] },
   pulo4: { title: 'IBALONG FORESTS', baybayin: 'ᜁᜊᜎᜓᜅ᜔', line: 'Cigar smoke from the old balete, and a baby crying where no baby should be.', pool: ['kapre', 'kapre', 'tiyanak', 'tiyanak', 'tikbalang', 'manananggal'] },
 };
 
 /** The four legs of the voyage; each run picks one island per leg. */
-export const ROUTE_SLOTS: string[][] = [['pulo1'], ['pulo2', 'sulu'], ['pulo3', 'ifugao'], ['pulo4']];
+export const ROUTE_SLOTS: string[][] = [['pulo1', 'bohol'], ['pulo2', 'sulu'], ['pulo3', 'ifugao', 'taal'], ['pulo4', 'palawan']];
 
 export const CAVE = { title: 'YUNGIB', baybayin: 'ᜌᜓᜅᜒᜊ᜔', line: 'A cave under the island. Something laughs in the dark below.' };
-export const CAVE_BOSS = 'BUNGISNGIS NG YUNGIB';
 export const ENDLESS = { title: 'WALANG KATAPUSAN', baybayin: 'ᜏᜎᜅ᜔ ᜃᜆᜉᜓᜐᜈ᜔', line: 'Endless islands. How far can you sail before the night takes you?' };
 
 export const PORT = { title: 'PORT OF TONDO', baybayin: 'ᜆᜓᜈ᜔ᜇᜓ', line: 'Haliya waits by the balangay.' };

@@ -874,6 +874,64 @@ def ring_fx(color, width=2):
     return img
 
 
+# mutya: charms dropped by bosses (16x16)
+RELICS = {
+    # Pangil ng Bungisngis: the laughing giant's tusk
+    "pangil_bungisngis": [
+        "", "",
+        "........HW......",
+        ".......HWW......",
+        "......HHW.......",
+        ".....HHW........",
+        "....HHW.........",
+        "...HHH..........",
+        "..hHH...........",
+        "..hh............",
+        "..yy............",
+        ".yAAy...........",
+        "..yy............",
+    ],
+    # Gintong Buhok ng Tikbalang: three golden hairs from its mane
+    "buhok_tikbalang": [
+        "", "",
+        "...Y.....Y......",
+        "....Y...Y...Y...",
+        "....Y..Y...Y....",
+        ".....Y.Y..Y.....",
+        ".....Y.Y.Y......",
+        "......YYY.......",
+        "......YAY.......",
+        ".......A........",
+        "......yAy.......",
+        "......yyy.......",
+    ],
+    # Mutya ng Kapre: the kapre's white stone, said to grant wishes
+    "mutya_kapre": [
+        "", "", "",
+        ".....wwwww......",
+        "....wWWWWWw.....",
+        "...wWWHWWWWw....",
+        "...wWHWWWWWw....",
+        "...wWWWWWWHw....",
+        "...wWWWWWHHw....",
+        "....wWWWHHw.....",
+        ".....wwwww......",
+    ],
+    # Kaliskis ng Bakunawa: a scale from the moon-eater, cold and shining
+    "kaliskis_bakunawa": [
+        "", "",
+        "......TTTT......",
+        ".....TCCCCT.....",
+        "....TCVVCCCT....",
+        "....TCVCCCCT....",
+        "....TCCCCCtT....",
+        ".....TCCCtT.....",
+        ".....TtCttT.....",
+        "......TttT......",
+        ".......TT.......",
+    ],
+}
+
 # kaban: a carved wooden chest bound in brass, found on cleared islands
 CHEST = [
     "", "", "",
@@ -997,6 +1055,14 @@ ISLANDS = {
     "sulu":   {"ground": (176, 160, 118), "grass": (120, 150, 96), "sand": (226, 214, 176), "deco": "coral", "big": "stilt"},
     # Ifugao: the rice terraces of the Cordillera, guarded by carved bulul
     "ifugao": {"ground": (70, 98, 52), "grass": (130, 160, 70), "sand": (120, 104, 72), "deco": "palay", "big": "bulul"},
+    # Taal: ash and black sand around a volcano in a lake, sulfur vents, glowing lava rock
+    "taal":   {"ground": (86, 78, 76), "grass": (104, 104, 74), "sand": (62, 56, 58), "deco": "vent", "big": "lavarock",
+               "shallows": (130, 160, 70, 80)},
+    # Bohol: the Chocolate Hills, grass that browns in the dry season
+    "bohol":  {"ground": (96, 112, 52), "grass": (150, 120, 60), "sand": (176, 156, 104), "deco": "mound", "big": "burol"},
+    # Palawan: limestone karst towers rising from an emerald lagoon
+    "palawan": {"ground": (80, 120, 74), "grass": (110, 160, 90), "sand": (232, 226, 200), "deco": "shard", "big": "karst",
+                "shallows": (40, 190, 140, 90)},
 }
 
 
@@ -1091,6 +1157,39 @@ DECO = {
         ".gGG..GgG..GGg..",
         ".......g........",
     ],
+    # sulfur vent on Taal: yellow crust and a wisp of steam
+    "vent": [
+        "",
+        ".......w........",
+        "......w.w.......",
+        ".......w..w.....",
+        "......w.........",
+        "...........w....",
+        "....YYYYYYY.....",
+        "...YyYkkkYyY....",
+        "...YYkKKKkYY....",
+        "....yYYYYYy.....",
+    ],
+    # a small brown hillock, like a Chocolate Hill in miniature
+    "mound": [
+        "", "", "", "", "",
+        "......NNN.......",
+        ".....NNNNN......",
+        "....NNNNNNn.....",
+        "...NNNNNNNnn....",
+        "..nNNNNNNnnnn...",
+    ],
+    # a broken shard of limestone
+    "shard": [
+        "", "", "",
+        "......W.........",
+        ".....WS.........",
+        ".....WS....S....",
+        "....WSSs..WSs...",
+        "....WSSs..WSs...",
+        "...WSSSss.WSSs..",
+        "...ssssssssssss.",
+    ],
     # coral head on the Sulu reef
     "coral": [
         "", "", "", "",
@@ -1170,6 +1269,43 @@ BIG = {
         "sSSSSSSSSsssss..",
         "ssSSSSSSssssss..",
         ".ssssssssssss...",
+    ],
+    # cooled lava rock with a seam that still glows
+    "lavarock": [
+        "",
+        "....kkkkkk......",
+        "..kkKkkkkkkk....",
+        ".kkkkkOkkkkKk...",
+        ".kKkkkOOkkkkk...",
+        "kkkkkkkOkkkkkk..",
+        "kkkkkkkOOkkkKk..",
+        "kkKkkkkkOkkkkk..",
+        ".kkkkkkkkkkkk...",
+    ],
+    # burol: a Chocolate Hill, a near-perfect cone of grass
+    "burol": [
+        "",
+        "......NNNN......",
+        "....NNNGNNNn....",
+        "...NNNNNNNNnn...",
+        "..NNGNNNNNNnnn..",
+        ".NNNNNNNGNNnnnn.",
+        ".NGNNNNNNNNnnnn.",
+        "NNNNNNNNNnnnnnn.",
+        "nnnnnnnnnnnnnn..",
+    ],
+    # a limestone karst tower with greenery clinging to its top
+    "karst": [
+        "....GGgGG.......",
+        "...GgGSSGg......",
+        "...SSSSSSSG.....",
+        "..WSSSSSSSs.....",
+        "..WSSSsSSSs.....",
+        "..WSSSSSSss.....",
+        "..WSSsSSSss.....",
+        ".WWSSSSSSsss....",
+        ".WSSSSsSSSss....",
+        "WSSSSSSSSSsss...",
     ],
     # bahay sa dagat: a nipa house on stilts (seen from above)
     "stilt": [
@@ -1875,6 +2011,10 @@ def render_island(g, seed, theme):
     img = Image.new("RGBA", (ROOM_W * 16, ROOM_H * 16), (0, 0, 0, 255))
     deco = rows_to_img(DECO[ISLANDS[theme]["deco"]])
     big = rows_to_img(BIG[ISLANDS[theme]["big"]])
+    # landmark islands draw their big obstacles at double size, rising above the tile they block
+    tall = theme in ("bohol", "palawan", "taal")
+    big2 = up(big, 2) if tall else None
+    talls = []
 
     def land(x, y):
         return 0 <= x < ROOM_W and 0 <= y < ROOM_H and g[y][x] != WATER
@@ -1909,7 +2049,12 @@ def render_island(g, seed, theme):
             if g[y][x] == CRATE:
                 img.alpha_composite(deco, pos)
             elif g[y][x] == PILLAR:
-                img.alpha_composite(big, pos)
+                if tall:
+                    talls.append(pos)
+                else:
+                    img.alpha_composite(big, pos)
+    for pos in sorted(talls, key=lambda p: p[1]):  # back to front
+        img.alpha_composite(big2, (pos[0] - 8, max(0, pos[1] - 16)))
     # surf: a light line wherever land meets water
     px = img.load()
     for y in range(ROOM_H):
@@ -1937,7 +2082,8 @@ def render_island(g, seed, theme):
                 if g[y][x] == FLOOR and land(x, y - 1):
                     d.line([(x * 16, y * 16), (x * 16 + 15, y * 16)], fill=(96, 84, 64, 255))
                     d.line([(x * 16, y * 16 + 1), (x * 16 + 15, y * 16 + 1)], fill=(60, 52, 40, 255))
-    if theme == "sulu":  # clear turquoise shallows
+    shallows = (60, 200, 190, 90) if theme == "sulu" else ISLANDS[theme].get("shallows")
+    if shallows:  # coloured water near the shore: Sulu turquoise, Taal's green lake, Palawan emerald
         fx = Image.new("RGBA", img.size, (0, 0, 0, 0))
         fp = fx.load()
         for y in range(ROOM_H):
@@ -1945,8 +2091,13 @@ def render_island(g, seed, theme):
                 if g[y][x] == WATER and any(land(x + dx, y + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)):
                     for yy in range(16):
                         for xx in range(16):
-                            fp[x * 16 + xx, y * 16 + yy] = (60, 200, 190, 90)
+                            fp[x * 16 + xx, y * 16 + yy] = shallows
         img.alpha_composite(fx)
+    if theme == "taal":  # drifting ash specks over everything
+        px2 = img.load()
+        for _ in range(500):
+            x, y = rnd.randrange(img.width), rnd.randrange(img.height)
+            px2[x, y] = (150, 144, 140, 255)
     if theme == "shore":  # red tide tint over the water
         fx = Image.new("RGBA", img.size, (0, 0, 0, 0))
         fp = fx.load()
@@ -2733,6 +2884,8 @@ def main():
     save(rows_to_img(YUNGIB), "sprites/deco/yungib.png")
     save(rows_to_img(HAGDAN), "sprites/deco/hagdan.png")
     save(darkness(), "sprites/fx/darkness.png", 4)
+    for name, rows in RELICS.items():
+        save(rows_to_img(rows), f"sprites/relics/{name}.png")
     save(rows_to_img(CHEST), "sprites/deco/chest_0.png")
     save(rows_to_img(CHEST_OPEN), "sprites/deco/chest_1.png")
     for name, rows in ITEMS.items():
@@ -2791,7 +2944,7 @@ def main():
     for i in range(1, 5):
         for v, sfx in enumerate("ab"):
             plan.append((f"pulo{i}_{sfx}", "combat", f"pulo{i}", 200 + i * 10 + v))
-    for i, theme in enumerate(("sulu", "ifugao")):
+    for i, theme in enumerate(("sulu", "ifugao", "taal", "bohol", "palawan")):
         for v, sfx in enumerate("ab"):
             plan.append((f"{theme}_{sfx}", "combat", theme, 400 + i * 10 + v))
     for i, sfx in enumerate("abc"):

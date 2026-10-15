@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { GestureResponderEvent, Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
-import { BOONS, BOSS_NAME, ENEMIES, LIGHT_MAX, WEAPONS, xpToNext } from '../game/data';
-import { advanceDialog, alive, chooseBoon, DODGE_TIME, FX_FRAMES, FX_LIFE, Game, Hero, Input, newGame, REVIVE_TIME, ROOM_H, ROOM_W, Setup, sigbinVisible, stageLabel, update } from '../game/engine';
-import { CAVE_BOSS } from '../game/story';
+import { BOONS, ENEMIES, LIGHT_MAX, RELICS, WEAPONS, xpToNext } from '../game/data';
+import { advanceDialog, alive, bossName, chooseBoon, DODGE_TIME, FX_FRAMES, FX_LIFE, Game, Hero, Input, newGame, REVIVE_TIME, ROOM_H, ROOM_W, Setup, sigbinVisible, stageLabel, update } from '../game/engine';
 import { BaybayinText, COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
 import { RunStats } from './ResultScreen';
 
@@ -146,6 +145,7 @@ export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onE
                 island: g.stage,
                 level: Math.max(...g.heroes.map((h) => h.lv)),
                 caves: g.caves,
+                relics: [...g.relics],
                 stage: stageLabel(g),
                 kills: g.kills,
                 coins: g.coins,
@@ -305,6 +305,7 @@ export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onE
   );
 
   const layers: { y: number; node: React.ReactNode[] }[] = [];
+  const bossLayer: { y: number; node: React.ReactNode[] }[] = [];
 
   // heroes, weapons and blade effects
   for (const hero of g.heroes) {
@@ -398,7 +399,8 @@ export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onE
     let opacity = spawning ? 0.4 + 0.4 * Math.sin(g.time * 30) : 1;
     if (hidden) opacity = 0.12 + 0.08 * Math.sin(g.time * 9 + e.id);
     const bob = floating ? Math.sin(g.time * 4 + e.id) * 2 : 0;
-    layers.push({
+    // bosses are drawn above the cave darkness so the biggest threat is always in view
+    (e.boss ? bossLayer : layers).push({
       y: e.y,
       node: [
         !hidden && shadow(e.x, e.y + size / 2 + (floating ? 4 : 0), size * (floating ? 0.4 : 0.6), `es${e.id}`),
@@ -447,6 +449,21 @@ export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onE
           sprite(`weapons_${p.weapon}`, p.x, p.y + bob, 14, { transform: [{ rotate: `${Math.sin(p.t * 2) * 25 - 30}deg` }], opacity: p.armed ? 1 : 0.6 }, `p${p.id}`),
           <PixelText key={`pn${p.id}`} size={Math.max(6, 2.6 * s)} color={COLORS.light} shadow style={{ position: 'absolute', left: p.x * s - 60, width: 120, textAlign: 'center', top: (p.y - 15) * s }}>
             {WEAPONS[p.weapon!].name.toUpperCase()}
+          </PixelText>,
+        ],
+      });
+      continue;
+    }
+    if (p.kind === 'relic') {
+      // a boss's mutya: a bright, pulsing glow and its name
+      const glow = 0.35 + 0.25 * Math.sin(p.t * 6);
+      layers.push({
+        y: p.y + 20,
+        node: [
+          <View key={`rg${p.id}`} style={{ position: 'absolute', left: (p.x - 11) * s, top: (p.y - 9) * s, width: 22 * s, height: 18 * s, borderRadius: 11 * s, backgroundColor: `rgba(130,238,214,${glow})` }} />,
+          sprite(`relics_${p.relic}`, p.x, p.y + bob * 1.5, 16, undefined, `p${p.id}`),
+          <PixelText key={`rn${p.id}`} size={Math.max(6, 2.6 * s)} color={COLORS.armor} style={{ position: 'absolute', left: p.x * s - 80, width: 160, textAlign: 'center', top: (p.y - 20) * s }}>
+            {RELICS[p.relic!].name.toUpperCase()}
           </PixelText>,
         ],
       });
@@ -517,6 +534,7 @@ export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onE
         {layers.map((l) => l.node)}
         {/* shots and numbers stay readable above the cave darkness */}
         {darkness}
+        {bossLayer.map((l) => l.node)}
         {g.bullets.map((b) => {
           const rot = b.sprite === 'shot_arrow' || b.sprite === 'shot_dart' || b.sprite === 'shot_spear' || b.sprite === 'shot_beetle';
           const deg = (Math.atan2(b.vy, b.vx) * 180) / Math.PI;
@@ -564,8 +582,11 @@ export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onE
       {/* HUDs: one per player */}
       <HeroHud h={g.heroes[0]} label={coop ? 'P1' : undefined} />
       {coop && <HeroHud h={g.heroes[1]} right label="P2" />}
-      {g.boons.length > 0 && (
+      {g.boons.length + g.relics.length > 0 && (
         <View pointerEvents="none" style={[styles.pips, styles.boons]}>
+          {g.relics.map((r) => (
+            <Sprite key={r} name={`relics_${r}` as ImgKey} size={16} />
+          ))}
           {g.boons.map((b) => (
             <Sprite key={b} name={`ui_boon_${b}` as ImgKey} size={16} />
           ))}
@@ -585,7 +606,7 @@ export default function GameScreen({ setup, onEnd, onQuit }: { setup: Setup; onE
       {boss && (
         <View pointerEvents="none" style={[styles.bossBar, { left: W * 0.3, width: W * 0.4, top: coop ? 66 : 10 }]}>
           <PixelText size={8} color="#ff8a7a">
-            {boss.boss ? CAVE_BOSS : BOSS_NAME}
+            {bossName(boss)}
           </PixelText>
           <View style={styles.bossTrack}>
             <View style={[styles.lampFill, { width: `${(boss.hp / boss.maxHp) * 100}%`, backgroundColor: COLORS.red }]} />

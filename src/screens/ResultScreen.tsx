@@ -1,6 +1,6 @@
 import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
-import { BoonId, BOONS, DIFFICULTIES, HeroId } from '../game/data';
+import { BoonId, BOONS, DIFFICULTIES, HeroId, RelicId, RELICS } from '../game/data';
 import { Setup } from '../game/engine';
 import { DEFEAT_LINES } from '../game/story';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
@@ -12,6 +12,7 @@ export interface RunStats {
   island: number; // islands reached (the endless score)
   level: number; // highest antas in the party
   caves: number;
+  relics: RelicId[];
   stage: string;
   kills: number;
   coins: number;
@@ -82,6 +83,18 @@ export default function ResultScreen({
               <PixelText size={9}>{value}</PixelText>
             </View>
           ))}
+          {stats.relics.length > 0 && (
+            <View style={[styles.row, { flexWrap: 'wrap', gap: 4, marginTop: 4 }]}>
+              {stats.relics.map((r) => (
+                <View key={r} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 6 }}>
+                  <Sprite name={`relics_${r}` as ImgKey} size={18} />
+                  <PixelText size={7} color={COLORS.armor} shadow={false} style={{ marginLeft: 3 }}>
+                    {RELICS[r].name}
+                  </PixelText>
+                </View>
+              ))}
+            </View>
+          )}
           {stats.boons.length > 0 && (
             <View style={[styles.row, { flexWrap: 'wrap', gap: 4, marginTop: 6 }]}>
               {stats.boons.map((b) => (

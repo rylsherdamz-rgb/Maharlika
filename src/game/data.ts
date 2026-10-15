@@ -234,3 +234,74 @@ export const DIFFICULTIES: Difficulty[] = [
 /** Hero levels (antas): XP from every banished creature, shared by the whole party. */
 export const LEVEL_MAX = 15;
 export const xpToNext = (lv: number) => 18 + lv * 14;
+
+// ---------------------------------------------------------------- mutya (boss relics)
+export type RelicId = 'pangil_bungisngis' | 'buhok_tikbalang' | 'mutya_kapre' | 'kaliskis_bakunawa';
+
+export interface RelicDef {
+  id: RelicId;
+  name: string; // Filipino
+  en: string;
+  from: string; // which boss drops it
+  desc: string; // what it does
+  lore: string;
+  source: string;
+}
+
+/** Charms that bosses drop. Each lasts the whole run and blesses the whole party. */
+export const RELICS: Record<RelicId, RelicDef> = {
+  pangil_bungisngis: {
+    id: 'pangil_bungisngis',
+    name: 'Pangil ng Bungisngis',
+    en: "Bungisngis's Tusk",
+    from: 'Bungisngis ng Yungib (cave guardian)',
+    desc: '+25% damage',
+    lore: 'A tusk from the laughing giant. It still seems to grin.',
+    source: 'The bungisngis is Tagalog and Visayan folklore; the tusk as a charm is invented for the game.',
+  },
+  buhok_tikbalang: {
+    id: 'buhok_tikbalang',
+    name: 'Gintong Buhok ng Tikbalang',
+    en: "Tikbalang's Golden Hair",
+    from: 'Punong Tikbalang (mountain cave guardian)',
+    desc: 'Move 20% faster; dodge recovers 40% sooner',
+    lore: 'In the old stories, whoever pulls the golden hairs from a tikbalang\'s mane can tame it, and gains a swift and loyal servant.',
+    source: 'Tagalog folklore',
+  },
+  mutya_kapre: {
+    id: 'mutya_kapre',
+    name: 'Mutya ng Kapre',
+    en: "Kapre's White Stone",
+    from: 'Haring Kapre (forest cave guardian)',
+    desc: '+2 max health; heal 1 on every new island',
+    lore: 'A kapre is said to keep a small white stone. Whoever holds it can ask the kapre for favors.',
+    source: 'Tagalog folklore (the mutya, a magical charm or stone)',
+  },
+  kaliskis_bakunawa: {
+    id: 'kaliskis_bakunawa',
+    name: 'Kaliskis ng Bakunawa',
+    en: "Bakunawa's Scale",
+    from: 'The Bakunawa',
+    desc: '+3 amulets; amulets recharge twice as fast',
+    lore: 'A scale shed by the moon-eater, cold as the sea at night and shining like the moon it swallowed.',
+    source: 'The Bakunawa is Visayan and Bicolano mythology; the scale is invented for the game.',
+  },
+};
+
+/** Which creature guards the cave under each island theme. */
+export const CAVE_GUARDIANS: Record<string, { type: 'bungisngis' | 'tikbalang' | 'kapre'; name: string; relic: RelicId }> = {
+  bungisngis: { type: 'bungisngis', name: 'BUNGISNGIS NG YUNGIB', relic: 'pangil_bungisngis' },
+  tikbalang: { type: 'tikbalang', name: 'PUNONG TIKBALANG', relic: 'buhok_tikbalang' },
+  kapre: { type: 'kapre', name: 'HARING KAPRE', relic: 'mutya_kapre' },
+};
+export const THEME_GUARDIAN: Record<string, keyof typeof CAVE_GUARDIANS> = {
+  pulo1: 'bungisngis',
+  bohol: 'bungisngis',
+  pulo2: 'bungisngis',
+  sulu: 'bungisngis',
+  pulo3: 'tikbalang',
+  ifugao: 'tikbalang',
+  taal: 'tikbalang',
+  pulo4: 'kapre',
+  palawan: 'kapre',
+};

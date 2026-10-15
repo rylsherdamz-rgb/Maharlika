@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { IMG } from '../assets';
-import { BOONS, HEROES } from '../game/data';
+import { BOONS, HEROES, RelicId, RELICS } from '../game/data';
 import { Bio, CREATURE_BIOS, DEITY_SOURCE, GUARDIAN_BIOS, HALIYA_BIO, WORLD_BIOS } from '../game/story';
 import { BaybayinText, COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite } from '../ui';
 
 const BAYBAYIN = /[\u1700-\u171f]/;
 
-type Tab = 'guardians' | 'creatures' | 'gods' | 'world';
+type Tab = 'guardians' | 'creatures' | 'gods' | 'world' | 'mutya';
 
 const DEITY_BIOS: Bio[] = Object.values(BOONS).map((b) => ({
   id: b.id,
@@ -19,11 +19,22 @@ const DEITY_BIOS: Bio[] = Object.values(BOONS).map((b) => ({
   source: DEITY_SOURCE,
 }));
 
+const RELIC_BIOS: Bio[] = Object.values(RELICS).map((r) => ({
+  id: r.id,
+  name: r.name,
+  epithet: r.en,
+  sprite: `relics_${r.id}` as Bio['sprite'],
+  facts: [['Dropped by', r.from], ['Effect', r.desc]],
+  story: [r.lore, 'A mutya lasts for the rest of the run and blesses the whole party.'],
+  source: r.source,
+}));
+
 const TABS: { id: Tab; label: string; en: string; entries: Bio[] }[] = [
   { id: 'guardians', label: 'MAHARLIKA', en: 'Heroes', entries: [...HEROES.map((h) => GUARDIAN_BIOS[h.id]), HALIYA_BIO] },
   { id: 'creatures', label: 'NILALANG', en: 'Creatures', entries: Object.values(CREATURE_BIOS) },
   { id: 'gods', label: 'MGA DIYOS', en: 'The Gods', entries: DEITY_BIOS },
   { id: 'world', label: 'DAIGDIG', en: 'The World', entries: WORLD_BIOS },
+  { id: 'mutya', label: 'MGA MUTYA', en: 'Relics', entries: RELIC_BIOS },
 ];
 
 export function codexTabFor(id: string): Tab {
@@ -31,12 +42,15 @@ export function codexTabFor(id: string): Tab {
 }
 
 /** Alamat ("legends"): readable bios for every guardian, creature, god and place. */
-export default function CodexScreen({ initial, onBack }: { initial?: string; onBack: () => void }) {
+export default function CodexScreen({ initial, found = [], onBack }: { initial?: string; found?: RelicId[]; onBack: () => void }) {
+  // a mutya not found yet shows only who guards it
+  const locked = (id: string) => id in RELICS && !found.includes(id as RelicId);
   const [tab, setTab] = useState<Tab>(initial ? codexTabFor(initial) : 'guardians');
   const entries = TABS.find((t) => t.id === tab)!.entries;
   const [sel, setSel] = useState<string>(initial ?? entries[0].id);
   const bio = entries.find((e) => e.id === sel) ?? entries[0];
   const wide = bio.portrait?.startsWith('story_');
+  const view: Bio = locked(bio.id) ? { ...bio, name: '???', epithet: 'Mutya', facts: bio.facts.filter(([k]) => k === 'Dropped by'), story: [], source: undefined } : bio;
 
   return (
     <View style={styles.root}>
@@ -77,9 +91,9 @@ export default function CodexScreen({ initial, onBack }: { initial?: string; onB
         <ScrollView style={styles.list} contentContainerStyle={{ gap: 4 }}>
           {entries.map((e) => (
             <Pressable key={e.id} onPress={() => setSel(e.id)} style={[styles.item, e.id === bio.id && styles.itemOn]}>
-              <Sprite name={e.sprite} size={28} />
+              <Sprite name={e.sprite} size={28} tint={locked(e.id) ? '#2a2444' : undefined} />
               <PixelText size={8} color={e.id === bio.id ? COLORS.light : COLORS.text} style={{ marginLeft: 8, flex: 1 }}>
-                {e.name}
+                {locked(e.id) ? '???' : e.name}
               </PixelText>
             </Pressable>
           ))}
@@ -97,17 +111,17 @@ export default function CodexScreen({ initial, onBack }: { initial?: string; onB
                 />
               ) : (
                 <View style={styles.portraitFrame}>
-                  <Sprite name={bio.sprite} size={72} />
+                  <Sprite name={bio.sprite} size={72} tint={locked(bio.id) ? '#2a2444' : undefined} />
                 </View>
               )}
               <View style={styles.titleCol}>
                 <PixelText size={13} color={COLORS.gold}>
-                  {bio.name}
+                  {view.name}
                 </PixelText>
                 <PixelText size={8} color={COLORS.armor} style={{ marginBottom: 6 }}>
-                  {bio.epithet}
+                  {view.epithet}
                 </PixelText>
-                {bio.facts.map(([k, v]) => (
+                {view.facts.map(([k, v]) => (
                   <View key={k} style={styles.fact}>
                     <PixelText size={7} color={COLORS.dim} shadow={false} style={styles.factKey}>
                       {k.toUpperCase()}
@@ -125,19 +139,24 @@ export default function CodexScreen({ initial, onBack }: { initial?: string; onB
                 ))}
               </View>
             </View>
-            {bio.story.map((p, k) => (
+            {locked(bio.id) && (
+              <PixelText size={8} color={COLORS.light} shadow={false} style={styles.para}>
+                HINDI PA NAKUKUHA · Not found yet. Defeat its guardian to claim it; once found, it stays in this collection.
+              </PixelText>
+            )}
+            {view.story.map((p, k) => (
               <PixelText key={k} size={8} shadow={false} style={styles.para}>
                 {p}
               </PixelText>
             ))}
-            {bio.source && (
+            {view.source && (
               <PixelText size={7} color={COLORS.armor} shadow={false} style={{ marginTop: 8 }}>
-                {`From: ${bio.source}`}
+                {`From: ${view.source}`}
               </PixelText>
             )}
-            {bio.quote && (
+            {view.quote && (
               <PixelText size={8} color={COLORS.light} shadow={false} style={styles.quote}>
-                “{bio.quote}”
+                “{view.quote}”
               </PixelText>
             )}
           </ScrollView>

@@ -30,7 +30,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'boot' });
   const [run, setRun] = useState(0);
   const [seenIntro, setSeenIntro] = useState(false);
-  const [progress, setProgress] = useState<Progress>({ wins: 0, hardUnlocked: false, bestEndless: 0 });
+  const [progress, setProgress] = useState<Progress>({ wins: 0, hardUnlocked: false, bestEndless: 0, relics: [] });
   const [progressReady, setProgressReady] = useState(false);
   useEffect(() => {
     loadProgress().then((p) => {
@@ -51,6 +51,7 @@ export default function App() {
       wins: progress.wins + (stats.victory ? 1 : 0),
       hardUnlocked: progress.hardUnlocked || stats.victory,
       bestEndless: stats.setup.mode === 'endless' ? Math.max(best, stats.island) : best,
+      relics: [...new Set([...progress.relics, ...stats.relics])],
     };
     setProgress(next);
     saveProgress(next);
@@ -100,7 +101,7 @@ export default function App() {
         break;
       }
       case 'codex':
-        content = <CodexScreen initial={screen.entry} onBack={() => setScreen(screen.back)} />;
+        content = <CodexScreen initial={screen.entry} found={progress.relics} onBack={() => setScreen(screen.back)} />;
         break;
       case 'select':
         content = (

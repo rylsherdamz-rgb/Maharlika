@@ -44,6 +44,10 @@ noise.
 | Bagani (Manobo and other Mindanao highland warriors, red headcloth); Sulu pearl divers | **History** | Banog and Dalisay are invented characters in these real roles. |
 | Sulu Sea stilt villages; Ifugao rice terraces and bulul rice guardians | **History / living tradition** | |
 | The bungisngis guarding a cave (yungib) | **Invented** | The bungisngis is folklore; placing a giant one under an island is the game's. |
+| Tikbalang's golden hairs tame it | **Folklore** | Tagalog. The relic *Gintong Buhok ng Tikbalang*. |
+| The kapre's white stone (mutya) that wins its favors | **Folklore** | Tagalog. The relic *Mutya ng Kapre*. |
+| The bungisngis tusk and the Bakunawa scale as charms; the Tikbalang Chief and Kapre King | **Invented** | |
+| Taal Volcano; the Chocolate Hills of Bohol (and the legend of two feuding giants); Palawan karst and lagoons | **Real places / legend** | |
 | Battle of Mactan, Lapulapu, Magellan's death (1521) | **History** | |
 | Balangay boats of Butuan (from about 320 CE); "barangay" from "balangay" | **History** | |
 | Maharlika as the Tagalog freeborn warrior class | **History** | Precolonial social class. |
@@ -67,6 +71,9 @@ Myths vary by region and teller. Where versions differ, the game uses the common
 | 2 (alt) | **Sulu Sea** (ᜐᜓᜎᜓ) | Stilt houses over the reef; fires drift on the water | santelmo, manananggal, sigbin, duwende |
 | 3 | **Mount Banahaw** (ᜊᜈᜑᜏ᜔) | Shirts inside out; laughter on the high trail | tikbalang, bungisngis, santelmo, duwende |
 | 3 (alt) | **Ifugao Terraces** (ᜁᜉᜓᜄᜏ᜔) | The bulul guard the rice | tikbalang, bungisngis, duwende, tiyanak |
+| 3 (alt) | **Bulkang Taal** (ᜆᜀᜎ᜔) | A volcano in a lake; ash and drifting fires | santelmo, tikbalang, bungisngis, duwende |
+| 1 (alt) | **Chocolate Hills** (ᜊᜓᜑᜓᜎ᜔) | Bohol; something walks backward between the hills | sigbin, duwende, santelmo |
+| 4 (alt) | **Palawan** (ᜉᜎᜏᜈ᜔) | Karst towers over an emerald lagoon | kapre, manananggal, tiyanak, duwende |
 | 4 | **Ibalong Forests** (ᜁᜊᜎᜓᜅ᜔) | Cigar smoke, and a baby crying where none should be | kapre, tiyanak, tikbalang, manananggal |
 | 5 | **Shore of Albay** (ᜀᜎ᜔ᜊᜌ᜔) | Beneath Mayon, the sea is red | the Bakunawa (summons manananggal) |
 

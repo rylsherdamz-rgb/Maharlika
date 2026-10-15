@@ -15,9 +15,9 @@ for (const d of DIFFICULTIES) {
     assert.strictEqual(g.route.length, d.legs + 2);
     assert.strictEqual(g.route[0], 'port');
     assert.strictEqual(g.route[g.route.length - 1], 'shore');
-    assert(g.route[g.route.length - 2].startsWith('pulo4'), 'Ibalong is the last island');
+    assert(/^(pulo4|palawan)_/.test(g.route[g.route.length - 2]), 'a forest island (Ibalong or Palawan) comes last');
     g.route.forEach((r) => assert(rooms[r], r));
-    if (d.legs === 6) assert.strictEqual(new Set(g.route.map((r) => r.replace(/_[ab]$/, ''))).size, 8, 'hard visits all six islands');
+    if (d.legs === 6) assert.strictEqual(new Set(g.route.map((r) => r.replace(/_[ab]$/, ''))).size, 8, 'hard visits six different islands');
   }
 }
 console.log('voyage lengths ok');
@@ -109,10 +109,10 @@ console.log('voyage lengths ok');
   console.log('cave run ok');
 }
 
-// 7. endless mode: keeps generating islands, no shore, harder each time
+// 7. endless mode: keeps generating islands (the Bakunawa every 8th), harder each time
 {
   const g = E.newGame({ players: [{ hero: 'kidlat' }], mode: 'endless' });
-  for (let i = 0; i < 12; i++) { sail(g); assert(g.room !== 'shore'); assert(rooms[g.room], g.room); clear(g); g.caveDoor = null; }
+  for (let i = 0; i < 12; i++) { sail(g); assert.strictEqual(g.room === 'shore', g.stage % E.ENDLESS_BOSS_EVERY === 0, `island ${g.stage}: ${g.room}`); assert(rooms[g.room], g.room); clear(g); g.caveDoor = null; }
   assert.strictEqual(g.stage, 12);
   sail(g);
   const late = g.enemies.reduce((s, e) => s + e.maxHp, 0) / g.enemies.length;
@@ -147,5 +147,62 @@ console.log('voyage lengths ok');
   }
   assert.strictEqual(stuck, 0, `${stuck}/${total} creatures got stuck`);
   console.log(`pathing ok: ${total} walkers reached the hero on every map`);
+}
+// 9. every island theme turns up, and each cave guardian drops its own mutya
+{
+  const { CAVE_GUARDIANS, THEME_GUARDIAN, RELICS } = require('../../.sim/game/data.js');
+  const themes = new Set();
+  for (let i = 0; i < 300; i++) E.newGame({ players: [{ hero: 'kidlat' }], difficulty: 2 }).route.forEach((r) => themes.add(r.replace(/_[ab]$/, '')));
+  for (const t of ['pulo1', 'bohol', 'pulo2', 'sulu', 'pulo3', 'ifugao', 'taal', 'pulo4', 'palawan']) assert(themes.has(t), `theme ${t} never chosen`);
+  for (const theme of Object.keys(THEME_GUARDIAN)) {
+    const g = E.newGame('liksi');
+    g.route[1] = `${theme}_a`;
+    g.caveStages = [1];
+    sail(g); clear(g);
+    const h = g.hero;
+    for (let d = 0; d < E.CAVE_DEPTH; d++) {
+      const door = g.caveDoor || g.exit; h.x = door.x; h.y = door.y; step(g);
+      if (d < E.CAVE_DEPTH - 1) clear(g);
+    }
+    const boss = g.enemies.find((e) => e.boss);
+    const want = CAVE_GUARDIANS[THEME_GUARDIAN[theme]];
+    assert(boss && boss.type === want.type, `${theme}: guardian ${boss && boss.type}`);
+    assert.strictEqual(E.bossName(boss), want.name);
+    // fight it for real for a while: the guardian must attack and survive the first seconds
+    h.hp = h.maxHp = 999; h.x = boss.x - 60; h.y = boss.y;
+    let shots = 0;
+    for (let i = 0; i < 300; i++) { step(g); shots += g.bullets.filter((b) => !b.fromHero).length > 0 ? 1 : 0; h.invuln = 0; }
+    assert(shots > 0, `${theme} guardian never attacked`);
+    boss.hp = 1; boss.spawn = 0; g.enemies = [boss]; h.x = boss.x - 12; h.y = boss.y; h.invuln = 99;
+    step(g, [{ ...idle(), attack: true }], 40);
+    const relic = g.pickups.find((p) => p.kind === 'relic');
+    assert(relic && relic.relic === want.relic, `${theme}: dropped ${relic && relic.relic}`);
+    const dmg0 = h.mods.dmg, spd0 = h.mods.speed, hp0 = h.maxHp;
+    h.x = relic.x; h.y = relic.y; step(g);
+    assert(g.relics.includes(want.relic), 'relic picked up');
+    if (want.relic === 'pangil_bungisngis') assert(h.mods.dmg > dmg0);
+    if (want.relic === 'buhok_tikbalang') assert(h.mods.speed > spd0);
+    if (want.relic === 'mutya_kapre') assert(h.maxHp === hp0 + 2);
+  }
+  console.log(`guardians and mutya ok: ${Object.keys(RELICS).length} relics, ${themes.size} themes`);
+}
+
+// 10. the Bakunawa: in a voyage its scale goes straight to the party; in endless it rises every 8 islands
+{
+  const g = E.newGame('dalisay');
+  g.stage = g.route.length - 2; g.dialog = null;
+  g.boat = { x: g.hero.x, y: g.hero.y }; step(g); g.dialog = null;
+  assert.strictEqual(g.room, 'shore');
+  const serpent = g.enemies.find((e) => e.type === 'bakunawa');
+  serpent.spawn = 0; serpent.hp = 1; g.hero.x = serpent.x - 14; g.hero.y = serpent.y; g.hero.invuln = 99;
+  step(g, [{ ...idle(), attack: true }], 60);
+  assert(g.relics.includes('kaliskis_bakunawa') && g.result === 'victory', 'voyage win carries the scale');
+  const e = E.newGame({ players: [{ hero: 'kidlat' }], mode: 'endless' });
+  for (let i = 0; i < E.ENDLESS_BOSS_EVERY; i++) { sail(e); if (e.room !== 'shore') { clear(e); e.caveDoor = null; } }
+  assert.strictEqual(e.room, 'shore', 'endless island 8 is the Bakunawa');
+  assert(e.enemies.some((x) => x.type === 'bakunawa'));
+  e.enemies = []; e.wave = e.waves; step(e);
+  assert(e.boat && !e.result, 'endless carries on after the Bakunawa');
+  console.log('bakunawa ok');
 }
 console.log('ALL MODE TESTS PASSED');
