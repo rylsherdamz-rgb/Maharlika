@@ -11,8 +11,9 @@ import type { EnemyType, HeroId } from './data';
  * The myths are real and kept close to their sources (see docs/STORY.md):
  * the Bakunawa and the seven moons (Visayan), Haliya the masked moon goddess
  * who fights the Bakunawa (Bicolano), the Tagalog deities who grant blessings,
- * and the creature lore of duwende, manananggal, tikbalang and kapre.
- * What is invented: the four heroes, Haliya calling them, and the route of
+ * and the creature lore of duwende, manananggal, tikbalang, kapre, tiyanak, sigbin,
+ * santelmo and bungisngis.
+ * What is invented: the six heroes, Haliya calling them, and the route of
  * the journey that ties the myths together.
  */
 
@@ -46,12 +47,12 @@ export const INTRO: StoryPanel[] = [
   {
     art: 'story_05_eclipse',
     title: 'The Moon Bleeds',
-    text: 'Tonight the moon is turning red: the Bakunawa is rising for the last one. The creatures of the night have come out with it, duwende from their punso, manananggal from the groves, tikbalang from the mountains, kapre from the balete trees, and they are keeping the people from gathering on the shore.',
+    text: 'Tonight the moon is turning red: the Bakunawa is rising for the last one. The creatures of the night have come out with it, duwende from their punso, manananggal from the groves, tikbalang from the mountains, kapre from the balete trees, sigbin and tiyanak and the wandering santelmo, and they are keeping the people from gathering on the shore.',
   },
   {
     art: 'story_06_call',
-    title: 'Four Maharlika',
-    text: 'On the docks of Tondo, Haliya calls four warriors. Sail the islands, clear the way, and reach the shore of Albay beneath Mayon. Hold back the serpent while the people make their noise, before the last moon is gone.',
+    title: 'Six Maharlika',
+    text: 'On the docks of Tondo, Haliya calls six warriors, from Mactan, Butuan, Panay, Siquijor, Bukidnon and Sulu. Sail the islands, clear the way, and reach the shore of Albay beneath Mayon. Hold back the serpent while the people make their noise, before the last moon is gone.',
   },
 ];
 
@@ -77,6 +78,10 @@ export const EPILOGUE: Record<HeroId, string> = {
     'Mayumi stayed on the shore until morning, singing to the water. The old songs say the Bakunawa loved the moons. She thinks they are right, and that it is lonely down there.',
   amihan:
     'Amihan went home to Siquijor with her pouch empty and a hundred wounds mended. She slept for two days, and the island let her.',
+  banog:
+    'Banog walked back up into the Bukidnon hills with a dented kalasag and a new story for the elders. They let him tell it twice.',
+  dalisay:
+    'Dalisay dove the reef off Albay at sunrise and came up with a pearl the color of the returned moon. She says it is for Haliya. Nobody has seen her give it away yet.',
 };
 
 export interface Bio {
@@ -96,7 +101,7 @@ export const GUARDIAN_BIOS: Record<HeroId, Bio> = {
     id: 'kidlat',
     name: 'Kidlat',
     epithet: 'Maharlika of Mactan',
-    sprite: 'heroes_kidlat_0',
+    sprite: 'heroes_kidlat_idle_0',
     portrait: 'portraits_kidlat',
     facts: [
       ['Age', '19'],
@@ -115,7 +120,7 @@ export const GUARDIAN_BIOS: Record<HeroId, Bio> = {
     id: 'liksi',
     name: 'Liksi',
     epithet: 'Navigator of Butuan',
-    sprite: 'heroes_liksi_0',
+    sprite: 'heroes_liksi_idle_0',
     portrait: 'portraits_liksi',
     facts: [
       ['Age', '16'],
@@ -133,7 +138,7 @@ export const GUARDIAN_BIOS: Record<HeroId, Bio> = {
     id: 'mayumi',
     name: 'Mayumi',
     epithet: 'Babaylan of Panay',
-    sprite: 'heroes_mayumi_0',
+    sprite: 'heroes_mayumi_idle_0',
     portrait: 'portraits_mayumi',
     facts: [
       ['Age', '24'],
@@ -151,7 +156,7 @@ export const GUARDIAN_BIOS: Record<HeroId, Bio> = {
     id: 'amihan',
     name: 'Amihan',
     epithet: 'Mananambal of Siquijor',
-    sprite: 'heroes_amihan_0',
+    sprite: 'heroes_amihan_idle_0',
     portrait: 'portraits_amihan',
     facts: [
       ['Age', '52'],
@@ -164,6 +169,42 @@ export const GUARDIAN_BIOS: Record<HeroId, Bio> = {
       'She has set more bones than anyone in the Visayas and she knows what every plant on her island does, which is why her blowgun darts are the ones nobody wants to be hit by.',
     ],
     quote: 'I have mended worse than you. Come, let us see how you heal.',
+  },
+  banog: {
+    id: 'banog',
+    name: 'Banog',
+    epithet: 'Bagani of Bukidnon',
+    sprite: 'heroes_banog_idle_0',
+    portrait: 'portraits_banog',
+    facts: [
+      ['Age', '27'],
+      ['Home', 'Bukidnon, Mindanao'],
+      ['Weapons', 'Panabas or baston'],
+      ['Role', 'Bagani, highland warrior'],
+    ],
+    story: [
+      'Among the Manobo and other highland peoples of Mindanao, a bagani was a warrior who had proven himself in defense of the community, and wore a red headcloth to show it. Banog earned his young. He is named for the hawk-eagle that circles the Bukidnon ridges.',
+      'He is slow to speak and slower to retreat. When the shots fly, he raises his kalasag and walks forward through them.',
+    ],
+    quote: 'The hills sent me. The hills do not send people who turn back.',
+  },
+  dalisay: {
+    id: 'dalisay',
+    name: 'Dalisay',
+    epithet: 'Pearl Diver of Sulu',
+    sprite: 'heroes_dalisay_idle_0',
+    portrait: 'portraits_dalisay',
+    facts: [
+      ['Age', '21'],
+      ['Home', 'Jolo, Sulu'],
+      ['Weapons', 'Buntot pagi or lantaka'],
+      ['Role', 'Pearl diver and gunner'],
+    ],
+    story: [
+      'Sulu was famous across Asia for its pearls, brought up by divers who could stay under for minutes on one breath. Dalisay is the best of her village, and when she is not diving she crews the lantaka, the bronze swivel guns of the Sulu boats.',
+      'Her name means "pure." She says the sea taught her two things: hold your breath, and let the wave do the work.',
+    ],
+    quote: 'I have been deeper than you, serpent. It did not frighten me either.',
   },
 };
 
@@ -231,6 +272,54 @@ export const CREATURE_BIOS: Record<EnemyType, Bio> = {
     ],
     source: 'Tagalog folklore',
   },
+  tiyanak: {
+    id: 'tiyanak',
+    name: 'Tiyanak',
+    epithet: 'The crying in the forest',
+    sprite: 'enemies_tiyanak_baby',
+    facts: [['Found', 'Ibalong forests'], ['Behavior', 'Cries until you come close, then lunges'], ['Tip', 'Hit it first to break the disguise']],
+    story: [
+      'A forest creature that takes the shape of a crying infant to lure travelers. Whoever picks the baby up sees it change into its true form, small and fanged, and attack.',
+      'Travelers are told not to follow a baby crying deep in the woods. Some tellings say loud noise or turning your clothes inside out drives it away.',
+    ],
+    source: 'Tagalog folklore',
+  },
+  sigbin: {
+    id: 'sigbin',
+    name: 'Sigbin',
+    epithet: 'The one that walks backward',
+    sprite: 'enemies_sigbin_0',
+    facts: [['Found', 'Siquijor'], ['Behavior', 'Unseen at a distance; bites, then backs off'], ['Tip', 'You can only aim at it up close']],
+    story: [
+      'A creature like a hornless goat or a dog with long ears, said to walk backward with its head hung low between its hind legs. It can make itself invisible and is said to drink blood from a person\'s shadow.',
+      'Some families, called sigbinan, are said to keep one. It is part of the folklore of Bohol, Siquijor and the other Visayan islands.',
+    ],
+    source: 'Visayan folklore',
+  },
+  santelmo: {
+    id: 'santelmo',
+    name: 'Santelmo',
+    epithet: 'The wandering fire',
+    sprite: 'enemies_santelmo_0',
+    facts: [['Found', 'Punso Fields, Mount Banahaw'], ['Behavior', 'Floats over water and walls; casts sparks in a cross']],
+    story: [
+      'A ball of fire seen at night drifting over fields, forests and the sea. It is often said to be the soul of someone who drowned or died far from home, and following it leads you astray.',
+      'The name comes from San Telmo (Saint Elmo) through Spanish. In this history the islands were never colonized, but the game keeps the name people know today.',
+    ],
+    source: 'Pan-Philippine folklore; the name is Spanish in origin',
+  },
+  bungisngis: {
+    id: 'bungisngis',
+    name: 'Bungisngis',
+    epithet: 'The laughing giant',
+    sprite: 'enemies_bungisngis_0',
+    facts: [['Found', 'Mount Banahaw'], ['Behavior', 'Slow; laughs, then slams out a ring of shots'], ['Tip', 'When it laughs, get out of the way']],
+    story: [
+      'A one-eyed giant of the forests, huge and very strong, whose upper lip is so big it can cover its face. Its name comes from the word for grinning or giggling, because it is always laughing.',
+      'In the tales it is strong but slow-witted, and clever people get the better of it.',
+    ],
+    source: 'Tagalog and Visayan folklore',
+  },
   bakunawa: {
     id: 'bakunawa',
     name: 'Bakunawa',
@@ -283,6 +372,96 @@ export const WORLD_BIOS: Bio[] = [
     ],
   },
   {
+    id: 'arms',
+    name: 'Arms of the Islands',
+    epithet: 'Thirteen weapons, two per maharlika and more in chests',
+    sprite: 'weapons_kris',
+    facts: [
+      ['Kidlat', 'Kampilan or kris'],
+      ['Liksi', 'Pana or bangkaw'],
+      ['Mayumi', 'Agimat rod or lingganay'],
+      ['Amihan', 'Sumpit or barang'],
+      ['Banog', 'Panabas or baston'],
+      ['Dalisay', 'Buntot pagi or lantaka'],
+      ['In chests', 'Any of them, plus the balaraw'],
+    ],
+    story: [
+      'The kris, the wavy-bladed sword of Mindanao, Sulu and the wider Malay world, and the bangkaw, a Visayan spear that could be thrown or thrust, are real weapons of the islands, as are the kampilan, the pana (bow) and the sumpit (blowgun).',
+      'The panabas (a heavy chopping blade of Mindanao), the balaraw (dagger), the baston (rattan sticks of arnis, the national martial art), the buntot pagi (a whip made from a stingray tail) and the lantaka (bronze swivel cannon) are all real.',
+      'Barang is Visayan folklore: sorcery said to send insects, often beetles, against a victim, and Siquijor is the island most associated with it. The lingganay, a bronze bell, is named after a real word for bell; a babaylan ringing it to scatter spirits is invented for this game, as is the agimat rod.',
+    ],
+    source: 'Philippine history and Visayan folklore; the bell and the rod are invented for the game',
+  },
+  {
+    id: 'sulu',
+    name: 'The Sulu Sea',
+    epithet: 'Pearls, reefs and stilt villages',
+    sprite: 'tiles_stilt',
+    facts: [['Where', 'Between Mindanao, Palawan and Borneo'], ['Known for', 'Pearls, trade, the lantaka']],
+    story: [
+      'For centuries the Sulu Sea was a crossroads of trade between the islands, Borneo and China, and its pearls were famous. Many coastal families still live in houses on stilts over the shallows.',
+      'The lantaka, a small bronze swivel cannon, was mounted on Sulu and other Moro boats. In this game it is Dalisay\'s weapon.',
+    ],
+    source: 'History',
+  },
+  {
+    id: 'ifugao',
+    name: 'Ifugao Rice Terraces',
+    epithet: 'Stairways to the sky',
+    sprite: 'tiles_bulul',
+    facts: [['Where', 'Cordillera, northern Luzon'], ['Age', 'Hundreds of years at least'], ['Guardian', 'The bulul']],
+    story: [
+      'The Ifugao carved terraced rice fields into the mountains of the Cordillera, fed by forest water through channels and walls built by hand. They are a UNESCO World Heritage Site.',
+      'The bulul are carved wooden figures, usually seated, that the Ifugao keep to guard and increase the rice harvest. They are part of a living tradition.',
+    ],
+    source: 'History and Ifugao tradition',
+  },
+  {
+    id: 'taal',
+    name: 'Taal Volcano',
+    epithet: 'A volcano in a lake',
+    sprite: 'tiles_lavarock',
+    facts: [['Where', 'Batangas, Luzon'], ['Known for', 'An island volcano inside a lake, with a lake inside its crater']],
+    story: [
+      'Taal is one of the most active volcanoes in the Philippines: a volcano island sitting in Taal Lake, with its own crater lake. Its eruptions have reshaped the land around it many times.',
+    ],
+    source: 'Geography',
+  },
+  {
+    id: 'bohol',
+    name: 'The Chocolate Hills',
+    epithet: 'Bohol',
+    sprite: 'tiles_burol',
+    facts: [['Where', 'Bohol, Visayas'], ['Count', 'More than 1,200 hills']],
+    story: [
+      'More than a thousand rounded limestone hills covered in grass, which turns brown in the dry season. A Boholano legend tells of two giants who fought for days, throwing rocks and sand, and left the hills behind.',
+      'Bohol is also one of the islands where the sigbin is most talked about.',
+    ],
+    source: 'Geography; the giants are a Boholano legend',
+  },
+  {
+    id: 'palawan',
+    name: 'Palawan',
+    epithet: 'Karst and lagoons',
+    sprite: 'tiles_karst',
+    facts: [['Where', 'Between the Sulu and South China Seas'], ['Known for', 'Limestone karst, lagoons, an underground river']],
+    story: [
+      'Sheer limestone cliffs and towers rise straight out of clear lagoons around El Nido and Coron. Puerto Princesa has an underground river that runs for kilometers under a karst mountain, a UNESCO World Heritage Site.',
+    ],
+    source: 'Geography',
+  },
+  {
+    id: 'kaban',
+    name: 'Kaban and Hasaan',
+    epithet: 'Chests and whetstones',
+    sprite: 'deco_chest_0',
+    facts: [['Kaban', 'A chest: gold, herbs, a weapon or a whetstone'], ['Hasaan', 'Whetstone: +20% damage, up to +5']],
+    story: [
+      'Once an island is safe, a kaban (chest) appears on it. Walk into it to open it. It may hold any of the thirteen weapons of the islands: walk over one to take it up and leave your old one on the ground in case you change your mind.',
+      'A hasaan (whetstone) sharpens whatever you carry, and the edge stays with you when you change weapons.',
+    ],
+  },
+  {
     id: 'baybayin',
     name: 'Baybayin',
     epithet: 'The old script',
@@ -303,12 +482,24 @@ export interface StageInfo {
   pool: EnemyType[];
 }
 
-export const STAGES: StageInfo[] = [
-  { title: 'PUNSO FIELDS', baybayin: 'ᜉᜓᜈ᜔ᜐᜓ', line: 'Tabi-tabi po. The duwende do not want to be stepped on tonight.', pool: ['duwende', 'duwende', 'duwende', 'manananggal'] },
-  { title: 'SIQUIJOR', baybayin: 'ᜐᜒᜃᜒᜑᜓᜇ᜔', line: 'Salt and ash in every pocket. The manananggal fly here.', pool: ['manananggal', 'manananggal', 'duwende', 'duwende'] },
-  { title: 'MOUNT BANAHAW', baybayin: 'ᜊᜈᜑᜏ᜔', line: 'Shirts inside out. The tikbalang are leading travelers astray.', pool: ['tikbalang', 'tikbalang', 'duwende', 'manananggal'] },
-  { title: 'IBALONG FORESTS', baybayin: 'ᜁᜊᜎᜓᜅ᜔', line: 'Cigar smoke drifts from the old balete. The kapre are awake.', pool: ['kapre', 'kapre', 'tikbalang', 'manananggal', 'duwende'] },
-];
+/** Island themes, keyed by the room name without its _a/_b map suffix. */
+export const STAGES: Record<string, StageInfo> = {
+  pulo1: { title: 'PUNSO FIELDS', baybayin: 'ᜉᜓᜈ᜔ᜐᜓ', line: 'Tabi-tabi po. The duwende do not want to be stepped on tonight.', pool: ['duwende', 'duwende', 'duwende', 'manananggal', 'santelmo'] },
+  pulo2: { title: 'SIQUIJOR', baybayin: 'ᜐᜒᜃᜒᜑᜓᜇ᜔', line: 'Salt and ash in every pocket. Something walks backward in the dark.', pool: ['manananggal', 'manananggal', 'sigbin', 'sigbin', 'duwende'] },
+  sulu: { title: 'SULU SEA', baybayin: 'ᜐᜓᜎᜓ', line: 'Stilt houses over the reef. Fires drift on the water, and nobody is fishing.', pool: ['santelmo', 'santelmo', 'manananggal', 'sigbin', 'duwende'] },
+  pulo3: { title: 'MOUNT BANAHAW', baybayin: 'ᜊᜈᜑᜏ᜔', line: 'Shirts inside out. Laughter echoes from the high trail.', pool: ['tikbalang', 'tikbalang', 'bungisngis', 'santelmo', 'duwende'] },
+  ifugao: { title: 'IFUGAO TERRACES', baybayin: 'ᜁᜉᜓᜄᜏ᜔', line: 'The bulul guard the rice. Tonight something walks the terrace walls.', pool: ['tikbalang', 'bungisngis', 'duwende', 'duwende', 'tiyanak'] },
+  bohol: { title: 'CHOCOLATE HILLS', baybayin: 'ᜊᜓᜑᜓᜎ᜔', line: 'Bohol. Hundreds of round hills, and something walking backward between them.', pool: ['sigbin', 'sigbin', 'duwende', 'duwende', 'santelmo'] },
+  taal: { title: 'BULKANG TAAL', baybayin: 'ᜆᜀᜎ᜔', line: 'A volcano inside a lake. Ash falls, the vents hiss, and fires drift over the water.', pool: ['santelmo', 'santelmo', 'tikbalang', 'bungisngis', 'duwende'] },
+  palawan: { title: 'PALAWAN', baybayin: 'ᜉᜎᜏᜈ᜔', line: 'Limestone towers over an emerald lagoon. The forest here is very old.', pool: ['kapre', 'manananggal', 'tiyanak', 'tiyanak', 'duwende'] },
+  pulo4: { title: 'IBALONG FORESTS', baybayin: 'ᜁᜊᜎᜓᜅ᜔', line: 'Cigar smoke from the old balete, and a baby crying where no baby should be.', pool: ['kapre', 'kapre', 'tiyanak', 'tiyanak', 'tikbalang', 'manananggal'] },
+};
+
+/** The four legs of the voyage; each run picks one island per leg. */
+export const ROUTE_SLOTS: string[][] = [['pulo1', 'bohol'], ['pulo2', 'sulu'], ['pulo3', 'ifugao', 'taal'], ['pulo4', 'palawan']];
+
+export const CAVE = { title: 'YUNGIB', baybayin: 'ᜌᜓᜅᜒᜊ᜔', line: 'A cave under the island. Something laughs in the dark below.' };
+export const ENDLESS = { title: 'WALANG KATAPUSAN', baybayin: 'ᜏᜎᜅ᜔ ᜃᜆᜉᜓᜐᜈ᜔', line: 'Endless islands. How far can you sail before the night takes you?' };
 
 export const PORT = { title: 'PORT OF TONDO', baybayin: 'ᜆᜓᜈ᜔ᜇᜓ', line: 'Haliya waits by the balangay.' };
 export const SHORE = { title: 'SHORE OF ALBAY', baybayin: 'ᜀᜎ᜔ᜊᜌ᜔', line: 'Beneath Mayon, the sea is the color of blood.' };
@@ -318,6 +509,9 @@ export const HALIYA_LINES = [
   'Catch the alitaptap. Their light fills your lamp, and a full lamp wakes your power.',
   'When the shots fly thick, dodge. Your amulets take the first blows, then mend.',
   'At each dambana, one of the old gods will bless you. Choose well.',
+  'If you hear a baby crying in the forest, do not go to it. Strike first.',
+  'The sigbin walks backward and hides from the eye. You will only see it when it is close.',
+  'When an island is safe, look for the kaban. A whetstone keeps its edge whatever weapon you carry.',
 ];
 
 export interface DialogueLine {
