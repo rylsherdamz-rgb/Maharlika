@@ -2350,6 +2350,49 @@ HALIYA = [
     "....hh....hh....",
 ]
 
+# ---------------------------------------------------------------- villagers (island locals, the tindera)
+# One body, swappable heads. Letters: h hair/hat, s skin, e eyes, t top, p bottom, a accent.
+VILLAGER_HEADS = {
+    "short": ["", ".....hhhhhh.....", "....hhhhhhhh....", "....hssssssh....", "....sesssess....", "....ssssssss....", ".....ssaass....."],
+    "long": ["", ".....hhhhhh.....", "....hhhhhhhh....", "...hhssssssh....", "...hsesssesh....", "...hssssssshh...", "...hh.ssss.hh..."],
+    "salakot": ["......aaa.......", "....aaaaaaa.....", "..aaaaaaaaaaa...", "....ssssssss....", "....sesssess....", "....ssssssss....", ".....ssaass....."],
+    "wrap": ["", ".....aaaaaa.....", "....aaaaaaaa....", "....aasssssa....", "....sesssess....", "....ssssssss....", ".....ssaass....."],
+    "elder": ["", ".....hhhhhh.....", "....hhsssshh....", "....hssssssh....", "....sesssess....", "....ssssssss....", ".....shhhhs....."],
+}
+VILLAGER_BODY = [
+    "......ssss......",
+    "....tttttttt....",
+    "...tttttttttt...",
+    "..sttttttttts...",
+    "...tttttttttt...",
+    "....pppppppp....",
+    "....pppppppp....",
+    "....ss....ss....",
+]
+
+
+def villager(head, hair, top, bottom, accent, frame=0):
+    rows = VILLAGER_HEADS[head] + VILLAGER_BODY
+    if frame:  # a small idle bob: shift the head down one row
+        rows = [rows[0]] + rows[:6] + rows[7:]
+    colors = {"h": hair, "s": "F", "e": "E", "t": top, "p": bottom, "a": accent}
+    return rows_to_img(["".join(colors.get(c, c) for c in r) for r in rows])
+
+
+# who stands on each island, and the tindera who sells along the shore
+VILLAGERS = {
+    "tonyo": ("salakot", "D", "w", "n", "Q"),      # Punso farmer
+    "pilar": ("long", "D", "M", "r", "R"),         # Bohol vendor
+    "sela": ("elder", "H", "w", "t", "A"),         # Siquijor mananambal
+    "amil": ("wrap", "D", "B", "b", "Y"),          # Sulu elder
+    "berto": ("short", "D", "G", "n", "A"),        # Banahaw guide
+    "dulnuan": ("elder", "H", "R", "D", "A"),      # Ifugao elder
+    "celso": ("short", "D", "T", "n", "A"),        # Taal fisher
+    "tala": ("long", "D", "Q", "g", "M"),          # Palawan Tagbanua girl
+    "esteban": ("elder", "H", "N", "n", "A"),      # Ibalong woodcutter
+    "nena": ("wrap", "D", "O", "R", "R"),          # the tindera
+}
+
 AGUNG = [
     "",
     ".QQQQQQQQQQQQQQ.",
@@ -2931,6 +2974,19 @@ def main():
     save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["T"], "long", ("flower", "beads")), "portraits/mayumi.png")
     save(portrait(PAL["F"], PAL["f"], (58, 48, 50), PAL["w"], "bun", ("tapis", "wrinkles", "streak", "earrings")), "portraits/amihan.png")
     save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["H"], "long", ("mask", "beads")), "portraits/haliya.png")
+    for name, (head, hair, top, bottom, accent) in VILLAGERS.items():
+        for f in range(2):
+            save(villager(head, hair, top, bottom, accent, f), f"sprites/npc/{name}_{f}.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["w"], "short", ("salakot",)), "portraits/tonyo.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["M"], "long", ("earrings", "blush")), "portraits/pilar.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["h"], PAL["w"], "elder", ("wrinkles", "beads")), "portraits/sela.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["B"], "short", ("kumbong", "beard")), "portraits/amil.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["G"], "short", ("putong_faded",)), "portraits/berto.png")
+    save(portrait((176, 112, 72), (134, 80, 52), PAL["h"], PAL["R"], "elder", ("wrinkles", "beads", "earrings")), "portraits/dulnuan.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["T"], "short", ("vest",)), "portraits/celso.png")
+    save(portrait((176, 112, 72), (134, 80, 52), PAL["D"], PAL["Q"], "long", ("flower", "beads")), "portraits/tala.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["h"], PAL["N"], "elder", ("wrinkles", "beard", "cane")), "portraits/esteban.png")
+    save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["O"], "bun", ("earrings", "tapis", "blush")), "portraits/nena.png")
     save(portrait((176, 112, 72), (134, 80, 52), PAL["D"], PAL["D"], "short", ("tangkulo", "redtrim")), "portraits/banog.png")
     save(portrait(PAL["F"], PAL["f"], PAL["D"], PAL["B"], "short", ("kumbong", "pearls")), "portraits/dalisay.png")
     save(bakunawa_portrait(), "portraits/bakunawa.png")

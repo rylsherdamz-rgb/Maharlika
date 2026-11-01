@@ -1,11 +1,14 @@
 // Co-op, revives, XP, difficulty, voyage length, caves and endless mode.
 const assert = require('assert');
 const E = require('../../.sim/game/engine.js');
+// these tests are about rules, not story: start every game with the island scenes off
+const newGameWithScenes = E.newGame;
+E.newGame = (...a) => Object.assign(newGameWithScenes(...a), { scenes: false });
 const { DIFFICULTIES, xpToNext } = require('../../.sim/game/data.js');
 const rooms = require('../../.sim/game/rooms.json').rooms;
 const idle = () => ({ mx: 0, my: 0, attack: false, skill: false, dodge: false });
 const step = (g, ins, n = 1) => { for (let i = 0; i < n; i++) E.update(g, ins ?? g.heroes.map(idle), 1 / 60); };
-const sail = (g) => { g.dialog = null; g.boat = { x: g.hero.x, y: g.hero.y }; step(g); g.dialog = null; };
+const sail = (g) => { g.dialog = null; g.boat = { x: g.hero.x, y: g.hero.y }; step(g); E.skipVoyage(g); step(g); g.dialog = null; };
 const clear = (g) => { g.enemies = []; g.wave = g.waves; step(g); };
 
 // 1. voyage length follows difficulty, and every island appears with 6 legs
@@ -191,7 +194,7 @@ console.log('voyage lengths ok');
 {
   const g = E.newGame('dalisay');
   g.stage = g.route.length - 2; g.dialog = null;
-  g.boat = { x: g.hero.x, y: g.hero.y }; step(g); g.dialog = null;
+  g.boat = { x: g.hero.x, y: g.hero.y }; step(g); E.skipVoyage(g); step(g); g.dialog = null;
   assert.strictEqual(g.room, 'shore');
   const serpent = g.enemies.find((e) => e.type === 'bakunawa');
   serpent.spawn = 0; serpent.hp = 1; g.hero.x = serpent.x - 14; g.hero.y = serpent.y; g.hero.invuln = 99;

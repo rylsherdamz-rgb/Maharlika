@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Setup } from './src/game/engine';
 import { initAudio, playMusic, setMusicOn, setSfxOn } from './src/audio';
-import { loadProgress, NEW_PROGRESS, Progress, saveProgress } from './src/save';
+import { closingWord, haliyaGreeting } from './src/game/tales';
+import { loadProgress, memoryOf, NEW_PROGRESS, Progress, saveProgress } from './src/save';
 import { ENDING, EPILOGUE, INTRO } from './src/game/story';
 import CodexScreen from './src/screens/CodexScreen';
 import GameScreen from './src/screens/GameScreen';
@@ -56,8 +57,18 @@ export default function App() {
 
   const start = (setup: Setup) => setScreen({ name: 'sailing', setup });
   const launch = (setup: Setup) => {
+    // Haliya greets the party with what she remembers; her one-time remarks are spent here
+    const heroes = setup.players.map((p) => p.hero);
+    const { lines, remark } = haliyaGreeting(memoryOf(progress), heroes);
+    const next: Progress = {
+      ...progress,
+      seen: progress.seen.includes(remark) ? progress.seen : [...progress.seen, remark],
+      heroesPlayed: [...new Set([...progress.heroesPlayed, ...heroes])],
+    };
+    setProgress(next);
+    saveProgress(next);
     setRun((r) => r + 1);
-    setScreen({ name: 'game', setup, run: run + 1 });
+    setScreen({ name: 'game', setup: { ...setup, greeting: lines }, run: run + 1 });
   };
   /** Record a finished run: wins unlock Mahirap, endless keeps the best island. */
   const finish = (stats: RunStats) => {
@@ -68,6 +79,11 @@ export default function App() {
       hardUnlocked: progress.hardUnlocked || stats.victory,
       bestEndless: stats.setup.mode === 'endless' ? Math.max(best, stats.island) : best,
       relics: [...new Set([...progress.relics, ...stats.relics])],
+      runs: progress.runs + 1,
+      deaths: progress.deaths + (stats.victory ? 0 : 1),
+      lastReached: stats.stage.replace(/ \d+\/\d+$/, ''), // 'YUNGIB 2/3' is remembered as 'YUNGIB'
+      lastVictory: stats.victory,
+      cavesCleared: progress.cavesCleared + stats.caves,
     };
     setProgress(next);
     saveProgress(next);
@@ -118,6 +134,8 @@ export default function App() {
         const panels = [
           ...ENDING,
           ...stats.heroes.map((h) => ({ art: ENDING[ENDING.length - 1].art, title: `Epilogue · ${h[0].toUpperCase()}${h.slice(1)}`, text: EPILOGUE[h] })),
+          // progress already counts this win
+          { art: 'story_04_haliya' as const, ...closingWord(progress.wins, progress.relics.length) },
         ];
         content = <StoryScreen panels={panels} doneLabel="SEE THE WATCH" onDone={() => setScreen({ name: 'result', stats })} />;
         break;

@@ -61,6 +61,26 @@ noise.
 
 Myths vary by region and teller. Where versions differ, the game uses the common version and says so.
 
+## People of the islands (invented characters)
+
+Each island has a local who meets the party as it lands, warns it about that island's creatures
+in line with the folklore above, and thanks it once the island is safe:
+
+| Island | Local | Who |
+|---|---|---|
+| Punso Fields | Mang Tonyo | A farmer; someone kicked a punso without saying "tabi-tabi po" |
+| Chocolate Hills | Aling Pilar | A vendor of Carmen, Bohol, who has seen the sigbin |
+| Siquijor | Lola Sela | An old mananambal: keep salt in your pocket |
+| Sulu Sea | Datu Amil | Elder of a stilt village; santelmo on the reef |
+| Mount Banahaw | Ka Berto | A guide: turn your shirt inside out |
+| Ifugao Terraces | Apo Dulnuan | An elder; even the bulul are afraid |
+| Bulkang Taal | Mang Celso | A fisherman of Taal Lake |
+| Palawan | Tala | A Tagbanua girl of the lagoon |
+| Ibalong Forests | Lakay Esteban | An old woodcutter at the edge of Albay |
+
+**Aling Nena**, a tindera, follows the fighting with her stall. **Haliya** speaks first at the
+docks, and what she says depends on the player's earlier runs (see `src/game/tales.ts`).
+
 ## The route of a run
 
 | # | Island | Lore line | Creatures |

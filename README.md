@@ -17,6 +17,31 @@ it is folklore, history or invented for the game.
 
 ## How it plays
 
+- **A story told while you play** (the way Hades and Undertale do it):
+  - **Haliya remembers you.** Her greeting at the docks changes with your history: your first
+    run, where you last fell, your first win, a hero she has not met, co-op, your first cave or
+    mutya. Each remark is spoken once.
+  - **Every island has a local** with something to say as you land: Mang Tonyo of the punso
+    fields, Aling Pilar of Bohol, Lola Sela of Siquijor, Datu Amil of Sulu, Ka Berto on Banahaw,
+    Apo Dulnuan of the terraces, Mang Celso of Taal, Tala of Palawan and Lakay Esteban of Ibalong.
+    Your hero answers in their own voice. Locals hide while the creatures are about and thank
+    you once the island is safe.
+  - **Dialogue** types out with portraits and name plates. Tap to finish a line, again for the
+    next; *Laktawan* skips the conversation.
+  - **Bosses** arrive with a title card between letterbox bars, and your hero has a word for
+    them. Your first victory and later ones end with different closing words from Haliya.
+- **The voyage map** shows between islands: your route, the balangay sailing to the next stop,
+  that island's name and the creatures waiting there (tap to land).
+- **Tindahan:** on every other cleared island, Aling Nena sets up her stall. Walk onto what you
+  want: herbs, a whetstone, an anting-anting (+1 amulet), a jar of fireflies (full light) or a
+  new weapon. Prices rise a little island by island; without enough *barya* she says so.
+- **Feel:** a 10% chance of a critical hit (double damage, a big number and a brief
+  freeze-frame), heavier freeze-frames on boss kills, and a red pulse at the screen edge when
+  health is low.
+- **Sinumpa (cursed) creatures:** from the second island on, some creatures come back with a
+  purple aura, twice the health, double XP and better spoils.
+- **The objective line** under the island name always says what to do next, for example
+  creatures left in the wave, or *Kaban · Dambana · then the balangay*.
 - **Modes:** *Paglalayag* (Voyage) to the Bakunawa, or *Walang Katapusan* (Endless): islands keep
   coming and get harder until the party falls; the furthest island is saved as your record.
 - **Difficulty:** *Madali* (Easy, 4 islands), *Katamtaman* (Normal, 5 islands) or *Mahirap* (Hard,
@@ -172,7 +197,8 @@ src/game/data.ts           heroes, weapons, creatures, the gods' blessings
 src/game/story.ts          all story text, bios with sources, island names in Baybayin
 src/game/engine.ts         simulation: islands, melee and ranged combat, dodge, light, blessings, AI
 src/screens/               Loading, Title, Story, Codex, Select (mode, players, difficulty), Game, Result
-src/save.ts                saved progress: wins, Mahirap unlock, endless record, mutya, sound settings
+src/game/tales.ts          island locals, hero voices, Haliya's memory, boss title cards, closing words
+src/save.ts                saved progress: wins, Mahirap unlock, endless record, mutya, sound, Haliya's memory
 src/audio.ts               music and sound effects (expo-audio)
 tools/generate_audio.py    all music and sound, synthesized
 src/ui.tsx                 palette, pixel and Baybayin text, buttons, panels

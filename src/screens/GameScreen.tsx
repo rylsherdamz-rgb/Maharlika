@@ -3,7 +3,8 @@ import { GestureResponderEvent, Image, Platform, Pressable, StyleSheet, useWindo
 import { IMG, ImgKey } from '../assets';
 import { audioSettings, playMusic, playSfx, setMusicOn, setSfxOn } from '../audio';
 import { BOONS, ENEMIES, LIGHT_MAX, RELICS, WEAPONS, xpToNext } from '../game/data';
-import { advanceDialog, alive, bossName, chooseBoon, DODGE_TIME, FX_FRAMES, FX_LIFE, Game, Hero, Input, newGame, REVIVE_TIME, ROOM_H, ROOM_W, Setup, sigbinVisible, stageLabel, update } from '../game/engine';
+import { advanceDialog, alive, bossName, chooseBoon, DODGE_TIME, FX_FRAMES, FX_LIFE, Game, Hero, Input, newGame, objective, REVIVE_TIME, ROOM_H, ROOM_W, Setup, ShopItem, sigbinVisible, skipVoyage, stageLabel, update, VOYAGE_TIME } from '../game/engine';
+import { STAGES } from '../game/story';
 import { BaybayinText, COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
 import { RunStats } from './ResultScreen';
 
@@ -15,6 +16,17 @@ const SEA = '#0c2c3e';
 /** Player colors for co-op markers, HUDs and controls. */
 const P_COLORS = ['#ffba48', '#82eed6'];
 const newInput = (): Input => ({ mx: 0, my: 0, attack: false, skill: false, dodge: false });
+/** Typewriter speed for dialogue, in characters per second. */
+const TYPE_CPS = 48;
+const SHOP_ICON: Record<ShopItem['kind'], ImgKey> = { herb: 'items_potion_health', whetstone: 'items_whetstone', amulet: 'ui_shield', light: 'items_energy_orb', weapon: 'items_coin' };
+const SHOP_NAME: Record<ShopItem['kind'], string> = { herb: 'Halamang gamot', whetstone: 'Hasaan', amulet: 'Anting-anting', light: 'Alitaptap', weapon: 'Sandata' };
+
+/** Short name of the island at a route stop, for the voyage map. */
+function stopName(room: string) {
+  if (room === 'port') return 'TONDO';
+  if (room === 'shore') return 'ALBAY';
+  return STAGES[room.replace(/_[ab]$/, '')]?.title ?? '?';
+}
 
 /** A row of diamond beads: filled up to `value`, empty up to `max`. */
 function Pips({ value, max, full, empty }: { value: number; max: number; full: ImgKey; empty: ImgKey }) {
@@ -104,6 +116,16 @@ export default function GameScreen({
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [sound, setSound] = useState(audioSettings);
+  // typewriter: when the current dialogue line started showing
+  const typeRef = useRef<{ key: unknown; start: number }>({ key: null, start: 0 });
+  const lineKey = (g: Game) => (g.dialog ? `${g.dialog.lines.length}:${g.dialog.lines[0].text.length}:${g.dialog.i}:${g.time}` : null);
+  /** Tap on dialogue: finish the line if it is still typing, otherwise go to the next one. */
+  const tapDialog = (g: Game) => {
+    const line = g.dialog!.lines[g.dialog!.i];
+    const shown = ((Date.now() - typeRef.current.start) / 1000) * TYPE_CPS;
+    if (shown < line.text.length) typeRef.current.start = 0;
+    else advanceDialog(g);
+  };
   const [, setFrame] = useState(0);
   const endRef = useRef({ onEnd, done: false });
   endRef.current.onEnd = onEnd;
@@ -203,7 +225,12 @@ export default function GameScreen({
       const g = gameRef.current;
       if (!down.has(k) && !pausedRef.current) {
         if (g.dialog && (k === ' ' || k === 'enter' || k === 'j')) {
-          advanceDialog(g);
+          tapDialog(g);
+          down.add(k);
+          return;
+        }
+        if (g.voyage && (k === ' ' || k === 'enter')) {
+          skipVoyage(g);
           down.add(k);
           return;
         }
@@ -239,7 +266,11 @@ export default function GameScreen({
     const g = gameRef.current;
     if (pausedRef.current || g.choice) return;
     if (g.dialog) {
-      advanceDialog(g);
+      tapDialog(g);
+      return;
+    }
+    if (g.voyage) {
+      skipVoyage(g);
       return;
     }
     for (const t of e.nativeEvent.changedTouches) {
@@ -450,7 +481,7 @@ export default function GameScreen({
       y: g.npc.y,
       node: [
         shadow(g.npc.x, g.npc.y + 8, 10, 'npcs'),
-        sprite(`npc_haliya_${Math.floor(g.time * 1.5) % 2}`, g.npc.x, g.npc.y, 16, { transform: [{ scaleX: g.hero.x < g.npc.x ? -1 : 1 }] }, 'npc'),
+        sprite(`${g.npc.sprite}_${Math.floor(g.time * 1.5) % 2}`, g.npc.x, g.npc.y, 16, { transform: [{ scaleX: g.hero.x < g.npc.x ? -1 : 1 }], opacity: g.npc.quiet && g.enemies.length ? 0.75 : 1 }, 'npc'),
       ],
     });
   }
@@ -515,6 +546,45 @@ export default function GameScreen({
     const y = f.kind === 'heal' ? f.y - p * 8 : f.y;
     layers.push({ y: f.kind === 'dust' ? f.y - 9 : f.y + 20, node: [sprite(`fx_${f.kind}_${frame}`, f.x, y, size, undefined, `fx${f.id}`)] });
   }
+  // the tindera's stall: Aling Nena and her wares, each with its price
+  if (g.shop) {
+    const sh = g.shop;
+    layers.push({
+      y: sh.y,
+      node: [
+        shadow(sh.x, sh.y + 8, 10, 'nenaS'),
+        sprite(`npc_nena_${Math.floor(g.time * 1.5) % 2}`, sh.x, sh.y, 16, undefined, 'nena'),
+        <PixelText key="nenaT" size={Math.max(6, 2.4 * s)} color={COLORS.light} style={{ position: 'absolute', left: sh.x * s - 40, width: 80, textAlign: 'center', top: (sh.y - 17) * s }}>
+          TINDAHAN
+        </PixelText>,
+      ],
+    });
+    for (const [i, it] of sh.items.entries()) {
+      if (it.sold) continue;
+      const icon = it.kind === 'weapon' ? (`weapons_${it.weapon}` as ImgKey) : SHOP_ICON[it.kind];
+      const afford = g.coins >= it.price;
+      layers.push({
+        y: it.y - 6,
+        node: [
+          <View key={`mat${i}`} style={{ position: 'absolute', left: (it.x - 8) * s, top: (it.y + 1) * s, width: 16 * s, height: 6 * s, borderRadius: 2 * s, backgroundColor: 'rgba(152,94,52,0.85)' }} />,
+          sprite(icon, it.x, it.y - 1 + Math.sin(g.time * 3 + i) * 1, it.kind === 'amulet' ? 11 : 14, undefined, `ware${i}`),
+          <PixelText key={`price${i}`} size={Math.max(5, 2 * s)} color={afford ? COLORS.gold : '#ff8a7a'} style={{ position: 'absolute', left: it.x * s - 40, width: 80, textAlign: 'center', top: (it.y + 7) * s }}>
+            {`${it.price}●`}
+          </PixelText>,
+        ],
+      });
+    }
+  }
+  // cursed (sinumpa) creatures glow purple
+  for (const e of g.enemies) {
+    if (!e.elite || e.spawn > 0) continue;
+    const r = ENEMIES[e.type].size * 0.55 * (e.scale ?? 1);
+    const a = 0.3 + 0.15 * Math.sin(g.time * 6 + e.id);
+    layers.push({
+      y: e.y - 0.01,
+      node: [<View key={`aura${e.id}`} style={{ position: 'absolute', left: (e.x - r) * s, top: (e.y - r * 0.7) * s, width: r * 2 * s, height: r * 1.6 * s, borderRadius: r * s, backgroundColor: `rgba(176,96,255,${a})` }} />],
+    });
+  }
   layers.sort((a, b) => a.y - b.y);
 
   const boss = g.enemies.find((e) => e.type === 'bakunawa' || e.boss);
@@ -563,16 +633,25 @@ export default function GameScreen({
         {g.texts.map((t) => (
           <PixelText
             key={`t${t.id}`}
-            size={Math.max(7, 4 * s)}
+            size={t.big ? Math.max(10, 6 * s) : Math.max(7, 4 * s)}
             color={t.color}
-            style={{ position: 'absolute', left: t.x * s - 50, width: 100, textAlign: 'center', top: t.y * s - 6, opacity: Math.min(1, t.t * 2) }}
+            style={{
+              position: 'absolute',
+              left: t.x * s - 50,
+              width: 100,
+              textAlign: 'center',
+              top: t.y * s - 6,
+              opacity: Math.min(1, t.t * 2),
+              // critical numbers pop: big first, settling as they rise
+              transform: t.big ? [{ scale: 1 + Math.max(0, t.t - 0.6) * 2.5 }] : undefined,
+            }}
           >
             {t.text}
           </PixelText>
         ))}
       </View>
 
-      {g.banner && (
+      {g.banner && !g.dialog && !g.voyage && (
         <View pointerEvents="none" style={[styles.banner, { top: H * 0.26 }]}>
           {g.banner.baybayin && <BaybayinText size={18} color={COLORS.light}>{g.banner.baybayin}</BaybayinText>}
           <PixelText size={16} color={COLORS.gold}>
@@ -589,12 +668,26 @@ export default function GameScreen({
       {g.npc?.talking && !g.dialog && (
         <View pointerEvents="none" style={[styles.bubble, { left: ox + g.npc.x * s - 100, top: oy + (g.npc.y - 12) * s - 56, width: 210 }]}>
           <PixelText size={7} color={COLORS.light} shadow={false}>
-            HALIYA
+            {g.npc.name}
           </PixelText>
           <PixelText size={7} shadow={false}>
             {g.npc.line}
           </PixelText>
         </View>
+      )}
+
+      {/* what to do now */}
+      {!g.voyage && !!objective(g) && (
+        <View pointerEvents="none" style={[styles.objective, { top: coop ? 66 : 42 }]}>
+          <PixelText size={7} color={COLORS.text} shadow>
+            {objective(g)}
+          </PixelText>
+        </View>
+      )}
+
+      {/* low health: the screen edge pulses red */}
+      {alive(g).some((o) => o.hp <= Math.max(1, Math.floor(o.maxHp / 4))) && !g.result && (
+        <View pointerEvents="none" style={[styles.vignette, { opacity: 0.35 + 0.3 * Math.sin(g.time * 7) }]} />
       )}
 
       {/* HUDs: one per player */}
@@ -710,24 +803,141 @@ export default function GameScreen({
 
       {g.dialog && (() => {
         const line = g.dialog.lines[g.dialog.i];
+        const key = lineKey(g);
+        if (typeRef.current.key !== key) typeRef.current = { key, start: Date.now() };
+        const shown = Math.floor(((Date.now() - typeRef.current.start) / 1000) * TYPE_CPS);
+        const done = shown >= line.text.length;
         const left = line.side === 'left';
         const enemy = line.speaker === 'BAKUNAWA';
+        const plate = enemy ? '#7e1e22' : left ? '#2a2444' : '#3a2a1c';
         return (
-          <View pointerEvents="none" style={styles.dialogWrap}>
-            <View style={[styles.dialog, { flexDirection: left ? 'row' : 'row-reverse' }]}>
-              <Image source={IMG[line.portrait]} fadeDuration={0} resizeMode="stretch" style={styles.dialogPortrait} />
-              <View style={{ flex: 1, marginHorizontal: 12 }}>
-                <PixelText size={11} color={enemy ? '#ff8a7a' : COLORS.light} style={{ textAlign: left ? 'left' : 'right' }}>
-                  {line.speaker}
+          <View pointerEvents="box-none" style={styles.dialogWrap}>
+            {/* skip the whole conversation */}
+            <Pressable
+              onPress={() => {
+                g.dialog = null;
+              }}
+              style={styles.skipTalk}
+              hitSlop={10}
+            >
+              <PixelText size={7} color={COLORS.dim} shadow={false}>
+                LAKTAWAN ▸▸
+              </PixelText>
+            </Pressable>
+            <View pointerEvents="none" style={[styles.dialog, { flexDirection: left ? 'row' : 'row-reverse', borderColor: enemy ? '#d63a30' : COLORS.border }]}>
+              <View style={[styles.dialogPortraitFrame, { borderColor: enemy ? '#d63a30' : COLORS.border }]}>
+                <Image source={IMG[line.portrait]} fadeDuration={0} resizeMode="stretch" style={styles.dialogPortrait} />
+              </View>
+              <View style={{ flex: 1, marginHorizontal: 12, minHeight: 84 }}>
+                <View style={[styles.namePlate, { backgroundColor: plate, alignSelf: left ? 'flex-start' : 'flex-end' }]}>
+                  <PixelText size={9} color={enemy ? '#ffb0a0' : COLORS.gold}>
+                    {line.speaker}
+                  </PixelText>
+                </View>
+                <PixelText size={9} shadow={false} style={{ marginTop: 6 }}>
+                  {line.text.slice(0, shown)}
+                  <PixelText size={9} shadow={false} style={{ opacity: 0 }}>
+                    {line.text.slice(shown)}
+                  </PixelText>
                 </PixelText>
-                <PixelText size={9} shadow={false} style={{ textAlign: left ? 'left' : 'right' }}>
-                  {line.text}
-                </PixelText>
-                <PixelText size={7} color={COLORS.dim} shadow={false} style={{ marginTop: 4, textAlign: left ? 'right' : 'left' }}>
-                  TAP ▸
-                </PixelText>
+                <View style={styles.dialogFoot}>
+                  <PixelText size={6} color={COLORS.dim} shadow={false}>
+                    {`${g.dialog.i + 1}/${g.dialog.lines.length}`}
+                  </PixelText>
+                  <PixelText size={8} color={COLORS.gold} shadow={false} style={{ opacity: done ? (Math.floor(Date.now() / 400) % 2 ? 1 : 0.3) : 0 }}>
+                    ▼
+                  </PixelText>
+                </View>
               </View>
             </View>
+          </View>
+        );
+      })()}
+
+      {/* a boss's title card, between letterbox bars */}
+      {g.titleCard && !g.dialog && (() => {
+        const t = g.titleCard.t;
+        const inOut = Math.min(1, (2.6 - t) * 3, t * 2);
+        return (
+          <View pointerEvents="none" style={styles.cardWrap}>
+            <View style={[styles.letterbox, { top: 0, height: H * 0.13 * inOut }]} />
+            <View style={[styles.letterbox, { bottom: 0, height: H * 0.13 * inOut }]} />
+            <View style={{ opacity: inOut, alignItems: 'center', transform: [{ translateY: (1 - inOut) * 12 }] }}>
+              <View style={styles.cardRule} />
+              <PixelText size={20} color="#ff8a7a">
+                {g.titleCard.name}
+              </PixelText>
+              <PixelText size={8} color={COLORS.light} shadow>
+                {g.titleCard.sub}
+              </PixelText>
+              <View style={styles.cardRule} />
+            </View>
+          </View>
+        );
+      })()}
+
+      {/* the voyage map between islands */}
+      {g.voyage && (() => {
+        const v = g.voyage;
+        const p = Math.min(1, 1 - v.t / VOYAGE_TIME);
+        // show a window of the route around the leg being sailed
+        const first = Math.max(0, Math.min(v.to - 3, g.route.length - 7));
+        const stops = g.route.slice(first, first + 7);
+        const span = Math.min(W - 80, 560);
+        const step = span / Math.max(1, stops.length - 1);
+        const x0 = (W - span) / 2;
+        const y0 = H * 0.42;
+        const nodeX = (i: number) => x0 + (i - first) * step;
+        const boatX = nodeX(v.to - 1) + (nodeX(v.to) - nodeX(v.to - 1)) * (p * p * (3 - 2 * p));
+        const next = g.route[v.to];
+        const info = STAGES[next.replace(/_[ab]$/, '')];
+        const pool = info ? [...new Set(info.pool)] : next === 'shore' ? ['bakunawa' as const] : [];
+        return (
+          <View style={styles.voyage}>
+            <PixelText size={8} color={COLORS.dim} shadow={false}>
+              PAGLALAYAG · THE VOYAGE
+            </PixelText>
+            <View style={{ position: 'absolute', left: x0, top: y0, width: span, height: 2, backgroundColor: 'rgba(130,238,214,0.35)' }} />
+            {stops.map((room, k) => {
+              const i = first + k;
+              const visited = i < v.to;
+              const isNext = i === v.to;
+              return (
+                <View key={i} style={{ position: 'absolute', left: nodeX(i) - 40, top: y0 - 9, width: 80, alignItems: 'center' }}>
+                  <View
+                    style={[
+                      styles.node,
+                      { backgroundColor: visited ? COLORS.border : isNext ? COLORS.light : '#2a2444', transform: [{ rotate: '45deg' }, { scale: isNext ? 1.2 + 0.15 * Math.sin(Date.now() / 150) : 1 }] },
+                    ]}
+                  />
+                  <PixelText size={6} color={isNext ? COLORS.gold : visited ? COLORS.text : COLORS.dim} shadow={false} style={{ marginTop: 8, textAlign: 'center' }}>
+                    {stopName(room)}
+                  </PixelText>
+                </View>
+              );
+            })}
+            <Image source={IMG[`deco_balangay_${Math.floor(Date.now() / 300) % 2}` as ImgKey]} fadeDuration={0} resizeMode="stretch" style={{ position: 'absolute', left: boatX - 22, top: y0 - 34, width: 44, height: 28 }} />
+            <View style={[styles.voyageNext, { top: y0 + 44 }]}>
+              <PixelText size={7} color={COLORS.dim} shadow={false}>
+                SUSUNOD NA ISLA · NEXT
+              </PixelText>
+              <PixelText size={14} color={COLORS.gold}>
+                {stopName(next)}
+              </PixelText>
+              {info && (
+                <PixelText size={7} color={COLORS.text} shadow={false} style={{ textAlign: 'center', maxWidth: 460 }}>
+                  {info.line}
+                </PixelText>
+              )}
+              <View style={{ flexDirection: 'row', gap: 6, marginTop: 6 }}>
+                {pool.map((type) => (
+                  <Sprite key={type} name={`enemies_${type === 'tiyanak' ? 'tiyanak_baby' : `${type}_0`}` as ImgKey} size={24} />
+                ))}
+              </View>
+            </View>
+            <PixelText size={6} color={COLORS.dim} shadow={false} style={{ position: 'absolute', bottom: 10 }}>
+              TAP TO LAND
+            </PixelText>
           </View>
         );
       })()}
@@ -735,8 +945,11 @@ export default function GameScreen({
       {paused && (
         <View style={styles.overlay}>
           <Panel style={{ alignItems: 'center', padding: 24 }}>
-            <PixelText size={16} color={COLORS.gold} style={{ marginBottom: 18 }}>
+            <PixelText size={16} color={COLORS.gold} style={{ marginBottom: 4 }}>
               PAUSED
+            </PixelText>
+            <PixelText size={7} color={COLORS.dim} shadow={false} style={{ marginBottom: 14, textAlign: 'center' }}>
+              {`${stageLabel(g)}  ·  Napaalis ${g.kills}  ·  Barya ${g.coins}  ·  Antas ${Math.max(...g.heroes.map((o) => o.lv))}${g.relics.length ? `  ·  Mutya ${g.relics.length}` : ''}`}
             </PixelText>
             <PixelButton label="RESUME" onPress={() => setPause(false)} style={{ marginBottom: 10, width: 200 }} />
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
@@ -804,6 +1017,18 @@ const styles = StyleSheet.create({
   cards: { flexDirection: 'row', gap: 12 },
   card: { width: 170, alignItems: 'center', padding: 12, backgroundColor: 'rgba(20,16,34,0.95)', borderWidth: 3, borderColor: '#b07a30' },
   dialogWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, justifyContent: 'flex-end', padding: 16, backgroundColor: 'rgba(5,12,16,0.45)' },
-  dialog: { alignItems: 'center', padding: 12, backgroundColor: 'rgba(8,18,24,0.95)', borderWidth: 3, borderColor: '#ffba48' },
-  dialogPortrait: { width: 84, height: 84, borderWidth: 2, borderColor: '#2c4a50', backgroundColor: '#1c3a40' },
+  dialog: { alignItems: 'stretch', padding: 10, backgroundColor: 'rgba(14,12,28,0.96)', borderWidth: 3 },
+  dialogPortrait: { width: 80, height: 80 },
+  dialogPortraitFrame: { borderWidth: 3, padding: 2, backgroundColor: '#1c1830' },
+  namePlate: { paddingHorizontal: 8, paddingVertical: 2, borderWidth: 2, borderColor: 'rgba(0,0,0,0.4)' },
+  dialogFoot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' },
+  skipTalk: { alignSelf: 'flex-end', marginBottom: 4, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: 'rgba(8,6,18,0.85)', borderWidth: 2, borderColor: COLORS.edge },
+  cardWrap: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  letterbox: { position: 'absolute', left: 0, right: 0, backgroundColor: '#000' },
+  cardRule: { width: 220, height: 2, backgroundColor: '#d63a30', marginVertical: 6 },
+  voyage: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#0a1622', alignItems: 'center', paddingTop: 16 },
+  voyageNext: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  node: { width: 14, height: 14, borderWidth: 2, borderColor: COLORS.bg },
+  objective: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  vignette: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderWidth: 14, borderColor: 'rgba(214,40,40,0.55)' },
 });

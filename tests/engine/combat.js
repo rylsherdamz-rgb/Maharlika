@@ -1,5 +1,8 @@
 // Combat: put each hero alone on an island with one creature and let auto-aim fight it out.
 const E = require('../../.sim/game/engine.js');
+// these tests are about rules, not story: start every game with the island scenes off
+const newGameWithScenes = E.newGame;
+E.newGame = (...a) => Object.assign(newGameWithScenes(...a), { scenes: false });
 const { WEAPONS } = require('../../.sim/game/data.js');
 const types = ['tiyanak', 'sigbin', 'santelmo', 'bungisngis', 'duwende', 'kapre'];
 const loadouts = [['kidlat', 'kampilan'], ['liksi', 'pana'], ['banog', 'panabas'], ['banog', 'baston'], ['dalisay', 'buntot_pagi'], ['dalisay', 'lantaka'], ['kidlat', 'balaraw']];
@@ -13,6 +16,8 @@ for (const [hero, weapon] of loadouts) {
       g.hero.weapon = weapon;
       g.dialog = null;
       g.boat = { x: g.hero.x, y: g.hero.y }; // sail to island 1
+      E.update(g, idle, 0.016);
+      E.skipVoyage(g);
       E.update(g, idle, 0.016);
       g.dialog = null;
       g.enemies = [];

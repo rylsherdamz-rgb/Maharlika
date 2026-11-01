@@ -26,6 +26,7 @@ import {
   xpToNext,
 } from './data';
 import type { SfxId } from '../sounds';
+import { arrivalScene, BOSS_CARDS, LOCALS, shopScene, TINDERA, VOICE } from './tales';
 import { bossDialogue, CAVE, DialogueLine, ENDLESS, HALIYA_LINES, PORT, ROUTE_SLOTS, SHORE, STAGES } from './story';
 
 export const TILE = roomData.tile;
@@ -116,6 +117,8 @@ export interface Enemy {
   scale?: number;
   /** Cave guardian (mini-boss): its own health bar, a big chest when it falls. */
   boss?: boolean;
+  /** Sinumpa: a cursed, tougher creature with a purple aura and better spoils. */
+  elite?: boolean;
 }
 
 export interface Bullet {
@@ -183,7 +186,24 @@ export interface FloatText {
   text: string;
   color: string;
   t: number;
+  big?: boolean; // critical hits and big moments
 }
+
+/** Something for sale at the tindera's stall. */
+export interface ShopItem {
+  kind: 'herb' | 'whetstone' | 'amulet' | 'weapon' | 'light';
+  price: number;
+  x: number;
+  y: number;
+  sold: boolean;
+  weapon?: WeaponId;
+  nag: number; // cooldown on "not enough coins"
+}
+
+/** Seconds the voyage map shows between islands (a tap skips it). */
+export const VOYAGE_TIME = 2.6;
+/** Chance that any hit is critical (double damage). */
+export const CRIT_CHANCE = 0.1;
 
 export interface Input {
   mx: number;
@@ -207,6 +227,8 @@ export interface Game {
   heroes: Hero[];
   /** Player 1; kept as a shortcut for single-player code and the HUD. */
   hero: Hero;
+  /** Whether island arrivals play their little scenes. */
+  scenes: boolean;
   mode: Mode;
   diff: Difficulty;
   /** Co-op: heroes attack by themselves whenever a creature is in reach. */
@@ -246,7 +268,18 @@ export interface Game {
   shake: number;
   banner: { text: string; baybayin?: string; sub?: string; t: number } | null;
   dialog: { lines: DialogueLine[]; i: number } | null;
-  npc: { x: number; y: number; talking: boolean; line: string } | null;
+  /** Someone standing on the island: Haliya at the docks, or a local. */
+  npc: { x: number; y: number; talking: boolean; line: string; sprite: string; name: string; quiet?: boolean } | null;
+  /** The tindera's stall on some cleared islands. */
+  shop: { x: number; y: number; items: ShopItem[] } | null;
+  /** Shown while sailing between islands. */
+  voyage: { to: number; t: number } | null;
+  /** A boss's name card. */
+  titleCard: { name: string; sub: string; t: number } | null;
+  /** A few frames of freeze on big hits (seconds left). */
+  hitstop: number;
+  /** One-time story beats already played this run (island themes visited, the shop). */
+  heard: string[];
   result: 'dead' | 'victory' | null;
   nextId: number;
 }
@@ -255,6 +288,10 @@ export interface Setup {
   players: { hero: HeroId; weapon?: WeaponId }[];
   mode?: Mode;
   difficulty?: 0 | 1 | 2;
+  /** Haliya's opening words at the docks (from what she remembers of earlier runs). */
+  greeting?: DialogueLine[];
+  /** Island scenes with the locals; on by default. */
+  scenes?: boolean;
 }
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -395,6 +432,7 @@ export function newGame(setup: Setup | HeroId, weapon?: WeaponId): Game {
   const g: Game = {
     heroes,
     hero: heroes[0],
+    scenes: s.scenes !== false,
     mode,
     diff,
     autoAttack: heroes.length > 1,
@@ -428,10 +466,16 @@ export function newGame(setup: Setup | HeroId, weapon?: WeaponId): Game {
     banner: null,
     dialog: null,
     npc: null,
+    shop: null,
+    voyage: null,
+    titleCard: null,
+    hitstop: 0,
+    heard: [],
     result: null,
     nextId: 1,
   };
   enterRoom(g, 0);
+  if (s.greeting?.length && g.scenes) g.dialog = { lines: s.greeting, i: 0 };
   return g;
 }
 
@@ -452,6 +496,8 @@ function resetRoom(g: Game) {
   g.shrine = null;
   g.boat = null;
   g.npc = null;
+  g.shop = null;
+  g.titleCard = null;
   g.caveDoor = null;
   g.exit = null;
   g.wave = 0;
@@ -470,7 +516,6 @@ function enterRoom(g: Game, stage: number) {
   g.grid = roomData.rooms[g.room].grid;
   resetRoom(g);
   placeParty(g, ENTRY.x, ENTRY.y);
-  if (stage > 0) snd(g, 'sail');
   // a fallen hero gets back up on the next island with a little health
   for (const h of g.heroes) {
     if (h.down) {
@@ -492,7 +537,7 @@ function enterRoom(g: Game, stage: number) {
     g.boat = { ...DOCK };
     const intro = g.mode === 'endless' ? ENDLESS : PORT;
     g.banner = { text: intro.title, baybayin: intro.baybayin, sub: intro.line, t: 3 };
-    g.npc = { x: 5.5 * TILE, y: 6.2 * TILE, talking: false, line: HALIYA_LINES[0] };
+    g.npc = { x: 5.5 * TILE, y: 6.2 * TILE, talking: false, line: HALIYA_LINES[0], sprite: 'npc_haliya', name: 'HALIYA' };
   } else if (g.room === 'shore') {
     g.waves = 1;
     g.banner = { text: SHORE.title, baybayin: SHORE.baybayin, sub: g.mode === 'endless' ? `The Bakunawa rises again. Island ${stage}.` : SHORE.line, t: 3 };
@@ -500,6 +545,7 @@ function enterRoom(g: Game, stage: number) {
     if (g.mode === 'voyage' || stage === ENDLESS_BOSS_EVERY) g.dialog = { lines: bossDialogue(g.hero.def.id), i: 0 };
     spawnEnemy(g, 'bakunawa', 17 * TILE, 7 * TILE);
     snd(g, 'roar');
+    g.titleCard = { ...BOSS_CARDS.bakunawa, t: 2.6 };
     g.wave = 1;
   } else {
     g.waves = 2;
@@ -507,7 +553,134 @@ function enterRoom(g: Game, stage: number) {
     const title = g.mode === 'endless' ? `${info.title} · ${stage}` : info.title;
     g.banner = { text: title, baybayin: info.baybayin, sub: info.line, t: 3.2 };
     spawnWave(g);
+    // a local stands near the landing; the first visit to each island plays their scene
+    const theme = g.route[stage].replace(/_[ab]$/, '');
+    const local = LOCALS[theme];
+    if (local) {
+      const at = floorNear(g, ENTRY.x + 1.5 * TILE, ENTRY.y - 2 * TILE);
+      g.npc = { x: at.x, y: at.y, talking: false, line: local.after, sprite: `npc_${local.id}`, name: local.name, quiet: true };
+      if (g.scenes && !g.heard.includes(theme)) {
+        g.heard.push(theme);
+        g.dialog = { lines: arrivalScene(theme, g.heroes.map((h) => h.def.id), stage), i: 0 };
+      }
+    }
   }
+}
+
+/** The closest free floor tile to a point (for placing people and stalls), away from `avoid`. */
+function floorNear(g: Game, x: number, y: number, avoid: { x: number; y: number }[] = []) {
+  let best = { x: CENTER.x, y: CENTER.y };
+  let bd = Infinity;
+  for (let ty = 1; ty < g.grid.length - 1; ty++) {
+    for (let tx = 1; tx < g.grid[0].length - 1; tx++) {
+      if (g.grid[ty][tx] !== FLOOR || g.grid[ty + 1][tx] !== FLOOR) continue;
+      const px = (tx + 0.5) * TILE;
+      const py = (ty + 0.5) * TILE;
+      if (avoid.some((a) => dist(px, py, a.x, a.y) < TILE)) continue;
+      const d = dist(px, py, x, y);
+      if (d < bd) {
+        bd = d;
+        best = { x: px, y: py };
+      }
+    }
+  }
+  return best;
+}
+
+/** Open the tindera's stall: three things to buy, laid out in a row. */
+function openShop(g: Game) {
+  const occupied = [g.boat, g.shrine, g.chest, g.caveDoor].filter((o): o is { x: number; y: number } => !!o);
+  const base = floorNear(g, CENTER.x - TILE, CENTER.y + 3 * TILE, occupied);
+  const kinds: ShopItem['kind'][] = ['herb', 'whetstone', 'amulet', 'weapon', 'light'];
+  const pickKinds: ShopItem['kind'][] = ['herb'];
+  while (pickKinds.length < 3) {
+    const k = pick(kinds);
+    if (!pickKinds.includes(k)) pickKinds.push(k);
+  }
+  const prices = { herb: 12, light: 15, whetstone: 28, amulet: 35, weapon: 40 };
+  const held = g.heroes.map((h) => h.weapon);
+  const taken = [base, ...occupied];
+  const items: ShopItem[] = pickKinds.map((kind, i) => {
+    const at = floorNear(g, base.x + (i + 1) * 28, base.y, taken);
+    taken.push(at);
+    return {
+      kind,
+      price: prices[kind] + Math.max(0, g.stage - 1) * 2,
+      x: at.x,
+      y: at.y,
+      sold: false,
+      weapon: kind === 'weapon' ? pick(LOOT_WEAPONS.filter((w) => !held.includes(w))) : undefined,
+      nag: 0,
+    };
+  });
+  g.shop = { x: base.x, y: base.y, items };
+  if (g.scenes && !g.heard.includes('shop')) {
+    g.heard.push('shop');
+    g.dialog = { lines: shopScene(g.hero.def.id), i: 0 };
+  }
+}
+
+function buy(g: Game, h: Hero, it: ShopItem) {
+  if (g.coins < it.price) {
+    if (it.nag <= 0) {
+      addText(g, it.x, it.y - 14, 'KULANG ANG BARYA', '#ff8a7a');
+      g.banner = { text: TINDERA.name, sub: TINDERA.short, t: 1.6 };
+      it.nag = 1.5;
+    }
+    return;
+  }
+  g.coins -= it.price;
+  it.sold = true;
+  snd(g, 'coin');
+  addFx(g, 'sparkle', it.x, it.y - 6);
+  switch (it.kind) {
+    case 'herb':
+      h.hp = Math.min(h.maxHp, h.hp + 3);
+      addFx(g, 'heal', h.x, h.y - 4);
+      snd(g, 'heal');
+      addText(g, h.x, h.y - 14, '+3', '#62b24a');
+      break;
+    case 'whetstone':
+      h.weaponLv = Math.min(WEAPON_LV_MAX, h.weaponLv + 1);
+      snd(g, 'levelup');
+      addText(g, h.x, h.y - 14, `HASA +${h.weaponLv}`, '#ffe882');
+      break;
+    case 'amulet':
+      h.maxArmor += 1;
+      h.armor = h.maxArmor;
+      addText(g, h.x, h.y - 14, '+1 ANTING-ANTING', '#82eed6');
+      break;
+    case 'light':
+      h.light = LIGHT_MAX;
+      addText(g, h.x, h.y - 14, 'LIWANAG!', '#ffe882');
+      break;
+    case 'weapon':
+      // the weapon is set down at the hero's feet, ready to take up
+      g.pickups.push({ id: g.nextId++, kind: 'weapon', x: it.x, y: it.y + 10, t: 0, weapon: it.weapon, armed: true });
+      break;
+  }
+}
+
+/** Skip the voyage map and land at once. */
+export function skipVoyage(g: Game) {
+  if (g.voyage) g.voyage.t = 0;
+}
+
+/** What the party should do now, for the objective line under the island name. */
+export function objective(g: Game): string {
+  if (g.room === 'port') return 'Sumakay sa balangay · Board the boat';
+  const left = g.enemies.length;
+  if (left > 0) {
+    const boss = g.enemies.find((e) => e.boss || e.type === 'bakunawa');
+    if (boss) return `Talunin si ${bossName(boss)}`;
+    return `Mga nilalang: ${left}${g.waves > 1 ? `  ·  Alon ${g.wave}/${g.waves}` : ''}`;
+  }
+  if (g.cave) return g.exit ? (g.cave.depth < CAVE_DEPTH ? 'Bumaba · Go deeper' : 'Lumabas · Climb out') : '';
+  const todo: string[] = [];
+  if (g.chest && !g.chest.open) todo.push('Kaban');
+  if (g.shrine && !g.shrine.used) todo.push('Dambana');
+  if (g.caveDoor) todo.push('Yungib?');
+  return todo.length ? `${todo.join(' · ')} · then the balangay` : 'Sumakay sa balangay · Sail on';
 }
 
 /** Go down into the cave (depth 1) or one level deeper. */
@@ -531,6 +704,11 @@ function enterCave(g: Game) {
     const guardian = CAVE_GUARDIANS[THEME_GUARDIAN[g.route[g.stage].replace(/_[ab]$/, '')] ?? 'bungisngis'];
     spawnEnemy(g, guardian.type, 16 * TILE, 7.5 * TILE, true);
     snd(g, 'roar');
+    g.titleCard = { ...BOSS_CARDS[guardian.type], t: 2.6 };
+    if (g.scenes) {
+      const h = g.hero.def.id;
+      g.dialog = { lines: [{ speaker: h.toUpperCase(), portrait: `portraits_${h}`, side: 'left', text: VOICE[h].boss }], i: 0 };
+    }
     for (let i = 0; i < 2; i++) {
       const p = randomFloor(g, 80);
       spawnEnemy(g, pick(stageInfo(g).pool), p.x, p.y);
@@ -623,6 +801,9 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number, boss = false
   const endlessBoss = g.mode === 'endless' ? 1 + (g.stage / ENDLESS_BOSS_EVERY - 1) * 0.5 : 1;
   let hp = type === 'bakunawa' ? Math.round(def.hp * g.diff.hp * (g.heroes.length > 1 ? 1.5 : 1) * endlessBoss) : Math.round(def.hp * scale);
   if (boss) hp = Math.round(hp * 5);
+  // sinumpa (cursed): now and then a creature comes back tougher, and pays better
+  const elite = !boss && type !== 'bakunawa' && (g.stage >= 2 || !!g.cave) && Math.random() < Math.min(0.2, 0.05 + g.stage * 0.012);
+  if (elite) hp = Math.round(hp * 2.2);
   g.enemies.push({
     id: g.nextId++,
     type,
@@ -638,8 +819,9 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number, boss = false
     poison: 0,
     poisonTick: 0,
     state: 0,
-    scale: boss ? 1.9 : 1,
+    scale: boss ? 1.9 : elite ? 1.15 : 1,
     boss,
+    elite,
   });
 }
 
@@ -751,16 +933,19 @@ function gainXp(g: Game, amount: number) {
   }
 }
 
-function damageEnemy(g: Game, e: Enemy, dmg: number, by: Hero = g.hero) {
+function damageEnemy(g: Game, e: Enemy, dmg: number, by: Hero = g.hero, canCrit = true) {
   if (e.hp <= 0) return;
-  const d = Math.round(dmg * by.mods.dmg * (1 + by.weaponLv * WEAPON_LV_BONUS) * 10) / 10;
+  const crit = canCrit && Math.random() < CRIT_CHANCE;
+  const d = Math.round(dmg * by.mods.dmg * (1 + by.weaponLv * WEAPON_LV_BONUS) * (crit ? 2 : 1) * 10) / 10;
+  if (crit) g.hitstop = Math.max(g.hitstop, 0.045);
   e.hp -= d;
   e.flash = 0.1;
   snd(g, 'hit');
   if (e.type === 'tiyanak' && e.state === 0) revealTiyanak(g, e);
   addFx(g, 'hit', e.x + rand(-3, 3), e.y + rand(-3, 3));
   by.light = Math.min(LIGHT_MAX, by.light + d * 1.3);
-  addText(g, e.x, e.y - 10, `${Math.round(d)}`, '#ffffff');
+  if (crit) g.texts.push({ id: g.nextId++, x: e.x, y: e.y - 12, text: `${Math.round(d)}!`, color: '#ffe882', t: 0.9, big: true });
+  else addText(g, e.x, e.y - 10, `${Math.round(d)}`, '#ffffff');
   if (e.hp <= 0) killEnemy(g, e);
 }
 
@@ -778,13 +963,20 @@ export function sigbinVisible(g: Game, e: Enemy) {
 function killEnemy(g: Game, e: Enemy) {
   g.kills++;
   snd(g, 'kill');
+  g.hitstop = Math.max(g.hitstop, e.boss || e.type === 'bakunawa' ? 0.3 : 0.025);
+  if (e.boss || e.type === 'bakunawa') g.shake = 0.5;
+  if (e.elite) {
+    for (let i = 0; i < ENEMIES[e.type].coins * 2; i++) dropPickup(g, 'coin', e.x, e.y);
+    if (Math.random() < 0.35) dropPickup(g, 'potion_health', e.x, e.y);
+    addText(g, e.x, e.y - 16, 'SINUMPA!', '#c88aff');
+  }
   addFx(g, 'poof', e.x, e.y, e.boss ? 36 : undefined);
   const def = ENEMIES[e.type];
   for (let i = 0; i < def.coins * (e.boss ? 4 : 1); i++) dropPickup(g, 'coin', e.x, e.y);
   const orbs = e.type === 'bakunawa' || e.boss ? 10 : 1 + Math.floor(Math.random() * 2);
   for (let i = 0; i < orbs; i++) dropPickup(g, 'energy_orb', e.x, e.y);
   if (Math.random() < 0.06 + g.hero.mods.herbs) dropPickup(g, 'potion_health', e.x, e.y);
-  gainXp(g, Math.ceil(e.maxHp / 3));
+  gainXp(g, Math.ceil(e.maxHp / 3) * (e.elite ? 2 : 1));
   if (e.boss) {
     g.chest = { x: e.x, y: e.y, open: false, big: true };
     // set the mutya a little apart from the chest, on ground a hero can reach
@@ -866,7 +1058,26 @@ export function update(g: Game, inputs: Input | Input[], dt: number) {
     for (const i of ins) i.skill = i.dodge = false;
     return;
   }
+  // sailing: the voyage map shows, then the party lands
+  if (g.voyage) {
+    g.voyage.t -= dt;
+    if (g.voyage.t <= 0) {
+      const to = g.voyage.to;
+      g.voyage = null;
+      enterRoom(g, to);
+    }
+    return;
+  }
+  // hit-stop: a few frozen frames make big hits land
+  if (g.hitstop > 0) {
+    g.hitstop -= dt;
+    return;
+  }
   g.time += dt;
+  if (g.titleCard) {
+    g.titleCard.t -= dt;
+    if (g.titleCard.t <= 0) g.titleCard = null;
+  }
   g.shake = Math.max(0, g.shake - dt);
   if (g.banner) {
     g.banner.t -= dt;
@@ -878,8 +1089,18 @@ export function update(g: Game, inputs: Input | Input[], dt: number) {
   updateBullets(g, dt);
   updatePickups(g, dt);
   if (g.npc) {
-    g.npc.talking = alive(g).some((h) => dist(h.x, h.y, g.npc!.x, g.npc!.y) < 36);
-    if (g.npc.talking) g.npc.line = HALIYA_LINES[Math.floor(g.time / 4) % HALIYA_LINES.length];
+    // locals keep their heads down until the island is safe; Haliya always has a word
+    const safe = !g.npc.quiet || g.enemies.length === 0;
+    g.npc.talking = safe && alive(g).some((h) => dist(h.x, h.y, g.npc!.x, g.npc!.y) < 36);
+    if (g.npc.talking && g.room === 'port') g.npc.line = HALIYA_LINES[Math.floor(g.time / 4) % HALIYA_LINES.length];
+  }
+  if (g.shop) {
+    for (const it of g.shop.items) {
+      it.nag = Math.max(0, it.nag - dt);
+      if (it.sold) continue;
+      const buyer = alive(g).find((h) => dist(h.x, h.y, it.x, it.y) < 9);
+      if (buyer) buy(g, buyer, it);
+    }
   }
   for (const t of g.texts) {
     t.t -= dt;
@@ -908,6 +1129,8 @@ export function update(g: Game, inputs: Input | Input[], dt: number) {
         const door = randomFloor(g, 40, [g.shrine, g.boat, g.chest]);
         g.caveDoor = door;
       }
+      const shopHere = g.room !== 'shore' && (g.mode === 'endless' ? g.stage % 3 === 2 : g.stage % 2 === 0);
+      if (shopHere) openShop(g);
       g.banner = {
         text: 'THE ISLAND IS SAFE',
         sub: hasCave ? 'Open the kaban, visit the dambana. A cave opens below the island.' : 'Open the kaban, visit the dambana, then sail on.',
@@ -933,7 +1156,11 @@ export function update(g: Game, inputs: Input | Input[], dt: number) {
   }
   if (g.boat && touching(g.boat, 10)) {
     if (g.mode === 'voyage' && g.stage + 1 >= g.route.length) g.result = 'victory';
-    else enterRoom(g, g.stage + 1);
+    else {
+      g.voyage = { to: g.stage + 1, t: VOYAGE_TIME };
+      g.boat = null;
+      snd(g, 'sail');
+    }
   }
 }
 
@@ -1253,7 +1480,7 @@ function updateEnemies(g: Game, dt: number) {
       e.poisonTick -= dt;
       if (e.poisonTick <= 0) {
         e.poisonTick = 0.5;
-        damageEnemy(g, e, 1);
+        damageEnemy(g, e, 1, g.hero, false);
       }
     }
     if (e.hp <= 0) continue;

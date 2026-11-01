@@ -1,6 +1,9 @@
 // Chests, loot, weapon swapping, whetstones, the two new skills and the island route.
 const assert = require('assert');
 const E = require('../../.sim/game/engine.js');
+// these tests are about rules, not story: start every game with the island scenes off
+const newGameWithScenes = E.newGame;
+E.newGame = (...a) => Object.assign(newGameWithScenes(...a), { scenes: false });
 const rooms = require('../../.sim/game/rooms.json').rooms;
 const idle = { mx: 0, my: 0, attack: false, skill: false, dodge: false };
 const step = (g, input = idle, n = 1) => { for (let i = 0; i < n; i++) E.update(g, { ...input }, 1 / 60); };
@@ -21,6 +24,8 @@ for (let i = 0; i < 200; i++) {
   const g = E.newGame('dalisay');
   g.dialog = null;
   g.boat = { x: g.hero.x, y: g.hero.y };
+  step(g);
+  E.skipVoyage(g);
   step(g);
   g.dialog = null;
   g.enemies = []; g.wave = g.waves;

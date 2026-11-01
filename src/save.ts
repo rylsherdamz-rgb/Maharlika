@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { RelicId } from './game/data';
+import { HeroId, RelicId } from './game/data';
+import { Memory } from './game/tales';
 
 /** What the game remembers between sessions. */
 export interface Progress {
@@ -9,10 +10,47 @@ export interface Progress {
   relics: RelicId[]; // every mutya ever found, for the collection in the codex
   musicOn: boolean;
   sfxOn: boolean;
+  // what Haliya remembers of earlier runs
+  runs: number;
+  deaths: number;
+  lastReached: string | null;
+  lastVictory: boolean;
+  heroesPlayed: HeroId[];
+  cavesCleared: number;
+  seen: string[];
+}
+
+/** The parts of saved progress that Haliya's greeting draws on. */
+export function memoryOf(p: Progress): Memory {
+  return {
+    runs: p.runs,
+    deaths: p.deaths,
+    wins: p.wins,
+    lastReached: p.lastReached,
+    lastVictory: p.lastVictory,
+    heroesPlayed: p.heroesPlayed,
+    relicsFound: p.relics.length,
+    cavesCleared: p.cavesCleared,
+    seen: p.seen,
+  };
 }
 
 const KEY = 'maharlika.progress.v1';
-const EMPTY: Progress = { wins: 0, hardUnlocked: false, bestEndless: 0, relics: [], musicOn: true, sfxOn: true };
+const EMPTY: Progress = {
+  wins: 0,
+  hardUnlocked: false,
+  bestEndless: 0,
+  relics: [],
+  musicOn: true,
+  sfxOn: true,
+  runs: 0,
+  deaths: 0,
+  lastReached: null,
+  lastVictory: false,
+  heroesPlayed: [],
+  cavesCleared: 0,
+  seen: [],
+};
 export const NEW_PROGRESS = EMPTY;
 
 export async function loadProgress(): Promise<Progress> {
