@@ -1,8 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { GestureResponderEvent, Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
-import { BOONS, BOSS_NAME, ENEMIES, HeroId, LIGHT_MAX, WEAPONS } from '../game/data';
-import { advanceDialog, chooseBoon, Game, Input, newGame, ROOM_H, ROOM_W, stageLabel, update } from '../game/engine';
+import { BOONS, BOSS_NAME, HeroId, LIGHT_MAX, OFFERINGS, WEAPONS } from '../game/data';
+import {
+  advanceDialog,
+  buyOffering,
+  chooseBoon,
+  DIVE_TIME,
+  enemySize,
+  Game,
+  Input,
+  newGame,
+  offeringUseful,
+  ROOM_H,
+  ROOM_W,
+  stageLabel,
+  update,
+} from '../game/engine';
+import { buzz } from '../lib/haptics';
 import { BaybayinText, COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
 import { RunStats } from './ResultScreen';
 
@@ -66,6 +81,8 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
         update(g, frameInput, dt);
         input.skill = frameInput.skill;
         input.dodge = frameInput.dodge;
+        for (const ev of g.events) buzz(ev);
+        g.events.length = 0;
         if (g.result && !endRef.current.done) {
           endRef.current.done = true;
           setTimeout(
@@ -74,8 +91,11 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
                 hero: heroId,
                 victory: g.result === 'victory',
                 stage: stageLabel(g),
+                stageNum: g.stage,
                 kills: g.kills,
                 coins: g.coins,
+                gongs: g.gongsRung,
+                spent: g.spent,
                 time: g.time,
                 boons: [...g.boons],
               }),
@@ -112,6 +132,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
           const id = g.choice[Number(k) - 1];
           if (id) chooseBoon(g, id);
         }
+        if (g.choice && ['4', '5', '6', '7'].includes(k)) buyOffering(g, OFFERINGS[Number(k) - 4].id);
         if (k === 'k') input.skill = true;
         if (k === 'shift' || k === 'l') input.dodge = true;
       }
@@ -246,21 +267,53 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
     layers.push({ y: h.y, node: nodes });
   }
 
+  const ring = (x: number, y: number, r: number, color: string, k: string, fill?: string) => (
+    <View
+      key={k}
+      style={{ position: 'absolute', left: (x - r) * s, top: (y - r * 0.5) * s, width: r * 2 * s, height: r * s, borderRadius: r * s, borderWidth: Math.max(1, s * 0.8), borderColor: color, backgroundColor: fill }}
+    />
+  );
+
   for (const e of g.enemies) {
-    const def = ENEMIES[e.type];
+    const size = enemySize(e);
     const spawning = e.spawn > 0;
+    const nodes: React.ReactNode[] = [];
+    if (e.dive > 0) {
+      // under the water: a dark wake, then a warning ring just before it bursts out
+      nodes.push(ring(e.x, e.y + 6, 14, 'rgba(10,30,40,0.6)', `ew${e.id}`, 'rgba(6,20,30,0.55)'));
+      if (e.dive < 0.7) nodes.push(ring(e.x, e.y + 6, 22 - e.dive * 10, Math.floor(g.time * 12) % 2 ? '#ff5a5a' : '#ffe882', `ewarn${e.id}`));
+      else if (e.dive > DIVE_TIME - 0.3) nodes.push(sprite(`enemies_${e.type}_${anim}`, e.x, e.y + (DIVE_TIME - e.dive) * 40, size, { opacity: 0.6, transform: [{ scaleX: -e.facing }] }, `e${e.id}`));
+      layers.push({ y: e.y - 20, node: nodes });
+      continue;
+    }
     const tint = e.flash > 0 ? '#ffffff' : e.poison > 0 && Math.floor(g.time * 6) % 2 === 0 ? '#9be36d' : undefined;
-    layers.push({
-      y: e.y,
-      node: [
-        shadow(e.x, e.y + def.size / 2, def.size * 0.6, `es${e.id}`),
-        sprite(`enemies_${e.type}_${anim}`, e.x, e.y, def.size, {
-          transform: [{ scaleX: -e.facing }, { scale: spawning ? 1 - e.spawn * 0.6 : 1 }],
-          opacity: spawning ? 0.4 + 0.4 * Math.sin(g.time * 30) : 1,
-          tintColor: tint,
-        }, `e${e.id}`),
-      ],
-    });
+    nodes.push(shadow(e.x, e.y + size / 2, size * 0.6, `es${e.id}`));
+    if (e.elite) nodes.push(ring(e.x, e.y + size / 2 - 1, size * 0.5, `rgba(255,186,72,${0.5 + 0.3 * Math.sin(g.time * 6)})`, `eg${e.id}`));
+    const wobble = e.stun > 0 ? Math.sin(g.time * 30) * 4 : 0;
+    nodes.push(
+      sprite(`enemies_${e.type}_${anim}`, e.x, e.y, size, {
+        transform: [{ scaleX: -e.facing }, { scale: spawning ? 1 - e.spawn * 0.6 : 1 }, { rotate: `${wobble}deg` }],
+        opacity: spawning ? 0.4 + 0.4 * Math.sin(g.time * 30) : 1,
+        tintColor: tint,
+      }, `e${e.id}`),
+    );
+    if (e.stun > 0) {
+      for (let i = 0; i < 3; i++) {
+        const a = g.time * 5 + (i * Math.PI * 2) / 3;
+        nodes.push(sprite('ui_star', e.x + Math.cos(a) * size * 0.4, e.y - size * 0.55 + Math.sin(a) * 3, 7, undefined, `st${e.id}_${i}`));
+      }
+    }
+    layers.push({ y: e.y, node: nodes });
+  }
+
+  for (const gong of g.gongs) {
+    const ready = gong.cd <= 0;
+    const nodes: React.ReactNode[] = [shadow(gong.x, gong.y + 7, 12, `gs${gong.id}`)];
+    if (ready) nodes.push(ring(gong.x, gong.y + 6, 11 + Math.sin(g.time * 5), 'rgba(255,232,130,0.7)', `gr${gong.id}`, 'rgba(255,220,130,0.18)'));
+    if (gong.ring > 0) nodes.push(ring(gong.x, gong.y, 10 + (0.6 - gong.ring) * 90, `rgba(255,232,130,${gong.ring * 1.5})`, `gw${gong.id}`));
+    const shiver = gong.ring > 0 ? Math.sin(g.time * 60) * 6 : 0;
+    nodes.push(sprite('deco_agung', gong.x, gong.y, 18, { opacity: ready ? 1 : 0.45, transform: [{ rotate: `${shiver}deg` }] }, `g${gong.id}`));
+    layers.push({ y: gong.y, node: nodes });
   }
 
   if (g.shrine) {
@@ -383,12 +436,19 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
 
       {boss && (
         <View pointerEvents="none" style={[styles.bossBar, { left: W * 0.3, width: W * 0.4 }]}>
-          <PixelText size={8} color="#ff8a7a">
-            {BOSS_NAME}
+          <PixelText size={8} color={boss.stun > 0 ? COLORS.gold : '#ff8a7a'}>
+            {boss.stun > 0 ? `${BOSS_NAME} · TULIG` : BOSS_NAME}
           </PixelText>
           <View style={styles.bossTrack}>
-            <View style={[styles.lampFill, { width: `${(boss.hp / boss.maxHp) * 100}%`, backgroundColor: COLORS.red }]} />
+            <View style={[styles.lampFill, { width: `${(boss.hp / boss.maxHp) * 100}%`, backgroundColor: boss.stun > 0 ? COLORS.gold : COLORS.red }]} />
+            <View style={[styles.bossTick, { left: '50%' }]} />
+            <View style={[styles.bossTick, { left: '30%' }]} />
           </View>
+          {g.gongsRung === 0 && !g.dialog && (
+            <PixelText size={7} color={COLORS.light} style={{ marginTop: 3, opacity: 0.6 + 0.4 * Math.sin(g.time * 4) }}>
+              RING THE AGUNG TO STUN IT
+            </PixelText>
+          )}
         </View>
       )}
 
@@ -454,6 +514,43 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
               );
             })}
           </View>
+          <View style={styles.alay}>
+            <View style={{ alignItems: 'center', marginRight: 6 }}>
+              <PixelText size={9} color={COLORS.gold}>
+                ALAY
+              </PixelText>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Sprite name="items_coin" size={16} />
+                <PixelText size={9} color={COLORS.gold}>
+                  {g.coins}
+                </PixelText>
+              </View>
+            </View>
+            {OFFERINGS.map((o, i) => {
+              const can = g.coins >= o.cost && offeringUseful(g, o.id);
+              return (
+                <Pressable
+                  key={o.id}
+                  disabled={!can}
+                  onPress={() => buyOffering(g, o.id)}
+                  style={({ pressed }) => [styles.offer, !can && { opacity: 0.4 }, pressed && { borderColor: COLORS.gold }]}
+                >
+                  <Sprite name={o.icon} size={20} />
+                  <View style={{ marginLeft: 4 }}>
+                    <PixelText size={7} color={COLORS.light} shadow={false}>
+                      {o.name}
+                    </PixelText>
+                    <PixelText size={6} shadow={false}>
+                      {o.desc}
+                    </PixelText>
+                    <PixelText size={7} color={COLORS.gold} shadow={false}>
+                      {`${o.cost} piloncito${Platform.OS === 'web' ? `  [${i + 4}]` : ''}`}
+                    </PixelText>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       )}
 
@@ -483,10 +580,32 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
 
       {paused && (
         <View style={styles.overlay}>
-          <Panel style={{ alignItems: 'center', padding: 24 }}>
-            <PixelText size={16} color={COLORS.gold} style={{ marginBottom: 18 }}>
+          <Panel style={{ alignItems: 'center', padding: 24, width: 340, maxWidth: '90%' }}>
+            <PixelText size={16} color={COLORS.gold} style={{ marginBottom: 8 }}>
               PAUSED
             </PixelText>
+            <PixelText size={8} color={COLORS.dim} style={{ marginBottom: 10 }}>
+              {`${h.def.name.toUpperCase()} · ${stageLabel(g)} · ${g.kills} banished`}
+            </PixelText>
+            {g.boons.length > 0 ? (
+              <View style={{ marginBottom: 14, alignSelf: 'stretch' }}>
+                {g.boons.map((b) => (
+                  <View key={b} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+                    <Sprite name={`ui_boon_${b}` as ImgKey} size={18} />
+                    <PixelText size={8} color={COLORS.gold} style={{ marginLeft: 6, width: 90 }}>
+                      {BOONS[b].deity}
+                    </PixelText>
+                    <PixelText size={7} shadow={false} style={{ flex: 1 }}>
+                      {BOONS[b].desc}
+                    </PixelText>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <PixelText size={7} color={COLORS.dim} shadow={false} style={{ marginBottom: 14 }}>
+                No blessings yet. Each dambana offers one.
+              </PixelText>
+            )}
             <PixelButton label="RESUME" onPress={() => setPause(false)} style={{ marginBottom: 10, width: 200 }} />
             <PixelButton label="RETURN TO TONDO" onPress={onQuit} color="#5a4a78" style={{ width: 200 }} />
           </Panel>
@@ -521,6 +640,9 @@ const styles = StyleSheet.create({
   lampFill: { position: 'absolute', left: 0, top: 0, bottom: 0 },
   topRight: { position: 'absolute', right: 8, top: 16, flexDirection: 'row', alignItems: 'center' },
   bossBar: { position: 'absolute', top: 10, alignItems: 'center' },
+  bossTick: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
+  alay: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 6, flexWrap: 'wrap', justifyContent: 'center' },
+  offer: { flexDirection: 'row', alignItems: 'center', padding: 5, backgroundColor: 'rgba(20,16,34,0.95)', borderWidth: 2, borderColor: '#5a4a78' },
   bossTrack: { height: 10, alignSelf: 'stretch', backgroundColor: '#0c161c', borderWidth: 2, borderColor: '#7e1e22', marginTop: 2 },
   bubble: { position: 'absolute', padding: 6, backgroundColor: 'rgba(8,18,24,0.92)', borderWidth: 2, borderColor: '#ffe882' },
   overlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(5,10,18,0.78)', alignItems: 'center', justifyContent: 'center', padding: 16 },

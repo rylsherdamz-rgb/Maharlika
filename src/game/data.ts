@@ -121,10 +121,34 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
   manananggal: { name: 'Manananggal', hp: 5, speed: 52, radius: 5, contact: 1, size: 16, coins: 1 },
   tikbalang: { name: 'Tikbalang', hp: 10, speed: 30, radius: 6, contact: 1, size: 16, coins: 2 },
   kapre: { name: 'Kapre', hp: 15, speed: 20, radius: 6, contact: 1, size: 16, coins: 2 },
-  bakunawa: { name: 'Bakunawa', hp: 380, speed: 22, radius: 13, contact: 2, size: 32, coins: 30 },
+  bakunawa: { name: 'Bakunawa', hp: 420, speed: 22, radius: 13, contact: 2, size: 32, coins: 30 },
 };
 
 export const BOSS_NAME = 'BAKUNAWA';
+
+/** Elite ("mabangis", fierce) creatures appear from the second island on. */
+export const ELITE = { hp: 2.2, speed: 1.15, size: 1.3, coins: 3, fireRate: 0.75 };
+
+/** Agung on the shore of Albay: ringing one stuns the Bakunawa. */
+export const GONG = { recharge: 18, stun: 2.6, stunnedDamage: 1.5 };
+
+export type OfferingId = 'herb' | 'anting' | 'liwanag' | 'reroll';
+
+export interface OfferingDef {
+  id: OfferingId;
+  name: string;
+  desc: string;
+  cost: number;
+  icon: 'items_potion_health' | 'ui_pip_armor' | 'items_energy_orb' | 'ui_star';
+}
+
+/** Alay (offerings): piloncitos spent at a dambana. */
+export const OFFERINGS: OfferingDef[] = [
+  { id: 'herb', name: 'Halamang Gamot', desc: 'Heal 2', cost: 6, icon: 'items_potion_health' },
+  { id: 'anting', name: 'Anting-anting', desc: 'Mend every amulet', cost: 5, icon: 'ui_pip_armor' },
+  { id: 'liwanag', name: 'Liwanag', desc: 'Fill your lamp', cost: 8, icon: 'items_energy_orb' },
+  { id: 'reroll', name: 'Ibang Diwata', desc: 'Ask other gods', cost: 4, icon: 'ui_star' },
+];
 
 export interface BoonDef {
   id: BoonId;

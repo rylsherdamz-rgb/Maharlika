@@ -40,6 +40,8 @@ noise.
 | Balangay boats of Butuan (from about 320 CE); "barangay" from "balangay" | **History** | |
 | Maharlika as the Tagalog freeborn warrior class | **History** | Precolonial social class. |
 | Baybayin script; putong, salakot, tapis, kampilan, kalasag, sumpit, pana, agung | **History / material culture** | Precolonial clothing, weapons and instruments. |
+| Piloncitos, small precolonial gold pieces used as money | **History** | Archaeological finds; used as the game's currency. |
+| Agung (bossed gong) | **Material culture** | Gong ensembles of the southern islands; on the shore, ringing one stuns the Bakunawa. |
 | Babaylan (Visayan) and mananambal (Siquijor folk healers) | **History / living tradition** | |
 | Mount Banahaw as a sacred mountain; Mayon in Albay; Ibalong as the old epic name of Bicol | **Real places and epic** | |
 | Maharlika never being colonized | **Invented** | The game's "what if". |
@@ -66,6 +68,26 @@ then the **balangay** sails on.
 The prologue (6 panels) runs: Mactan 1521 → Maharlika today → the seven moons → Haliya →
 the moon bleeds → the four are called. The ending (2 panels plus epilogue) runs: the noise on
 the shore → dawn over Mayon → the hero's own epilogue.
+
+## The noise, in play
+
+The eclipse myth is the boss fight. Three **agung** stand on the shore of Albay. Walk into one,
+strike it, or shoot it and it rings: the Bakunawa is stunned (**tulig**), its shots scatter, its
+brood is hurt, and for a moment it takes double damage. Each gong needs time before it rings
+again. Below a third of its health the serpent starts to sink into the surf (**lumulubog**), swims
+under you and bursts out in a ring of shots; a red and gold ring on the sand warns where. A gong
+drives it straight back up.
+
+## Piloncitos and the alay
+
+Creatures drop **piloncitos**. At a dambana, next to the three blessings, you can leave an
+**alay** (offering): an herb (heal 2), an anting-anting (mend all amulets), liwanag (fill the
+lamp), or ask for different gods (new blessing cards).
+
+## Mabangis creatures
+
+From Siquijor on, some creatures come **mabangis** (fierce), ringed in gold: tougher, faster,
+quicker to shoot, and carrying three times the piloncitos and a likely herb.
 
 ## The four maharlika (invented characters, real roles)
 

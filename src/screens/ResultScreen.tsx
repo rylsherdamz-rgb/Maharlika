@@ -2,30 +2,30 @@ import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { BoonId, BOONS, HeroId } from '../game/data';
 import { DEFEAT_LINES } from '../game/story';
+import { fmtTime, RunOutcome } from '../lib/records';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
 export interface RunStats {
   hero: HeroId;
   victory: boolean;
   stage: string;
+  stageNum: number; // 0 = Tondo ... 5 = Albay
   kills: number;
+  gongs: number;
+  spent: number;
   coins: number;
   time: number;
   boons: BoonId[];
 }
 
-function fmtTime(s: number) {
-  const m = Math.floor(s / 60);
-  const r = Math.floor(s % 60);
-  return `${m}:${r.toString().padStart(2, '0')}`;
-}
-
 export default function ResultScreen({
   stats,
+  outcome,
   onRetry,
   onMenu,
 }: {
   stats: RunStats;
+  outcome?: RunOutcome;
   onRetry: () => void;
   onMenu: () => void;
 }) {
@@ -35,9 +35,14 @@ export default function ResultScreen({
   const rows: [ImgKey, string, string][] = [
     ['ui_moon', 'REACHED', stats.stage],
     ['ui_skull', 'BANISHED', `${stats.kills}`],
-    ['items_coin', 'BARYA', `${stats.coins}`],
+    ['items_coin', 'PILONCITO', stats.spent > 0 ? `${stats.coins} (+${stats.spent} offered)` : `${stats.coins}`],
     ['ui_gem', 'TIME', fmtTime(stats.time)],
   ];
+  if (stats.gongs > 0) rows.push(['deco_agung', 'GONGS RUNG', `${stats.gongs}`]);
+  const badges: string[] = [];
+  if (outcome?.firstWin) badges.push('FIRST VICTORY!');
+  else if (outcome?.newBestTime) badges.push('NEW BEST TIME!');
+  if (!stats.victory && outcome?.furtherThanEver) badges.push('FURTHEST YET!');
   return (
     <View style={styles.root}>
       <CoverImage name={stats.victory ? 'screen_victory_bg' : 'screen_gameover_bg'} />
@@ -54,6 +59,11 @@ export default function ResultScreen({
           style={!stats.victory ? { transform: [{ rotate: '90deg' }], opacity: 0.8 } : undefined}
         />
         <Panel style={styles.panel}>
+          {badges.map((b) => (
+            <PixelText key={b} size={10} color={COLORS.gold} style={{ marginBottom: 4, opacity: t % 4 === 0 ? 0.7 : 1 }}>
+              {b}
+            </PixelText>
+          ))}
           {rows.map(([icon, label, value]) => (
             <View key={label} style={styles.row}>
               <Sprite name={icon} size={16} />

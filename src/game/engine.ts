@@ -3,12 +3,16 @@ import {
   BoonId,
   BOONS,
   BulletSprite,
+  ELITE,
   ENEMIES,
   EnemyType,
   HEROES,
   HeroDef,
   HeroId,
+  GONG,
   LIGHT_MAX,
+  OFFERINGS,
+  OfferingId,
   WEAPONS,
 } from './data';
 import { bossDialogue, DialogueLine, HALIYA_LINES, PORT, SHORE, STAGES } from './story';
@@ -23,6 +27,12 @@ const WATER = 4;
 const ENTRY = { x: 2.5 * TILE, y: 7.5 * TILE };
 const CENTER = { x: 11.5 * TILE, y: 7.5 * TILE };
 const DOCK = { x: 20.5 * TILE, y: 7.5 * TILE };
+/** Where the agung stand on the shore of Albay (tile coordinates, all on sand). */
+const GONG_TILES: [number, number][] = [
+  [6, 3],
+  [8, 10],
+  [13, 11],
+];
 
 export interface Mods {
   dmg: number;
@@ -77,7 +87,23 @@ export interface Enemy {
   facing: 1 | -1;
   poison: number;
   poisonTick: number;
+  elite: boolean;
+  stun: number; // >0 while stunned by a gong
+  dive: number; // >0 while the Bakunawa is under the sand and water
+  diveCd: number;
 }
+
+/** An agung on the shore of Albay. Ring it to stun the Bakunawa. */
+export interface Gong {
+  id: number;
+  x: number;
+  y: number;
+  cd: number; // seconds until it can ring again
+  ring: number; // >0 while the ring effect is showing
+}
+
+/** Things the screen reacts to (haptics, flashes). Drained every frame. */
+export type GameEvent = 'hurt' | 'gong' | 'skill' | 'elite' | 'boon' | 'buy' | 'surface';
 
 export interface Bullet {
   id: number;
@@ -131,6 +157,10 @@ export interface Game {
   shrine: { x: number; y: number; used: boolean } | null;
   choice: BoonId[] | null;
   boons: BoonId[];
+  gongs: Gong[];
+  gongsRung: number;
+  events: GameEvent[];
+  spent: number;
   boat: { x: number; y: number } | null;
   route: RoomName[];
   stage: number;
@@ -198,6 +228,10 @@ export function newGame(heroId: HeroId): Game {
     shrine: null,
     choice: null,
     boons: [],
+    gongs: [],
+    gongsRung: 0,
+    events: [],
+    spent: 0,
     boat: null,
     route,
     stage: 0,
@@ -230,6 +264,7 @@ function enterRoom(g: Game, stage: number) {
   g.shrine = null;
   g.boat = null;
   g.npc = null;
+  g.gongs = [];
   h.x = ENTRY.x;
   h.y = ENTRY.y;
   h.spin = h.swing = h.dash = 0;
@@ -248,6 +283,7 @@ function enterRoom(g: Game, stage: number) {
     g.banner = { text: SHORE.title, baybayin: SHORE.baybayin, sub: SHORE.line, t: 3 };
     g.dialog = { lines: bossDialogue(h.def.id), i: 0 };
     spawnEnemy(g, 'bakunawa', 17 * TILE, 7 * TILE);
+    for (const [tx, ty] of GONG_TILES) g.gongs.push({ id: g.nextId++, x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, cd: 0, ring: 0 });
     g.wave = 1;
   } else {
     g.waves = 2;
@@ -313,10 +349,11 @@ function randomFloor(g: Game, minDistFromHero: number) {
 }
 
 // ---------------------------------------------------------------- spawning
-function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
+function spawnEnemy(g: Game, type: EnemyType, x: number, y: number, canBeElite = false) {
   const def = ENEMIES[type];
   const scale = 1 + (g.stage - 1) * 0.15;
-  const hp = type === 'bakunawa' ? def.hp : Math.round(def.hp * scale);
+  const elite = canBeElite && g.stage >= 2 && Math.random() < 0.05 * g.stage;
+  const hp = type === 'bakunawa' ? def.hp : Math.round(def.hp * scale * (elite ? ELITE.hp : 1));
   g.enemies.push({
     id: g.nextId++,
     type,
@@ -331,7 +368,21 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
     facing: -1,
     poison: 0,
     poisonTick: 0,
+    elite,
+    stun: 0,
+    dive: 0,
+    diveCd: 4,
   });
+}
+
+/** Can this creature be hit right now? Not while rising from the ground or under the water. */
+export function targetable(e: Enemy) {
+  return e.spawn <= 0 && e.dive <= 0 && e.hp > 0;
+}
+
+/** Drawn size of a creature in world pixels. */
+export function enemySize(e: Enemy) {
+  return ENEMIES[e.type].size * (e.elite ? ELITE.size : 1);
 }
 
 function spawnWave(g: Game) {
@@ -340,7 +391,7 @@ function spawnWave(g: Game) {
   const n = 3 + g.stage + (g.wave - 1);
   for (let i = 0; i < n; i++) {
     const p = randomFloor(g, 90);
-    spawnEnemy(g, pick(pool), p.x, p.y);
+    spawnEnemy(g, pick(pool), p.x, p.y, true);
   }
 }
 
@@ -382,6 +433,7 @@ function hurtHero(g: Game, dmg: number) {
   h.sinceHit = 0;
   g.shake = 0.25;
   addText(g, h.x, h.y - 10, `-${dmg}`, left > 0 ? '#ff5a5a' : '#82eed6');
+  g.events.push('hurt');
   if (h.hp <= 0) {
     h.hp = 0;
     g.result = 'dead';
@@ -390,26 +442,33 @@ function hurtHero(g: Game, dmg: number) {
 
 function damageEnemy(g: Game, e: Enemy, dmg: number) {
   if (e.hp <= 0) return;
-  const d = Math.round(dmg * g.hero.mods.dmg * 10) / 10;
+  const stunned = e.type === 'bakunawa' && e.stun > 0 ? GONG.stunnedDamage : 1;
+  const d = Math.round(dmg * g.hero.mods.dmg * stunned * 10) / 10;
   e.hp -= d;
   e.flash = 0.1;
-  g.hero.light = Math.min(LIGHT_MAX, g.hero.light + d * 1.3);
-  addText(g, e.x, e.y - 10, `${Math.round(d)}`, '#ffffff');
+  // the serpent is vast: striking it fills the lamp slowly, so skills cannot chain off it
+  g.hero.light = Math.min(LIGHT_MAX, g.hero.light + d * (e.type === 'bakunawa' ? 0.45 : 1.3));
+  addText(g, e.x, e.y - 10, `${Math.round(d)}`, stunned > 1 ? '#ffe882' : '#ffffff');
   if (e.hp <= 0) killEnemy(g, e);
 }
 
 function killEnemy(g: Game, e: Enemy) {
   g.kills++;
   const def = ENEMIES[e.type];
-  for (let i = 0; i < def.coins; i++) dropPickup(g, 'coin', e.x, e.y);
-  const orbs = e.type === 'bakunawa' ? 10 : 1 + Math.floor(Math.random() * 2);
+  const coins = def.coins * (e.elite ? ELITE.coins : 1);
+  for (let i = 0; i < coins; i++) dropPickup(g, 'coin', e.x, e.y);
+  const orbs = e.type === 'bakunawa' ? 10 : 1 + Math.floor(Math.random() * 2) + (e.elite ? 3 : 0);
   for (let i = 0; i < orbs; i++) dropPickup(g, 'energy_orb', e.x, e.y);
-  if (Math.random() < 0.06 + g.hero.mods.herbs) dropPickup(g, 'potion_health', e.x, e.y);
+  if (Math.random() < (e.elite ? 0.5 : 0.06) + g.hero.mods.herbs) dropPickup(g, 'potion_health', e.x, e.y);
+  if (e.elite) {
+    addText(g, e.x, e.y - 18, 'MABANGIS!', '#ffba48');
+    g.events.push('elite');
+  }
 }
 
 // ---------------------------------------------------------------- blessings
-function boonOptions(g: Game): BoonId[] {
-  const left = (Object.keys(BOONS) as BoonId[]).filter((b) => !g.boons.includes(b));
+function boonOptions(g: Game, exclude: BoonId[] = []): BoonId[] {
+  const left = (Object.keys(BOONS) as BoonId[]).filter((b) => !g.boons.includes(b) && !exclude.includes(b));
   const out: BoonId[] = [];
   while (out.length < 3 && left.length) out.push(left.splice(Math.floor(Math.random() * left.length), 1)[0]);
   return out;
@@ -453,6 +512,49 @@ export function chooseBoon(g: Game, id: BoonId) {
       break;
   }
   addText(g, h.x, h.y - 14, BOONS[id].deity.toUpperCase(), '#ffe882');
+  g.events.push('boon');
+}
+
+/** Spend piloncitos on an alay (offering) at the dambana. Returns false if it can't be bought. */
+export function buyOffering(g: Game, id: OfferingId) {
+  const o = OFFERINGS.find((x) => x.id === id)!;
+  const h = g.hero;
+  if (!g.choice || g.coins < o.cost || !offeringUseful(g, id)) return false;
+  g.coins -= o.cost;
+  g.spent += o.cost;
+  switch (id) {
+    case 'herb':
+      h.hp = Math.min(h.maxHp, h.hp + 2);
+      break;
+    case 'anting':
+      h.armor = h.maxArmor;
+      break;
+    case 'liwanag':
+      h.light = LIGHT_MAX;
+      break;
+    case 'reroll': {
+      const fresh = boonOptions(g, g.choice);
+      if (fresh.length) g.choice = fresh;
+      break;
+    }
+  }
+  g.events.push('buy');
+  return true;
+}
+
+/** False when buying it would do nothing (already at full health, etc.). */
+export function offeringUseful(g: Game, id: OfferingId) {
+  const h = g.hero;
+  switch (id) {
+    case 'herb':
+      return h.hp < h.maxHp;
+    case 'anting':
+      return h.armor < h.maxArmor;
+    case 'liwanag':
+      return h.light < LIGHT_MAX;
+    case 'reroll':
+      return !!g.choice && boonOptions(g, g.choice).length > 0;
+  }
 }
 
 /** Moves the open dialogue on by one line; closes it after the last. */
@@ -479,6 +581,7 @@ export function update(g: Game, input: Input, dt: number) {
   updateEnemies(g, dt);
   updateBullets(g, dt);
   updatePickups(g, dt);
+  updateGongs(g, dt);
   if (g.npc) {
     g.npc.talking = dist(g.hero.x, g.hero.y, g.npc.x, g.npc.y) < 36;
     if (g.npc.talking) g.npc.line = HALIYA_LINES[Math.floor(g.time / 4) % HALIYA_LINES.length];
@@ -516,7 +619,7 @@ function nearestTarget(g: Game) {
   let best: Enemy | null = null;
   let bd = 190;
   for (const e of g.enemies) {
-    if (e.spawn > 0) continue;
+    if (!targetable(e)) continue;
     const d = dist(h.x, h.y, e.x, e.y);
     if (d < bd && lineOfSight(g, h.x, h.y + 2, e.x, e.y)) {
       bd = d;
@@ -538,13 +641,16 @@ function slash(g: Game, aim: number, reach: number, arc: number, dmg: number) {
   const h = g.hero;
   const cy = h.y + 3;
   for (const e of g.enemies) {
-    if (e.spawn > 0 || e.hp <= 0) continue;
+    if (!targetable(e)) continue;
     const d = dist(h.x, cy, e.x, e.y);
     if (d < reach + ENEMIES[e.type].radius && angleDiff(Math.atan2(e.y - cy, e.x - h.x), aim) < arc) damageEnemy(g, e, dmg);
   }
   for (const b of g.bullets) {
     if (b.fromHero) continue;
     if (dist(h.x, cy, b.x, b.y) < reach + 6 && angleDiff(Math.atan2(b.y - cy, b.x - h.x), aim) < arc) b.life = 0;
+  }
+  for (const gong of g.gongs) {
+    if (dist(h.x, cy, gong.x, gong.y) < reach + 6 && angleDiff(Math.atan2(gong.y - cy, gong.x - h.x), aim) < arc) ringGong(g, gong);
   }
 }
 
@@ -626,6 +732,7 @@ function updateHero(g: Game, input: Input, dt: number) {
 function useSkill(g: Game, mx: number, my: number) {
   const h = g.hero;
   h.light = 0;
+  g.events.push('skill');
   switch (h.def.id) {
     case 'kidlat':
       slash(g, 0, 46 * h.mods.reach, Math.PI + 0.01, 14);
@@ -723,9 +830,14 @@ function updateEnemies(g: Game, dt: number) {
       }
     }
     if (e.hp <= 0) continue;
+    if (e.stun > 0) {
+      e.stun -= dt;
+      continue;
+    }
     e.t += dt;
-    e.cd -= dt;
-    const def = ENEMIES[e.type];
+    e.cd -= dt * (e.elite ? 1 / ELITE.fireRate : 1);
+    const base = ENEMIES[e.type];
+    const def = e.elite ? { ...base, speed: base.speed * ELITE.speed } : base;
     const dx = h.x - e.x;
     const dy = h.y - e.y;
     const d = Math.hypot(dx, dy) || 1;
@@ -768,7 +880,7 @@ function updateEnemies(g: Game, dt: number) {
         updateBoss(g, e, ux, uy, d, aim, dt);
         break;
     }
-    if (d < def.radius + 5) hurtHero(g, def.contact);
+    if (e.dive <= 0 && d < def.radius + 5) hurtHero(g, def.contact);
   }
   g.enemies = g.enemies.filter((e) => e.hp > 0);
 }
@@ -776,6 +888,30 @@ function updateEnemies(g: Game, dt: number) {
 function updateBoss(g: Game, e: Enemy, ux: number, uy: number, d: number, aim: number, dt: number) {
   const def = ENEMIES.bakunawa;
   const enraged = e.hp < e.maxHp / 2;
+  const desperate = e.hp < e.maxHp * 0.3;
+
+  // phase three: it sinks into the surf, swims under the hero and bursts out
+  if (e.dive > 0) {
+    e.dive -= dt;
+    moveBody(g, e, ux * 95 * dt, uy * 95 * dt, 10);
+    if (e.dive <= 0) {
+      for (let i = 0; i < 20; i++) shoot(g, e.x, e.y, (i / 20) * Math.PI * 2 + e.t, 80, 1, false, 'shot_enemy', 3);
+      g.shake = 0.35;
+      g.events.push('surface');
+      e.cd = 1.2;
+      e.diveCd = 7;
+    }
+    return;
+  }
+  if (desperate) {
+    e.diveCd -= dt;
+    if (e.diveCd <= 0 && e.cd <= 0) {
+      e.dive = DIVE_TIME;
+      g.bullets = g.bullets.filter((b) => b.fromHero);
+      addText(g, e.x, e.y - 20, 'LUMULUBOG!', '#ff8a7a');
+      return;
+    }
+  }
   const want = d > 90 ? 1 : d < 50 ? -0.6 : 0.2;
   const side = Math.sin(e.t * 0.8);
   moveBody(g, e, (ux * want - uy * side) * def.speed * dt, (uy * want + ux * side) * def.speed * dt, 10);
@@ -802,6 +938,43 @@ function updateBoss(g: Game, e: Enemy, ux: number, uy: number, d: number, aim: n
   }
 }
 
+export const DIVE_TIME = 1.8;
+
+// ---------------------------------------------------------------- the agung
+/** The people's noise: stun the Bakunawa, scatter its shots, hurt its brood. */
+function ringGong(g: Game, gong: Gong) {
+  if (gong.cd > 0) return;
+  gong.cd = GONG.recharge;
+  gong.ring = 0.6;
+  g.gongsRung++;
+  g.shake = Math.max(g.shake, 0.2);
+  g.bullets = g.bullets.filter((b) => b.fromHero);
+  addText(g, gong.x, gong.y - 14, 'GONG!', '#ffe882');
+  for (const e of g.enemies) {
+    if (e.type === 'bakunawa') {
+      if (e.dive > 0) {
+        e.dive = 0; // the noise drives it up out of the water
+        e.diveCd = 7;
+      }
+      e.stun = GONG.stun;
+      addText(g, e.x, e.y - 22, 'TULIG!', '#ffe882');
+    } else if (targetable(e)) {
+      damageEnemy(g, e, 4);
+    }
+  }
+  if (g.gongsRung === 1) g.banner = { text: 'THE PEOPLE ANSWER', sub: 'Every gong on the coast rings with yours.', t: 2.2 };
+  g.events.push('gong');
+}
+
+function updateGongs(g: Game, dt: number) {
+  const h = g.hero;
+  for (const gong of g.gongs) {
+    gong.cd = Math.max(0, gong.cd - dt);
+    gong.ring = Math.max(0, gong.ring - dt);
+    if (dist(h.x, h.y + 3, gong.x, gong.y) < 13) ringGong(g, gong);
+  }
+}
+
 function updateBullets(g: Game, dt: number) {
   const h = g.hero;
   for (const b of g.bullets) {
@@ -813,8 +986,15 @@ function updateBullets(g: Game, dt: number) {
       continue;
     }
     if (b.fromHero) {
+      for (const gong of g.gongs) {
+        if (gong.cd <= 0 && dist(b.x, b.y, gong.x, gong.y) < 7 + b.r) {
+          ringGong(g, gong);
+          if (!b.pierce) b.life = 0;
+        }
+      }
+      if (b.life <= 0) continue;
       for (const e of g.enemies) {
-        if (e.spawn > 0 || e.hp <= 0 || b.hit?.has(e.id)) continue;
+        if (!targetable(e) || b.hit?.has(e.id)) continue;
         if (dist(b.x, b.y, e.x, e.y) < ENEMIES[e.type].radius + b.r) {
           damageEnemy(g, e, b.dmg);
           if (b.poison) {

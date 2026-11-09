@@ -237,7 +237,7 @@ export const CREATURE_BIOS: Record<EnemyType, Bio> = {
     epithet: 'Eater of moons',
     sprite: 'enemies_bakunawa_0',
     portrait: 'portraits_bakunawa',
-    facts: [['Found', 'The sea off Albay'], ['Moons eaten', 'Six of seven']],
+    facts: [['Found', 'The sea off Albay'], ['Moons eaten', 'Six of seven'], ['Weakness', 'Noise: ring the agung']],
     story: [
       'A gigantic sea serpent believed to cause eclipses by swallowing the moon. In the Visayan telling, Bathala made seven moons and the Bakunawa swallowed six. People banged pots, pans and gongs to make it spit the moon back out.',
       'In Bicol, its great enemy is Haliya. Some versions say the serpent fell in love with the moons.',
@@ -283,6 +283,31 @@ export const WORLD_BIOS: Bio[] = [
     ],
   },
   {
+    id: 'agung',
+    name: 'The Agung',
+    epithet: 'Gongs of the shore',
+    sprite: 'deco_agung',
+    portrait: 'story_07_noise',
+    facts: [['What', 'Large hanging bossed gong'], ['Played in', 'Mindanao, Sulu and Palawan'], ['In the game', 'Stuns the Bakunawa']],
+    story: [
+      'The agung is a wide-rimmed bronze gong with a raised boss in the middle, played in the gong ensembles of the southern islands. Gongs were traded and treasured across the archipelago long before 1521.',
+      'When the Bakunawa rose, the old stories say, people beat gongs, pots and pans to drive it off. On the shore of Albay, every gong you strike is answered by a thousand more along the coast, and the serpent reels.',
+    ],
+    source: 'Material culture; Visayan and Bicolano eclipse lore',
+  },
+  {
+    id: 'piloncitos',
+    name: 'Piloncitos',
+    epithet: 'Tiny gold of the islands',
+    sprite: 'items_coin',
+    facts: [['Made', 'About the 9th to 16th centuries'], ['Size', 'Often smaller than a corn kernel'], ['In the game', 'Offered at a dambana']],
+    story: [
+      'Piloncitos are tiny bead-like pieces of gold, many stamped with a single character, found across the precolonial islands and often counted among the earliest money used there.',
+      'In Maharlika they never stopped being minted. Creatures of the night hoard them, and at a dambana you may leave them as an alay, an offering, in return for medicine, mended amulets, light, or the attention of a different god.',
+    ],
+    source: 'History (archaeological finds)',
+  },
+  {
     id: 'baybayin',
     name: 'Baybayin',
     epithet: 'The old script',
@@ -318,6 +343,9 @@ export const HALIYA_LINES = [
   'Catch the alitaptap. Their light fills your lamp, and a full lamp wakes your power.',
   'When the shots fly thick, dodge. Your amulets take the first blows, then mend.',
   'At each dambana, one of the old gods will bless you. Choose well.',
+  'Keep the piloncitos the creatures drop. The gods accept an alay.',
+  'Some creatures come fiercer than the rest, ringed in gold. Mabangis. They carry more.',
+  'On the shore of Albay, ring the agung. The serpent cannot bear the noise.',
 ];
 
 export interface DialogueLine {

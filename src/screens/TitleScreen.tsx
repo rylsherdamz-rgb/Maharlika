@@ -1,9 +1,21 @@
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { HEROES } from '../game/data';
+import { Records } from '../lib/records';
 import { CoverImage, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
-export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: () => void; onStory: () => void; onCodex: () => void }) {
+export default function TitleScreen({
+  records,
+  onStart,
+  onStory,
+  onCodex,
+}: {
+  records: Records;
+  onStart: () => void;
+  onStory: () => void;
+  onCodex: () => void;
+}) {
+  const wins = Object.values(records.heroes).reduce((n, h) => n + h.wins, 0);
   const { width, height } = useWindowDimensions();
   const t = useTicker(120);
   const logoW = Math.min(width * 0.52, 470);
@@ -28,14 +40,21 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
       {/* heroes marching across the bottom */}
       <View style={[styles.parade, { bottom: height * 0.11 }]}>
         {HEROES.map((h, i) => (
-          <Sprite
-            key={h.id}
-            name={`heroes_${h.id}_${(t + i) % 2}` as ImgKey}
-            size={Math.min(64, height * 0.14)}
-            style={{ marginHorizontal: 6 }}
-          />
+          <View key={h.id} style={{ alignItems: 'center', marginHorizontal: 6 }}>
+            {/* a star over every maharlika who has saved the moon */}
+            <View style={{ height: 14 }}>{records.heroes[h.id].wins > 0 && <Sprite name="ui_star" size={14} />}</View>
+            <Sprite name={`heroes_${h.id}_${(t + i) % 2}` as ImgKey} size={Math.min(64, height * 0.14)} />
+          </View>
         ))}
       </View>
+      {wins > 0 && (
+        <View style={styles.tally} pointerEvents="none">
+          <Sprite name="ui_moon" size={16} />
+          <PixelText size={8} color="#ffe882" style={{ marginLeft: 4 }}>
+            {`MOON SAVED ×${wins}`}
+          </PixelText>
+        </View>
+      )}
       <View style={[styles.tap, { bottom: height * 0.03 }]}>
         {t % 8 < 5 && <PixelText size={12} color="#ffba48">TAP TO SET SAIL</PixelText>}
       </View>
@@ -48,5 +67,6 @@ const styles = StyleSheet.create({
   logoWrap: { position: 'absolute', left: 24, width: '55%', alignItems: 'center' },
   parade: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', justifyContent: 'center' },
   tap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  tally: { position: 'absolute', right: 16, top: 12, flexDirection: 'row', alignItems: 'center' },
   menu: { position: 'absolute', left: 24, bottom: 16, flexDirection: 'row', gap: 8 },
 });

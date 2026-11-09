@@ -25,6 +25,14 @@ it is folklore, history or invented for the game.
   (piercing spirit orbs), sumpit (poison darts).
 - **Dodge roll** for everyone; **skills charge with light** from fighting and catching fireflies.
 - **Health beads and amulets:** amulets (anting-anting) absorb hits and recharge.
+- **Piloncitos and the alay:** creatures drop precolonial gold; at a dambana, offer it for an herb,
+  mended amulets, a full lamp, or a different set of gods.
+- **Mabangis creatures:** from Siquijor on, some foes come fierce and ringed in gold, with richer drops.
+- **The noise:** on the shore of Albay, ring the three **agung** (walk into, strike or shoot them) to
+  stun the Bakunawa and double your damage. Below a third of its health it dives into the surf and
+  bursts out under you; watch for the ring on the sand.
+- **Records:** wins, best times and furthest island are saved per hero (stars on the title and select
+  screens). Haptic feedback on Android and iOS.
 
 | Hero | From | Weapon | Skill |
 |---|---|---|---|
@@ -47,7 +55,8 @@ and the **Kwento** codex (Maharlika · Creatures · The Gods · The World) with 
 | Sun | Skill, when your light is full |
 | Cards at a dambana | Choose a blessing |
 
-Web build: `WASD` move, `Space` attack, `Shift` dodge, `K` skill, `1-3` choose a blessing, `Esc` pause.
+Web build: `WASD` move, `Space` attack, `Shift` dodge, `K` skill, `1-3` choose a blessing,
+`4-7` buy an offering, `Esc` pause (shows your blessings).
 
 ## Running it
 
@@ -85,6 +94,8 @@ src/game/data.ts           heroes, weapons, creatures, the gods' blessings
 src/game/story.ts          all story text, bios with sources, island names in Baybayin
 src/game/engine.ts         simulation: islands, melee and ranged combat, dodge, light, blessings, AI
 src/screens/               Title, Story, Codex, Select, Game, Result
+src/lib/records.ts         saved records (AsyncStorage)
+src/lib/haptics.ts         haptic feedback for game events
 src/ui.tsx                 palette, pixel and Baybayin text, buttons, panels
 tools/generate_assets.py   all art
 docs/STORY.md              story bible and sources

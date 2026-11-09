@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { HEROES, HeroId, WEAPONS } from '../game/data';
+import { STAGES } from '../game/story';
+import { fmtTime, Records } from '../lib/records';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
+
+const titleCase = (t: string) => t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+/** Island names by stage number, for "furthest reached". */
+const PLACES = ['Tondo', ...STAGES.map((st) => titleCase(st.title)), 'Albay'];
 
 function StatRow({ icon, value, color }: { icon: ImgKey; value: number; color: string }) {
   return (
@@ -16,10 +22,12 @@ function StatRow({ icon, value, color }: { icon: ImgKey; value: number; color: s
 }
 
 export default function SelectScreen({
+  records,
   onBack,
   onPick,
   onStory,
 }: {
+  records: Records;
   onBack: () => void;
   onPick: (id: HeroId) => void;
   onStory: (id: HeroId) => void;
@@ -28,6 +36,7 @@ export default function SelectScreen({
   const [sel, setSel] = useState<HeroId>('kidlat');
   const t = useTicker(180);
   const hero = HEROES.find((h) => h.id === sel)!;
+  const rec = records.heroes[sel];
   const cardW = Math.min(130, (width * 0.55) / 4);
   const spriteSize = Math.min(cardW - 16, height * 0.2);
 
@@ -47,6 +56,7 @@ export default function SelectScreen({
                   color={active ? h.color : COLORS.edge}
                   style={[styles.card, { width: cardW }, active && { transform: [{ translateY: -6 }] }]}
                 >
+                  {records.heroes[h.id].wins > 0 && <Sprite name="ui_star" size={12} style={styles.cardStar} />}
                   <Sprite name={`heroes_${h.id}_${active ? t % 2 : 0}` as ImgKey} size={spriteSize} />
                   <PixelText size={8} color={active ? h.color : COLORS.dim} style={{ marginTop: 4 }}>
                     {h.name.toUpperCase()}
@@ -81,6 +91,13 @@ export default function SelectScreen({
               </PixelText>
             </View>
           </View>
+          {rec.runs > 0 && (
+            <PixelText size={6} color={COLORS.light} shadow={false} style={{ marginBottom: 6 }}>
+              {rec.wins > 0
+                ? `Moon saved ×${rec.wins} · best ${fmtTime(rec.bestTime ?? 0)}`
+                : `${rec.runs} voyage${rec.runs > 1 ? 's' : ''} · furthest: ${PLACES[rec.furthest]}`}
+            </PixelText>
+          )}
           <View style={styles.weapons}>
             <View style={[styles.weapon, { flexDirection: 'row', gap: 8 }]}>
               <Sprite name={`weapons_${hero.weapon}` as ImgKey} size={32} />
@@ -112,6 +129,7 @@ const styles = StyleSheet.create({
   cards: { flexDirection: 'row', alignItems: 'flex-end', marginRight: 16 },
   card: { alignItems: 'center', marginHorizontal: 4, paddingHorizontal: 4 },
   info: {},
+  cardStar: { position: 'absolute', top: 4, right: 4 },
   statLine: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   stat: { flexDirection: 'row', alignItems: 'center' },
   skill: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
