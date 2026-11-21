@@ -12,6 +12,10 @@ export interface RunStats {
   coins: number;
   time: number;
   boons: BoonId[];
+  /** Stage index reached (0 = Tondo). */
+  reached: number;
+  /** Set by the app once the run is recorded. */
+  newBest?: boolean;
 }
 
 function fmtTime(s: number) {
@@ -54,6 +58,11 @@ export default function ResultScreen({
           style={!stats.victory ? { transform: [{ rotate: '90deg' }], opacity: 0.8 } : undefined}
         />
         <Panel style={styles.panel}>
+          {stats.newBest && (
+            <PixelText size={9} color={COLORS.gold} style={{ marginBottom: 4 }}>
+              {stats.victory ? 'NEW RECORD!' : 'FURTHEST YET!'}
+            </PixelText>
+          )}
           {rows.map(([icon, label, value]) => (
             <View key={label} style={styles.row}>
               <Sprite name={icon} size={16} />
