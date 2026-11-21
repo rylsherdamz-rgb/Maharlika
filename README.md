@@ -28,6 +28,12 @@ it is folklore, history or invented for the game.
 - **Kulintang soundtrack:** gong-chime music for the port, the islands and the serpent, plus effects for
   every swing, shot, hit and blessing. Music and sound toggle on the title screen and in the pause menu.
 - **Your watch is remembered:** best island reached and dawns won per hero, shown on the select screen.
+- **Mini-bosses:** the Aswang guards Siquijor and Rabot (from the Ibalong epic) guards the Ibalong forests;
+  the Bakunawa has a last phase, *Lamon*. New creatures: the Sigbin and the Tiyanak.
+- **Alay:** barya carries over between runs; offer it to unlock four more gods (Hanan, Amanikable,
+  Idiyanale, Bathala) and alternate colors for each hero. Win once to open **Pulang Buwan** (red moon) mode.
+- **Tagalog or English:** every menu, story panel and codex entry. Filipino-language phones start in Tagalog.
+- **First-run tutorial** on the Tondo dock, vibration, left-handed controls, notch-safe layout.
 
 | Hero | From | Weapon | Skill |
 |---|---|---|---|
@@ -50,6 +56,8 @@ and the **Kwento** codex (Maharlika · Creatures · The Gods · The World) with 
 | Sun | Skill, when your light is full |
 | Cards at a dambana | Choose a blessing |
 | Android back | Pause in a run, step back in menus |
+
+Settings (title screen): language, music, sound, vibration, left- or right-handed controls, replay the tutorial.
 
 Web build: `WASD` move, `Space` attack, `Shift` dodge, `K` skill, `1-3` choose a blessing, `Esc` pause.
 
@@ -104,7 +112,8 @@ src/game/story.ts          all story text, bios with sources, island names in Ba
 src/game/engine.ts         simulation: islands, melee and ranged combat, dodge, light, blessings, AI
 src/screens/               Title, Story, Codex, Select, Game, Result
 src/audio.ts               sound effect pools, music, settings
-src/save.ts                saved settings and per-hero records (AsyncStorage)
+src/save.ts                saved settings, barya, unlocks and per-hero records (AsyncStorage)
+src/i18n.ts                Tagalog text, looked up by the English line
 src/ui.tsx                 palette, pixel and Baybayin text, buttons, panels
 tools/generate_assets.py   all art
 docs/STORY.md              story bible and sources

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { HEROES, HeroId, WEAPONS } from '../game/data';
+import { tr } from '../i18n';
 import { updateSave, useSave } from '../save';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
@@ -64,7 +65,7 @@ export default function SelectScreen({
             {hero.name.toUpperCase()}
           </PixelText>
           <PixelText size={7} color={COLORS.dim}>
-            {`${hero.title} · ${hero.home}`}
+            {`${tr(hero.title)} · ${hero.home}`}
           </PixelText>
           <PixelText size={6} color={COLORS.text} shadow={false} style={{ marginBottom: 8, opacity: 0.85 }}>
             {hero.lore}
@@ -76,10 +77,10 @@ export default function SelectScreen({
           {rec && (
             <View style={[styles.statLine, { marginTop: -4 }]}>
               <PixelText size={6} color={COLORS.dim} shadow={false}>
-                {`BEST: ${rec.bestLabel}`}
+                {tr('BEST: {x}', { x: tr(rec.bestLabel) })}
               </PixelText>
               <PixelText size={6} color={rec.wins > 0 ? COLORS.gold : COLORS.dim} shadow={false}>
-                {`DAWNS: ${rec.wins}/${rec.runs}`}
+                {tr('DAWNS: {x}/{y}', { x: rec.wins, y: rec.runs })}
               </PixelText>
             </View>
           )}
@@ -120,7 +121,7 @@ export default function SelectScreen({
           />
         )}
         <PixelButton label="BACK" onPress={onBack} color="#5a4a78" size={10} />
-        <PixelButton label={`${hero.name.toUpperCase()}'S STORY`} onPress={() => onStory(sel)} color="#5a4a78" size={10} style={{ marginLeft: 16 }} />
+        <PixelButton label={tr("{name}'S STORY", { name: hero.name.toUpperCase() })} onPress={() => onStory(sel)} color="#5a4a78" size={10} style={{ marginLeft: 16 }} />
         <PixelButton label="SET SAIL" onPress={() => onPick(sel)} color={hero.color} style={{ marginLeft: 16 }} />
       </View>
     </View>

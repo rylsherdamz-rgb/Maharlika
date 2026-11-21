@@ -19,6 +19,8 @@ export interface SaveData {
   wearing: HeroId[];
   hard: boolean;
   hardWins: number;
+  /** Attack buttons on the left, joystick on the right. */
+  lefty: boolean;
   runs: number;
   wins: number;
   kills: number;
@@ -61,6 +63,7 @@ const DEFAULTS: SaveData = {
   wearing: [],
   hard: false,
   hardWins: 0,
+  lefty: false,
   runs: 0,
   wins: 0,
   kills: 0,
@@ -79,6 +82,15 @@ function persist() {
   AsyncStorage.setItem(KEY, JSON.stringify(data)).catch(() => {});
 }
 
+function deviceLang(): 'en' | 'tl' {
+  try {
+    const loc = Intl.DateTimeFormat().resolvedOptions().locale.toLowerCase();
+    return loc.startsWith('fil') || loc.startsWith('tl') ? 'tl' : 'en';
+  } catch {
+    return 'en';
+  }
+}
+
 /** Reads the save once at startup. A missing or broken save starts fresh. */
 export async function loadSave() {
   try {
@@ -86,6 +98,9 @@ export async function loadSave() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.version === 1) data = { ...DEFAULTS, ...parsed, heroes: { ...parsed.heroes } };
+    } else {
+      // first launch: start in Tagalog on Filipino-language devices
+      data = { ...DEFAULTS, lang: deviceLang() };
     }
   } catch {
     data = { ...DEFAULTS };

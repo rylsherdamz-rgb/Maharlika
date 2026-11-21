@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState, BackHandler, GestureResponderEvent, Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { drainSfx, setMusic, syncMusic } from '../audio';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { tr } from '../i18n';
 import { updateSave, useSave } from '../save';
 import { BOONS, BOSSES, ENEMIES, HeroId, LIGHT_MAX, WEAPONS } from '../game/data';
 import { advanceDialog, chooseBoon, Game, Input, newGame, ROOM_H, ROOM_W, RunOptions, stageLabel, TutorialStep, update } from '../game/engine';
@@ -23,8 +25,9 @@ function Pips({ value, max, full, empty }: { value: number; max: number; full: I
   );
 }
 
-const TUTORIAL_TOUCH: Record<TutorialStep, string> = {
+const TUTORIAL_TOUCH: Record<TutorialStep | 'moveLefty', string> = {
   move: 'Drag on the left side of the screen to walk',
+  moveLefty: 'Drag on the right side of the screen to walk',
   attack: 'Hold the crossed blades to strike the practice duwende',
   dodge: 'Tap the wind to dodge roll through danger',
   skill: 'Your lamp is full! Tap the sun to use your skill',
@@ -38,6 +41,20 @@ const TUTORIAL_KEYS: Record<TutorialStep, string> = {
   sail: 'Well done. Board the balangay to sail',
 };
 
+function runStats(hero: HeroId, g: Game): RunStats {
+  return {
+    hero,
+    victory: g.result === 'victory',
+    stage: stageLabel(g),
+    reached: g.stage,
+    kills: g.kills,
+    coins: g.coins,
+    time: g.time,
+    boons: [...g.boons],
+    hard: g.hard,
+  };
+}
+
 export default function GameScreen({
   heroId,
   options = {},
@@ -47,7 +64,8 @@ export default function GameScreen({
   heroId: HeroId;
   options?: RunOptions;
   onEnd: (s: RunStats) => void;
-  onQuit: () => void;
+  /** Leaving mid-run still records the run (and keeps its barya). */
+  onQuit: (s: RunStats) => void;
 }) {
   const { width: W, height: H } = useWindowDimensions();
   const gameRef = useRef<Game>(null as unknown as Game);
@@ -63,15 +81,28 @@ export default function GameScreen({
   const endRef = useRef({ onEnd, done: false });
   endRef.current.onEnd = onEnd;
 
-  // controls layout (screen space)
-  const attackBtn = { x: W - 80, y: H - 80, r: 48 };
-  const dodgeBtn = { x: W - 178, y: H - 50, r: 30 };
-  const skillBtn = { x: W - 66, y: H - 182, r: 34 };
-  const pauseBtn = { x: W - 28, y: 26, r: 22 };
+  const [confirmQuit, setConfirmQuit] = useState(false);
+  const quit = () => {
+    if (endRef.current.done) return;
+    endRef.current.done = true;
+    onQuit(runStats(heroId, gameRef.current));
+  };
+  const ins = useSafeAreaInsets();
+  // controls layout (screen space), kept clear of notches; mirrored for left-handed play
+  const lefty = save.lefty;
+  const padL = Math.max(ins.left, 0);
+  const padR = Math.max(ins.right, 0);
+  const side = (fromRight: number) => (lefty ? padL + fromRight : W - padR - fromRight);
+  const attackBtn = { x: side(80), y: H - 80 - ins.bottom, r: 48 };
+  const dodgeBtn = { x: side(178), y: H - 50 - ins.bottom, r: 30 };
+  const skillBtn = { x: side(66), y: H - 182 - ins.bottom, r: 34 };
+  const pauseBtn = { x: W - padR - 28, y: 26 + ins.top, r: 22 };
+  const stickHome = lefty ? { right: 40 + padR } : { left: 40 + padL };
 
   const setPause = (p: boolean) => {
     pausedRef.current = p;
     setPaused(p);
+    if (!p) setConfirmQuit(false);
     if (p) {
       touches.clear();
       input.attack = false;
@@ -101,17 +132,7 @@ export default function GameScreen({
           endRef.current.done = true;
           setTimeout(
             () =>
-              endRef.current.onEnd({
-                hero: heroId,
-                victory: g.result === 'victory',
-                stage: stageLabel(g),
-                reached: g.stage,
-                kills: g.kills,
-                coins: g.coins,
-                time: g.time,
-                boons: [...g.boons],
-                hard: g.hard,
-              }),
+              endRef.current.onEnd(runStats(heroId, g)),
             g.result === 'victory' ? 1200 : 900,
           );
         }
@@ -197,7 +218,7 @@ export default function GameScreen({
       else if (hit(attackBtn, x, y)) c = 'attack';
       else if (hit(skillBtn, x, y)) c = 'skill';
       else if (hit(dodgeBtn, x, y)) c = 'dodge';
-      else if (x < W * 0.5 && ![...touches.values()].includes('stick')) c = 'stick';
+      else if ((lefty ? x > W * 0.5 : x < W * 0.5) && ![...touches.values()].includes('stick')) c = 'stick';
       if (!c) continue;
       touches.set(id, c);
       if (c === 'attack') input.attack = true;
@@ -377,6 +398,12 @@ export default function GameScreen({
       </View>
 
       {g.dark > 0.01 && <View pointerEvents="none" style={[styles.fill, { backgroundColor: `rgba(40,0,8,${0.35 * g.dark})` }]} />}
+      {h.hp <= 1 && !g.result && (
+        <View
+          pointerEvents="none"
+          style={[styles.fill, { borderWidth: 18, borderColor: `rgba(220,30,30,${0.25 + 0.2 * Math.sin(g.time * 6)})` }]}
+        />
+      )}
       {g.flash && <View pointerEvents="none" style={[styles.fill, { backgroundColor: g.flash.color, opacity: 0.45 * (g.flash.t / g.flash.max) }]} />}
       {g.banner && (
         <View pointerEvents="none" style={[styles.banner, { top: H * 0.26 }]}>
@@ -404,7 +431,7 @@ export default function GameScreen({
       )}
 
       {/* HUD: portrait medallion with bead rows */}
-      <View pointerEvents="none" style={styles.hud}>
+      <View pointerEvents="none" style={[styles.hud, { left: 8 + padL, top: 8 + ins.top }]}>
         <View style={styles.medal}>
           <Image source={IMG.ui_medallion} fadeDuration={0} style={styles.medalFrame} />
           <Image source={IMG[`portraits_${h.def.id}` as ImgKey]} fadeDuration={0} style={styles.medalPortrait} />
@@ -427,13 +454,13 @@ export default function GameScreen({
           )}
         </View>
       </View>
-      <View style={styles.topRight} pointerEvents="none">
+      <View style={[styles.topRight, { right: 8 + padR, top: 16 + ins.top }]} pointerEvents="none">
         <Sprite name="items_coin" size={20} />
         <PixelText size={10} color={COLORS.gold} style={{ marginRight: 14 }}>
           {g.coins}
         </PixelText>
         <PixelText size={9} style={{ marginRight: 52 }}>
-          {`${stageLabel(g)}  ${g.stage}/${g.route.length - 1}`}
+          {`${tr(stageLabel(g))}  ${g.stage}/${g.route.length - 1}`}
         </PixelText>
       </View>
       {button('ui_btn_pause', pauseBtn)}
@@ -456,7 +483,7 @@ export default function GameScreen({
           <Image source={IMG.ui_joystick_knob} fadeDuration={0} style={[styles.abs, { left: stick.kx - 26, top: stick.ky - 26, width: 52, height: 52 }]} />
         </>
       ) : (
-        <View pointerEvents="none" style={[styles.abs, { left: 40, bottom: 30, opacity: 0.3 }]}>
+        <View pointerEvents="none" style={[styles.abs, stickHome, { bottom: 30 + ins.bottom, opacity: 0.3 }]}>
           <Image source={IMG.ui_joystick_base} fadeDuration={0} style={{ width: 120, height: 120 }} />
         </View>
       )}
@@ -476,12 +503,12 @@ export default function GameScreen({
               />
             )}
             {g.tutorial === 'move' && !web && (
-              <View pointerEvents="none" style={[styles.abs, { left: 40, bottom: 30, width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: COLORS.gold, transform: [{ scale: pulse }] }]} />
+              <View pointerEvents="none" style={[styles.abs, stickHome, { bottom: 30 + ins.bottom, width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: COLORS.gold, transform: [{ scale: pulse }] }]} />
             )}
             <View pointerEvents="none" style={[styles.tutorial, { top: H * 0.16 }]}>
               <Panel style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
                 <PixelText size={9} color={COLORS.gold} style={{ textAlign: 'center' }}>
-                  {(web ? TUTORIAL_KEYS : TUTORIAL_TOUCH)[g.tutorial]}
+                  {web ? TUTORIAL_KEYS[g.tutorial] : TUTORIAL_TOUCH[lefty && g.tutorial === 'move' ? 'moveLefty' : g.tutorial]}
                 </PixelText>
               </Panel>
             </View>
@@ -569,21 +596,36 @@ export default function GameScreen({
             <PixelText size={16} color={COLORS.gold} style={{ marginBottom: 18 }}>
               PAUSED
             </PixelText>
-            <PixelButton label="RESUME" onPress={() => setPause(false)} style={{ marginBottom: 10, width: 200 }} />
+            <PixelButton label="RESUME" onPress={() => setPause(false)} style={{ marginBottom: 10, width: 264 }} />
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
               <PixelButton
                 label={save.music ? 'MUSIC ON' : 'MUSIC OFF'}
                 size={7}
                 color="#5a4a78"
-                style={{ width: 96 }}
+                style={{ width: 128 }}
                 onPress={() => {
                   updateSave({ music: !save.music });
                   syncMusic();
                 }}
               />
-              <PixelButton label={save.sfx ? 'SOUND ON' : 'SOUND OFF'} size={7} color="#5a4a78" style={{ width: 96 }} onPress={() => updateSave({ sfx: !save.sfx })} />
+              <PixelButton label={save.sfx ? 'SOUND ON' : 'SOUND OFF'} size={7} color="#5a4a78" style={{ width: 128 }} onPress={() => updateSave({ sfx: !save.sfx })} />
             </View>
-            <PixelButton label="RETURN TO TONDO" onPress={onQuit} color="#5a4a78" style={{ width: 200 }} />
+            {confirmQuit ? (
+              <View style={{ alignItems: 'center', width: 220 }}>
+                <PixelText size={9} color="#ff8a7a">
+                  ABANDON THIS RUN?
+                </PixelText>
+                <PixelText size={7} color={COLORS.dim} shadow={false} style={{ textAlign: 'center', marginBottom: 8 }}>
+                  Your barya from this run will still be kept.
+                </PixelText>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <PixelButton label="KEEP FIGHTING" onPress={() => setConfirmQuit(false)} color={COLORS.border} size={8} />
+                  <PixelButton label="YES, RETURN" onPress={quit} color={COLORS.red} size={8} />
+                </View>
+              </View>
+            ) : (
+              <PixelButton label="RETURN TO TONDO" onPress={() => setConfirmQuit(true)} color="#5a4a78" style={{ width: 264 }} />
+            )}
           </Panel>
         </View>
       )}

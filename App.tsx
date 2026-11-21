@@ -8,6 +8,8 @@ import { HeroId } from './src/game/data';
 import { ENDING, EPILOGUE, INTRO } from './src/game/story';
 import { getSave, loadSave, recordRun, updateSave, useSave } from './src/save';
 import OfferingsScreen from './src/screens/OfferingsScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RunOptions } from './src/game/engine';
 import CodexScreen from './src/screens/CodexScreen';
 import GameScreen from './src/screens/GameScreen';
@@ -21,12 +23,28 @@ type Screen =
   | { name: 'select' }
   | { name: 'game'; hero: HeroId; run: number; options: RunOptions }
   | { name: 'offerings' }
+  | { name: 'settings' }
   | { name: 'result'; stats: RunStats }
   | { name: 'intro'; then: 'select' | 'title' }
   | { name: 'ending'; stats: RunStats }
   | { name: 'codex'; entry?: string; back: Screen };
 
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <Game />
+    </SafeAreaProvider>
+  );
+}
+
+/** Keeps menus clear of camera notches and rounded corners; the game screen handles its own. */
+function Safe({ full, children }: { full: boolean; children: React.ReactNode }) {
+  const ins = useSafeAreaInsets();
+  if (full) return <>{children}</>;
+  return <View style={{ flex: 1, paddingLeft: ins.left, paddingRight: ins.right, paddingBottom: ins.bottom }}>{children}</View>;
+}
+
+function Game() {
   const [fontsLoaded] = useFonts({ PixelifySans_500Medium, PixelifySans_700Bold, NotoSansTagalog_400Regular });
   const [screen, setScreen] = useState<Screen>({ name: 'title' });
   const [run, setRun] = useState(0);
@@ -106,6 +124,7 @@ export default function App() {
             onStory={() => setScreen({ name: 'intro', then: 'title' })}
             onCodex={() => setScreen({ name: 'codex', back: { name: 'title' } })}
             onOfferings={() => setScreen({ name: 'offerings' })}
+            onSettings={() => setScreen({ name: 'settings' })}
           />
         );
         break;
@@ -127,6 +146,9 @@ export default function App() {
         content = <StoryScreen panels={panels} doneLabel="SEE THE WATCH" onDone={() => setScreen({ name: 'result', stats })} />;
         break;
       }
+      case 'settings':
+        content = <SettingsScreen onBack={() => setScreen({ name: 'title' })} />;
+        break;
       case 'offerings':
         content = <OfferingsScreen onBack={() => setScreen({ name: 'title' })} />;
         break;
@@ -149,7 +171,10 @@ export default function App() {
             heroId={screen.hero}
             options={screen.options}
             onEnd={finish}
-            onQuit={() => setScreen({ name: 'title' })}
+            onQuit={(stats) => {
+              recordRun({ hero: stats.hero, victory: false, reached: stats.reached, stage: stats.stage, kills: stats.kills, time: stats.time, coins: Math.round(stats.coins * (stats.hard ? 1.5 : 1)), hard: stats.hard });
+              setScreen({ name: 'title' });
+            }}
           />
         );
         break;
@@ -168,7 +193,7 @@ export default function App() {
   return (
     <View style={styles.root}>
       <StatusBar hidden />
-      {content}
+      <Safe full={screen.name === 'game'}>{content}</Safe>
     </View>
   );
 }
