@@ -1,3 +1,4 @@
+import type { SfxId } from '../sounds';
 import roomData from './rooms.json';
 import {
   BoonId,
@@ -147,11 +148,16 @@ export interface Game {
   npc: { x: number; y: number; talking: boolean; line: string } | null;
   result: 'dead' | 'victory' | null;
   nextId: number;
+  /** Sounds raised this frame; the screen plays and clears them. */
+  sfx: SfxId[];
 }
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const dist = (ax: number, ay: number, bx: number, by: number) => Math.hypot(ax - bx, ay - by);
 const pick = <T>(a: T[]) => a[Math.floor(Math.random() * a.length)];
+const sound = (g: Game, id: SfxId) => {
+  g.sfx.push(id);
+};
 
 export function stageLabel(g: Game) {
   if (g.room === 'port') return 'TONDO';
@@ -214,6 +220,7 @@ export function newGame(heroId: HeroId): Game {
     npc: null,
     result: null,
     nextId: 1,
+    sfx: [],
   };
   enterRoom(g, 0);
   return g;
@@ -234,6 +241,7 @@ function enterRoom(g: Game, stage: number) {
   h.y = ENTRY.y;
   h.spin = h.swing = h.dash = 0;
   g.wave = 0;
+  if (stage > 0) sound(g, 'sail');
   if (h.mods.harvest && stage > 0) {
     h.hp = Math.min(h.maxHp, h.hp + 1);
     addText(g, h.x, h.y - 12, '+1 LAKAPATI', '#62b24a');
@@ -248,6 +256,7 @@ function enterRoom(g: Game, stage: number) {
     g.banner = { text: SHORE.title, baybayin: SHORE.baybayin, sub: SHORE.line, t: 3 };
     g.dialog = { lines: bossDialogue(h.def.id), i: 0 };
     spawnEnemy(g, 'bakunawa', 17 * TILE, 7 * TILE);
+    sound(g, 'roar');
     g.wave = 1;
   } else {
     g.waves = 2;
@@ -336,6 +345,7 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
 
 function spawnWave(g: Game) {
   g.wave++;
+  if (g.wave > 1) sound(g, 'wave');
   const pool = STAGES[Math.min(g.stage, STAGES.length) - 1].pool;
   const n = 3 + g.stage + (g.wave - 1);
   for (let i = 0; i < n; i++) {
@@ -353,6 +363,7 @@ function dropPickup(g: Game, kind: PickupKind, x: number, y: number) {
 }
 
 function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg: number, fromHero: boolean, sprite: BulletSprite, r = 2.5, pierce = false, poison?: number) {
+  if (!fromHero) sound(g, 'enemy_shot');
   g.bullets.push({
     id: g.nextId++,
     x,
@@ -382,9 +393,11 @@ function hurtHero(g: Game, dmg: number) {
   h.sinceHit = 0;
   g.shake = 0.25;
   addText(g, h.x, h.y - 10, `-${dmg}`, left > 0 ? '#ff5a5a' : '#82eed6');
+  sound(g, left > 0 ? 'hurt' : 'block');
   if (h.hp <= 0) {
     h.hp = 0;
     g.result = 'dead';
+    sound(g, 'death');
   }
 }
 
@@ -396,10 +409,12 @@ function damageEnemy(g: Game, e: Enemy, dmg: number) {
   g.hero.light = Math.min(LIGHT_MAX, g.hero.light + d * 1.3);
   addText(g, e.x, e.y - 10, `${Math.round(d)}`, '#ffffff');
   if (e.hp <= 0) killEnemy(g, e);
+  else sound(g, 'hit');
 }
 
 function killEnemy(g: Game, e: Enemy) {
   g.kills++;
+  sound(g, e.type === 'bakunawa' ? 'roar' : 'kill');
   const def = ENEMIES[e.type];
   for (let i = 0; i < def.coins; i++) dropPickup(g, 'coin', e.x, e.y);
   const orbs = e.type === 'bakunawa' ? 10 : 1 + Math.floor(Math.random() * 2);
@@ -453,12 +468,14 @@ export function chooseBoon(g: Game, id: BoonId) {
       break;
   }
   addText(g, h.x, h.y - 14, BOONS[id].deity.toUpperCase(), '#ffe882');
+  sound(g, 'boon');
 }
 
 /** Moves the open dialogue on by one line; closes it after the last. */
 export function advanceDialog(g: Game) {
   if (!g.dialog) return;
   g.dialog.i++;
+  sound(g, 'talk');
   if (g.dialog.i >= g.dialog.lines.length) g.dialog = null;
 }
 
@@ -495,7 +512,9 @@ export function update(g: Game, input: Input, dt: number) {
       spawnWave(g);
     } else if (g.room === 'shore') {
       g.result = 'victory';
+      sound(g, 'victory');
     } else {
+      sound(g, 'island_clear');
       g.boat = { ...DOCK };
       g.shrine = { x: CENTER.x, y: CENTER.y - TILE, used: false };
       g.banner = { text: 'THE ISLAND IS SAFE', sub: 'Visit the dambana, then sail on.', t: 2 };
@@ -587,6 +606,7 @@ function updateHero(g: Game, input: Input, dt: number) {
       h.dash = 0.2;
       h.invuln = Math.max(h.invuln, 0.3);
       h.dodgeCd = 0.9 * m.dodgeCd;
+      sound(g, 'dodge');
     }
   }
   if (h.dash > 0) {
@@ -605,7 +625,10 @@ function updateHero(g: Game, input: Input, dt: number) {
 
   if (input.skill) {
     input.skill = false;
-    if (h.light >= LIGHT_MAX) useSkill(g, mx, my);
+    if (h.light >= LIGHT_MAX) {
+      useSkill(g, mx, my);
+      sound(g, 'skill');
+    }
   }
 
   const w = WEAPONS[h.def.weapon];
@@ -614,10 +637,12 @@ function updateHero(g: Game, input: Input, dt: number) {
       slash(g, h.aim, w.radius * m.reach, (75 * Math.PI) / 180, w.damage);
       h.swing = 0.14;
       h.swingAim = h.aim;
+      sound(g, 'slash');
     } else {
       const gx = h.x + Math.cos(h.aim) * 9;
       const gy = h.y + 3 + Math.sin(h.aim) * 9;
       shoot(g, gx, gy, h.aim + rand(-w.spread, w.spread), w.speed, w.damage, true, w.sprite!, w.radius, w.pierce || m.pierce, w.poison);
+      sound(g, w.sprite === 'shot_arrow' ? 'bow' : w.sprite === 'shot_dart' ? 'dart' : 'orb');
     }
     h.atkCd = w.rate * m.rate;
   }
@@ -649,6 +674,7 @@ function useSkill(g: Game, mx: number, my: number) {
       h.hp = Math.min(h.maxHp, h.hp + 2);
       h.armor = h.maxArmor;
       addText(g, h.x, h.y - 14, '+2 TAMBAL', '#62b24a');
+      sound(g, 'heal');
       break;
   }
 }
@@ -848,9 +874,14 @@ function updatePickups(g: Game, dt: number) {
       p.y += ((h.y - p.y) / d) * 120 * dt;
     }
     if (d < 8) {
-      if (p.kind === 'coin') g.coins++;
-      else if (p.kind === 'energy_orb') h.light = Math.min(LIGHT_MAX, h.light + 6);
-      else {
+      if (p.kind === 'coin') {
+        g.coins++;
+        sound(g, 'coin');
+      } else if (p.kind === 'energy_orb') {
+        h.light = Math.min(LIGHT_MAX, h.light + 6);
+        sound(g, 'light');
+      } else {
+        sound(g, 'heal');
         h.hp = Math.min(h.maxHp, h.hp + 2);
         addText(g, h.x, h.y - 12, '+2', '#62b24a');
       }

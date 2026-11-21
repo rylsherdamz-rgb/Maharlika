@@ -1,10 +1,12 @@
 import { NotoSansTagalog_400Regular } from '@expo-google-fonts/noto-sans-tagalog';
 import { PixelifySans_500Medium, PixelifySans_700Bold, useFonts } from '@expo-google-fonts/pixelify-sans';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { BackHandler, StyleSheet, View } from 'react-native';
+import { initAudio, playSfx, setMusic } from './src/audio';
 import { HeroId } from './src/game/data';
 import { ENDING, EPILOGUE, INTRO } from './src/game/story';
+import { loadSave, recordRun, updateSave, useSave } from './src/save';
 import CodexScreen from './src/screens/CodexScreen';
 import GameScreen from './src/screens/GameScreen';
 import ResultScreen, { RunStats } from './src/screens/ResultScreen';
@@ -25,7 +27,54 @@ export default function App() {
   const [fontsLoaded] = useFonts({ PixelifySans_500Medium, PixelifySans_700Bold, NotoSansTagalog_400Regular });
   const [screen, setScreen] = useState<Screen>({ name: 'title' });
   const [run, setRun] = useState(0);
-  const [seenIntro, setSeenIntro] = useState(false);
+  const [saveReady, setSaveReady] = useState(false);
+  const seenIntro = useSave().seenIntro;
+
+  useEffect(() => {
+    loadSave().finally(() => {
+      initAudio();
+      setSaveReady(true);
+    });
+  }, []);
+
+  // music follows the screen; the game screen picks its own track per island
+  useEffect(() => {
+    if (!saveReady || screen.name === 'game') return;
+    if (screen.name === 'result') setMusic(screen.stats.victory ? 'title' : null);
+    else setMusic('title');
+  }, [saveReady, screen]);
+
+  // Android back: step back through the menus; on the title, leave the app
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      switch (screen.name) {
+        case 'title':
+          return false;
+        case 'game':
+          return true; // the game screen handles it (pause)
+        case 'codex':
+          setScreen(screen.back);
+          return true;
+        case 'intro':
+          updateSave({ seenIntro: true });
+          setScreen(screen.then === 'select' ? { name: 'select' } : { name: 'title' });
+          return true;
+        case 'ending':
+          setScreen({ name: 'result', stats: screen.stats });
+          return true;
+        default:
+          setScreen({ name: 'title' });
+          return true;
+      }
+    });
+    return () => sub.remove();
+  }, [screen]);
+
+  const finish = (stats: RunStats) => {
+    const newBest = recordRun({ hero: stats.hero, victory: stats.victory, reached: stats.reached, stage: stats.stage, kills: stats.kills, time: stats.time });
+    const s = { ...stats, newBest };
+    setScreen(s.victory ? { name: 'ending', stats: s } : { name: 'result', stats: s });
+  };
 
   const start = (hero: HeroId) => {
     setRun((r) => r + 1);
@@ -33,12 +82,15 @@ export default function App() {
   };
 
   let content: React.ReactNode = null;
-  if (fontsLoaded) {
+  if (fontsLoaded && saveReady) {
     switch (screen.name) {
       case 'title':
         content = (
           <TitleScreen
-            onStart={() => setScreen(seenIntro ? { name: 'select' } : { name: 'intro', then: 'select' })}
+            onStart={() => {
+              playSfx('tap');
+              setScreen(seenIntro ? { name: 'select' } : { name: 'intro', then: 'select' });
+            }}
             onStory={() => setScreen({ name: 'intro', then: 'title' })}
             onCodex={() => setScreen({ name: 'codex', back: { name: 'title' } })}
           />
@@ -50,7 +102,7 @@ export default function App() {
             panels={INTRO}
             doneLabel={screen.then === 'select' ? 'CHOOSE A GUARDIAN' : 'RETURN'}
             onDone={() => {
-              setSeenIntro(true);
+              updateSave({ seenIntro: true });
               setScreen(screen.then === 'select' ? { name: 'select' } : { name: 'title' });
             }}
           />
@@ -79,7 +131,7 @@ export default function App() {
           <GameScreen
             key={screen.run}
             heroId={screen.hero}
-            onEnd={(stats) => setScreen(stats.victory ? { name: 'ending', stats } : { name: 'result', stats })}
+            onEnd={finish}
             onQuit={() => setScreen({ name: 'title' })}
           />
         );

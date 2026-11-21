@@ -8,7 +8,7 @@ import base64, glob, os, re, sys
 dist, out = sys.argv[1], sys.argv[2]
 js_path = glob.glob(os.path.join(dist, '_expo/static/js/web/*.js'))[0]
 js = open(js_path, encoding='utf-8').read()
-MIME = {'.png': 'image/png', '.ttf': 'font/ttf'}
+MIME = {'.png': 'image/png', '.ttf': 'font/ttf', '.wav': 'audio/wav', '.m4a': 'audio/mp4'}
 n = 0
 def repl(m):
     global n
@@ -17,7 +17,7 @@ def repl(m):
     data = base64.b64encode(open(p, 'rb').read()).decode()
     n += 1
     return '"data:%s;base64,%s"' % (MIME[os.path.splitext(p)[1]], data)
-js = re.sub(r'"(/assets/[^"]+\.(?:png|ttf))"', repl, js)
+js = re.sub(r'"(/assets/[^"]+\.(?:png|ttf|wav|m4a))"', repl, js)
 assert '"/assets/' not in js, 'unreplaced asset path'
 js = js.replace('</script', '<\\/script')
 html = '''<title>Maharlika</title>

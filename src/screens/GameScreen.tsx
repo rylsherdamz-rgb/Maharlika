@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { GestureResponderEvent, Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { AppState, BackHandler, GestureResponderEvent, Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
+import { drainSfx, setMusic, syncMusic } from '../audio';
+import { updateSave, useSave } from '../save';
 import { BOONS, BOSS_NAME, ENEMIES, HeroId, LIGHT_MAX, WEAPONS } from '../game/data';
 import { advanceDialog, chooseBoon, Game, Input, newGame, ROOM_H, ROOM_W, stageLabel, update } from '../game/engine';
 import { BaybayinText, COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
@@ -32,6 +34,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [, setFrame] = useState(0);
+  const save = useSave();
   const endRef = useRef({ onEnd, done: false });
   endRef.current.onEnd = onEnd;
 
@@ -66,6 +69,9 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
         update(g, frameInput, dt);
         input.skill = frameInput.skill;
         input.dodge = frameInput.dodge;
+        drainSfx(g.sfx);
+        const track = g.room === 'port' ? 'title' : g.room === 'shore' ? 'boss' : 'island';
+        setMusic(g.result ? null : track);
         if (g.result && !endRef.current.done) {
           endRef.current.done = true;
           setTimeout(
@@ -74,6 +80,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
                 hero: heroId,
                 victory: g.result === 'victory',
                 stage: stageLabel(g),
+                reached: g.stage,
                 kills: g.kills,
                 coins: g.coins,
                 time: g.time,
@@ -88,6 +95,21 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // ------------------------------------------------------------ Android back button, app switching
+  useEffect(() => {
+    const back = BackHandler.addEventListener('hardwareBackPress', () => {
+      setPause(!pausedRef.current);
+      return true;
+    });
+    const app = AppState.addEventListener('change', (s) => {
+      if (s !== 'active' && !gameRef.current.result) setPause(true);
+    });
+    return () => {
+      back.remove();
+      app.remove();
+    };
   }, []);
 
   // ------------------------------------------------------------ keyboard (web build)
@@ -488,6 +510,19 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
               PAUSED
             </PixelText>
             <PixelButton label="RESUME" onPress={() => setPause(false)} style={{ marginBottom: 10, width: 200 }} />
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+              <PixelButton
+                label={save.music ? 'MUSIC ON' : 'MUSIC OFF'}
+                size={7}
+                color="#5a4a78"
+                style={{ width: 96 }}
+                onPress={() => {
+                  updateSave({ music: !save.music });
+                  syncMusic();
+                }}
+              />
+              <PixelButton label={save.sfx ? 'SOUND ON' : 'SOUND OFF'} size={7} color="#5a4a78" style={{ width: 96 }} onPress={() => updateSave({ sfx: !save.sfx })} />
+            </View>
             <PixelButton label="RETURN TO TONDO" onPress={onQuit} color="#5a4a78" style={{ width: 200 }} />
           </Panel>
         </View>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { HEROES, HeroId, WEAPONS } from '../game/data';
+import { useSave } from '../save';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
 function StatRow({ icon, value, color }: { icon: ImgKey; value: number; color: string }) {
@@ -28,6 +29,7 @@ export default function SelectScreen({
   const [sel, setSel] = useState<HeroId>('kidlat');
   const t = useTicker(180);
   const hero = HEROES.find((h) => h.id === sel)!;
+  const rec = useSave().heroes[sel];
   const cardW = Math.min(130, (width * 0.55) / 4);
   const spriteSize = Math.min(cardW - 16, height * 0.2);
 
@@ -70,6 +72,16 @@ export default function SelectScreen({
             <StatRow icon="ui_heart" value={hero.hp} color="#ff8a7a" />
             <StatRow icon="ui_shield" value={hero.armor} color={COLORS.armor} />
           </View>
+          {rec && (
+            <View style={[styles.statLine, { marginTop: -4 }]}>
+              <PixelText size={6} color={COLORS.dim} shadow={false}>
+                {`BEST: ${rec.bestLabel}`}
+              </PixelText>
+              <PixelText size={6} color={rec.wins > 0 ? COLORS.gold : COLORS.dim} shadow={false}>
+                {`DAWNS: ${rec.wins}/${rec.runs}`}
+              </PixelText>
+            </View>
+          )}
           <View style={styles.skill}>
             <Sprite name="ui_star" size={14} />
             <View style={{ marginLeft: 8, flex: 1 }}>

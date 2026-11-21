@@ -25,6 +25,9 @@ it is folklore, history or invented for the game.
   (piercing spirit orbs), sumpit (poison darts).
 - **Dodge roll** for everyone; **skills charge with light** from fighting and catching fireflies.
 - **Health beads and amulets:** amulets (anting-anting) absorb hits and recharge.
+- **Kulintang soundtrack:** gong-chime music for the port, the islands and the serpent, plus effects for
+  every swing, shot, hit and blessing. Music and sound toggle on the title screen and in the pause menu.
+- **Your watch is remembered:** best island reached and dawns won per hero, shown on the select screen.
 
 | Hero | From | Weapon | Skill |
 |---|---|---|---|
@@ -46,6 +49,7 @@ and the **Kwento** codex (Maharlika · Creatures · The Gods · The World) with 
 | Wind (small diamond) | Dodge roll |
 | Sun | Skill, when your light is full |
 | Cards at a dambana | Choose a blessing |
+| Android back | Pause in a run, step back in menus |
 
 Web build: `WASD` move, `Space` attack, `Shift` dodge, `K` skill, `1-3` choose a blessing, `Esc` pause.
 
@@ -77,6 +81,20 @@ small procedural routines (Baybayin is rendered from Noto Sans Tagalog). Run
 - title (Mayon, the eclipse, the Bakunawa and the fleet), select, defeat, dawn screens; logo
   and Baybayin logo; 8 story panels; 6 dialogue portraits; brand sheet; app icons
 
+## Audio
+
+All sound is synthesized in [`tools/generate_audio.py`](tools/generate_audio.py) (needs numpy,
+scipy and ffmpeg): kulintang gong-chimes on pentatonic rows, the agung, the dabakan drum and the
+babandil keeping time. Run `python3 tools/generate_audio.py` to regenerate:
+
+- `assets/audio/sfx/*.wav`: 23 short effects (WAV, so they start with no codec delay)
+- `assets/audio/music/*.m4a`: three seamless loops, `title` (Tondo), `island`, `boss` (Albay)
+- `src/sounds.ts`: typed registry
+
+The engine queues sounds in `game.sfx`; `src/audio.ts` plays them from small preloaded pools with
+per-sound rate limits, and swaps music by island. The microphone permission that `expo-audio` adds
+by default is turned off in `app.json`.
+
 ## Project layout
 
 ```
@@ -85,6 +103,8 @@ src/game/data.ts           heroes, weapons, creatures, the gods' blessings
 src/game/story.ts          all story text, bios with sources, island names in Baybayin
 src/game/engine.ts         simulation: islands, melee and ranged combat, dodge, light, blessings, AI
 src/screens/               Title, Story, Codex, Select, Game, Result
+src/audio.ts               sound effect pools, music, settings
+src/save.ts                saved settings and per-hero records (AsyncStorage)
 src/ui.tsx                 palette, pixel and Baybayin text, buttons, panels
 tools/generate_assets.py   all art
 docs/STORY.md              story bible and sources

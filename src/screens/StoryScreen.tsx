@@ -1,3 +1,4 @@
+import { playSfx } from '../audio';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { StoryPanel } from '../game/story';
@@ -33,8 +34,10 @@ export default function StoryScreen({
 
   const next = () => {
     if (shown < full) setShown(full);
-    else if (i < panels.length - 1) setI(i + 1);
-    else onDone();
+    else if (i < panels.length - 1) {
+      playSfx('talk');
+      setI(i + 1);
+    } else onDone();
   };
 
   const last = i === panels.length - 1;

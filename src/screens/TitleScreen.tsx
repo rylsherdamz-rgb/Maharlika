@@ -1,6 +1,8 @@
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
+import { syncMusic } from '../audio';
 import { HEROES } from '../game/data';
+import { updateSave, useSave } from '../save';
 import { CoverImage, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
 export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: () => void; onStory: () => void; onCodex: () => void }) {
@@ -8,6 +10,7 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
   const t = useTicker(120);
   const logoW = Math.min(width * 0.52, 470);
   const bob = Math.round(Math.sin(t / 4) * 3);
+  const save = useSave();
   return (
     <Pressable style={styles.root} onPress={onStart}>
       <CoverImage name="screen_title_bg" />
@@ -24,6 +27,18 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
       <View style={styles.menu}>
         <PixelButton label="STORY" onPress={onStory} color="#5a4a78" size={8} />
         <PixelButton label="KWENTO" onPress={onCodex} color="#5a4a78" size={8} />
+      </View>
+      <View style={styles.settings}>
+        <PixelButton
+          label={save.music ? 'MUSIC ON' : 'MUSIC OFF'}
+          onPress={() => {
+            updateSave({ music: !save.music });
+            syncMusic();
+          }}
+          color={save.music ? '#5a4a78' : '#3a3050'}
+          size={7}
+        />
+        <PixelButton label={save.sfx ? 'SOUND ON' : 'SOUND OFF'} onPress={() => updateSave({ sfx: !save.sfx })} color={save.sfx ? '#5a4a78' : '#3a3050'} size={7} />
       </View>
       {/* heroes marching across the bottom */}
       <View style={[styles.parade, { bottom: height * 0.11 }]}>
@@ -49,4 +64,5 @@ const styles = StyleSheet.create({
   parade: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', justifyContent: 'center' },
   tap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   menu: { position: 'absolute', left: 24, bottom: 16, flexDirection: 'row', gap: 8 },
+  settings: { position: 'absolute', right: 16, bottom: 16, gap: 6 },
 });
