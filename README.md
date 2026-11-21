@@ -57,6 +57,26 @@ npx expo start              # scan the QR code with Expo Go on Android
 npx eas-cli@latest build -p android --profile preview   # installable APK
 ```
 
+### Automatic APK releases
+
+[`.github/workflows/android-release.yml`](.github/workflows/android-release.yml) builds the APK on
+EAS and attaches it to a GitHub Release.
+
+One-time setup:
+1. Create an access token at expo.dev (Account settings > Access tokens) and add it to the repo as
+   the `EXPO_TOKEN` secret (Settings > Secrets and variables > Actions).
+2. Run one build from your own machine so EAS creates and stores the Android signing key:
+   `npx eas-cli@latest init` (commit the `app.json` change), then
+   `npx eas-cli@latest build -p android --profile preview` and accept the new keystore.
+
+Then:
+- **Release:** `git tag v1.0.1 && git push origin v1.0.1` publishes "Maharlika v1.0.1" with
+  `Maharlika-1.0.1.apk`.
+- **Test build:** Actions > Android APK release > Run workflow publishes a pre-release.
+
+Each run stamps the version from the tag and a rising `versionCode` (100 + run number), so
+updates install over the previous APK.
+
 Single-file web build:
 
 ```bash
