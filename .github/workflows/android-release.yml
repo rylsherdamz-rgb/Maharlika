@@ -1,0 +1,113 @@
+# Builds an installable Android APK on EAS and attaches it to a GitHub Release.
+#
+#   Release:  git tag v1.0.1 && git push origin v1.0.1
+#             -> builds Maharlika-1.0.1.apk and publishes release "Maharlika v1.0.1"
+#   Test:     Actions tab -> "Android APK release" -> Run workflow
+#             -> builds and publishes a pre-release tagged build-<run number>
+#
+# Needs one repository secret: EXPO_TOKEN (expo.dev -> Account settings -> Access tokens).
+name: Android APK release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120 # free EAS builds can wait in a queue
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check for EXPO_TOKEN
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::Add an EXPO_TOKEN repository secret (expo.dev > Account settings > Access tokens)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Work out version
+        id: ver
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+            PRERELEASE=false
+          else
+            TAG="build-${GITHUB_RUN_NUMBER}"
+            VERSION="$(node -p "require('./app.json').expo.version")-build.${GITHUB_RUN_NUMBER}"
+            PRERELEASE=true
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          echo "Building $VERSION (tag $TAG)"
+
+      # Android needs a versionCode that always goes up; the run number does.
+      - name: Stamp version into app.json
+        run: |
+          node -e "
+            const fs = require('fs');
+            const a = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            a.expo.version = '${{ steps.ver.outputs.version }}';
+            a.expo.android.versionCode = 100 + Number(process.env.GITHUB_RUN_NUMBER);
+            fs.writeFileSync('app.json', JSON.stringify(a, null, 2) + '\n');
+          "
+
+      # Links the EAS project on the fly if app.json has no projectId yet.
+      # (Committing the result of a local `npx eas-cli init` is better.)
+      - name: Link EAS project
+        run: |
+          if [ "$(node -p "require('./app.json').expo.extra?.eas?.projectId ?? ''")" = "" ]; then
+            eas init --non-interactive --force
+          fi
+
+      - name: Build APK on EAS
+        run: |
+          eas build -p android --profile preview --non-interactive --wait --json \
+            --message "GitHub ${{ steps.ver.outputs.tag }}" > build.json
+          cat build.json
+          URL=$(jq -r '.[0].artifacts.buildUrl // .[0].artifacts.applicationArchiveUrl' build.json)
+          if [ -z "$URL" ] || [ "$URL" = "null" ]; then
+            echo "::error::EAS build finished without an APK URL"
+            exit 1
+          fi
+          curl -fsSL "$URL" -o "Maharlika-${{ steps.ver.outputs.version }}.apk"
+          ls -la *.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Maharlika ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ steps.ver.outputs.prerelease }}
+          generate_release_notes: true
+          files: Maharlika-${{ steps.ver.outputs.version }}.apk
+          body: |
+            Android APK for **Maharlika: Ang Gabi ng Bakunawa** (version ${{ steps.ver.outputs.version }}).
+
+            Download the `.apk` below on your Android phone and open it to install
+            (allow "Install unknown apps" for your browser or file manager when asked).
