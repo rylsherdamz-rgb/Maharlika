@@ -1,6 +1,6 @@
 export type HeroId = 'kidlat' | 'liksi' | 'mayumi' | 'amihan';
 export type WeaponId = 'kampilan' | 'pana' | 'agimat' | 'sumpit';
-export type EnemyType = 'duwende' | 'manananggal' | 'tikbalang' | 'kapre' | 'bakunawa';
+export type EnemyType = 'duwende' | 'manananggal' | 'tikbalang' | 'kapre' | 'sigbin' | 'tiyanak' | 'aswang' | 'rabot' | 'bakunawa';
 export type BulletSprite = 'shot_arrow' | 'shot_spirit' | 'shot_dart' | 'shot_enemy';
 export type BoonId =
   | 'apolaki'
@@ -10,7 +10,12 @@ export type BoonId =
   | 'dumakulem'
   | 'lakapati'
   | 'aman_sinaya'
-  | 'lakan_bakod';
+  | 'lakan_bakod'
+  // unlocked with barya
+  | 'bathala'
+  | 'hanan'
+  | 'amanikable'
+  | 'idiyanale';
 
 export interface HeroDef {
   id: HeroId;
@@ -121,9 +126,15 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
   manananggal: { name: 'Manananggal', hp: 5, speed: 52, radius: 5, contact: 1, size: 16, coins: 1 },
   tikbalang: { name: 'Tikbalang', hp: 10, speed: 30, radius: 6, contact: 1, size: 16, coins: 2 },
   kapre: { name: 'Kapre', hp: 15, speed: 20, radius: 6, contact: 1, size: 16, coins: 2 },
-  bakunawa: { name: 'Bakunawa', hp: 380, speed: 22, radius: 13, contact: 2, size: 32, coins: 30 },
+  sigbin: { name: 'Sigbin', hp: 9, speed: 34, radius: 6, contact: 1, size: 16, coins: 1 },
+  tiyanak: { name: 'Tiyanak', hp: 6, speed: 64, radius: 5, contact: 1, size: 16, coins: 1 },
+  aswang: { name: 'Aswang', hp: 110, speed: 40, radius: 9, contact: 1, size: 24, coins: 12 },
+  rabot: { name: 'Rabot', hp: 200, speed: 18, radius: 10, contact: 2, size: 24, coins: 15 },
+  bakunawa: { name: 'Bakunawa', hp: 420, speed: 22, radius: 13, contact: 2, size: 32, coins: 30 },
 };
 
+/** Creatures that get a health bar and a name across the top of the screen. */
+export const BOSSES: EnemyType[] = ['aswang', 'rabot', 'bakunawa'];
 export const BOSS_NAME = 'BAKUNAWA';
 
 export interface BoonDef {
@@ -144,4 +155,18 @@ export const BOONS: Record<BoonId, BoonDef> = {
   lakapati: { id: 'lakapati', deity: 'Lakapati', domain: 'Goddess of fertility and harvest', name: 'Ani', desc: 'Heal 1 on each new island; foes drop herbs more often' },
   aman_sinaya: { id: 'aman_sinaya', deity: 'Aman Sinaya', domain: 'Goddess of the sea', name: 'Alon', desc: 'Attack 20% faster' },
   lakan_bakod: { id: 'lakan_bakod', deity: 'Lakan Bakod', domain: 'Protector of fences and harvests', name: 'Bakod', desc: 'Amulets recharge twice as fast' },
+  bathala: { id: 'bathala', deity: 'Bathala', domain: 'Supreme god and creator', name: 'Hininga ng Buhay', desc: 'Once per run, survive a fatal blow with 2 health' },
+  hanan: { id: 'hanan', deity: 'Hanan', domain: 'Goddess of the morning', name: 'Bukang-liwayway', desc: 'Start every island with your lamp half full' },
+  amanikable: { id: 'amanikable', deity: 'Amanikable', domain: 'God of the sea and of hunters', name: 'Mata ng Mangangaso', desc: '15% of hits strike for double damage' },
+  idiyanale: { id: 'idiyanale', deity: 'Idiyanale', domain: 'Goddess of labor and good deeds', name: 'Sipag', desc: 'Half of the barya you pick up counts twice' },
 };
+
+/** Blessings every run can offer; the rest are bought with barya. */
+export const BASE_BOONS: BoonId[] = ['apolaki', 'mayari', 'tala', 'anitun_tabu', 'dumakulem', 'lakapati', 'aman_sinaya', 'lakan_bakod'];
+export const UNLOCKABLE_BOONS: { id: BoonId; cost: number }[] = [
+  { id: 'hanan', cost: 120 },
+  { id: 'amanikable', cost: 160 },
+  { id: 'idiyanale', cost: 200 },
+  { id: 'bathala', cost: 300 },
+];
+export const SKIN_COST = 100;

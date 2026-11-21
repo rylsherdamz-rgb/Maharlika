@@ -231,6 +231,50 @@ export const CREATURE_BIOS: Record<EnemyType, Bio> = {
     ],
     source: 'Tagalog folklore',
   },
+  sigbin: {
+    id: 'sigbin',
+    name: 'Sigbin',
+    epithet: 'The one that walks backward',
+    sprite: 'enemies_sigbin_0',
+    facts: [['Found', 'Siquijor, Mount Banahaw'], ['Behavior', 'Fades into the dark, then lunges']],
+    story: [
+      'A Visayan night creature like a hornless goat or a hound with huge ears. It is said to walk backward with its head lowered between its hind legs, to give off a foul smell, and to feed on the shadows of its victims. Some families were believed to keep one.',
+    ],
+    source: 'Visayan folklore',
+  },
+  tiyanak: {
+    id: 'tiyanak',
+    name: 'Tiyanak',
+    epithet: 'The crying in the forest',
+    sprite: 'enemies_tiyanak_0',
+    facts: [['Found', 'Fields and forests'], ['Trick', 'Cries like a lost baby']],
+    story: [
+      'A forest creature that takes the form of an abandoned infant and cries until a traveler picks it up. Then it shows its true face and attacks. Like the tikbalang, it can be confused by wearing your clothes inside out.',
+    ],
+    source: 'Tagalog and Visayan folklore',
+  },
+  aswang: {
+    id: 'aswang',
+    name: 'Aswang',
+    epithet: 'The shapeshifter',
+    sprite: 'enemies_aswang_0',
+    facts: [['Guards', 'Siquijor'], ['Forms', 'Walks as a person, hunts as a beast']],
+    story: [
+      'The most feared creature of Philippine folklore, especially in the Visayas. By day an aswang lives as an ordinary villager; by night it changes into a beast such as a dog, a pig or a great bird. It is said to have a long tongue and to be warded off by garlic, salt and the tail of a stingray.',
+    ],
+    source: 'Visayan folklore (told across the islands)',
+  },
+  rabot: {
+    id: 'rabot',
+    name: 'Rabot',
+    epithet: 'Monster of the Ibalong',
+    sprite: 'enemies_rabot_0',
+    facts: [['Guards', 'Ibalong Forests'], ['Power', 'A gaze that turns flesh to stone']],
+    story: [
+      'In Ibalong, the epic of Bicol, Rabot is a terrible half-human, half-beast that turned people to stone; rocks around its den were said to be its victims. Handyong gave the hero Bantong a thousand warriors, but Bantong watched the monster, waited until it slept and cut it down alone.',
+    ],
+    source: 'Ibalong, the Bicolano epic',
+  },
   bakunawa: {
     id: 'bakunawa',
     name: 'Bakunawa',
@@ -301,13 +345,16 @@ export interface StageInfo {
   baybayin: string;
   line: string;
   pool: EnemyType[];
+  waves: number;
+  /** Guards the last wave. */
+  miniboss?: EnemyType;
 }
 
 export const STAGES: StageInfo[] = [
-  { title: 'PUNSO FIELDS', baybayin: 'ᜉᜓᜈ᜔ᜐᜓ', line: 'Tabi-tabi po. The duwende do not want to be stepped on tonight.', pool: ['duwende', 'duwende', 'duwende', 'manananggal'] },
-  { title: 'SIQUIJOR', baybayin: 'ᜐᜒᜃᜒᜑᜓᜇ᜔', line: 'Salt and ash in every pocket. The manananggal fly here.', pool: ['manananggal', 'manananggal', 'duwende', 'duwende'] },
-  { title: 'MOUNT BANAHAW', baybayin: 'ᜊᜈᜑᜏ᜔', line: 'Shirts inside out. The tikbalang are leading travelers astray.', pool: ['tikbalang', 'tikbalang', 'duwende', 'manananggal'] },
-  { title: 'IBALONG FORESTS', baybayin: 'ᜁᜊᜎᜓᜅ᜔', line: 'Cigar smoke drifts from the old balete. The kapre are awake.', pool: ['kapre', 'kapre', 'tikbalang', 'manananggal', 'duwende'] },
+  { title: 'PUNSO FIELDS', baybayin: 'ᜉᜓᜈ᜔ᜐᜓ', line: 'Tabi-tabi po. The duwende do not want to be stepped on tonight.', pool: ['duwende', 'duwende', 'duwende', 'manananggal', 'tiyanak'], waves: 2 },
+  { title: 'SIQUIJOR', baybayin: 'ᜐᜒᜃᜒᜑᜓᜇ᜔', line: 'Salt and ash in every pocket. The manananggal fly here.', pool: ['manananggal', 'manananggal', 'duwende', 'sigbin', 'sigbin'], waves: 3, miniboss: 'aswang' },
+  { title: 'MOUNT BANAHAW', baybayin: 'ᜊᜈᜑᜏ᜔', line: 'Shirts inside out. The tikbalang are leading travelers astray.', pool: ['tikbalang', 'tikbalang', 'duwende', 'sigbin', 'tiyanak'], waves: 3 },
+  { title: 'IBALONG FORESTS', baybayin: 'ᜁᜊᜎᜓᜅ᜔', line: 'Cigar smoke drifts from the old balete. The kapre are awake.', pool: ['kapre', 'kapre', 'tikbalang', 'sigbin', 'tiyanak', 'manananggal'], waves: 4, miniboss: 'rabot' },
 ];
 
 export const PORT = { title: 'PORT OF TONDO', baybayin: 'ᜆᜓᜈ᜔ᜇᜓ', line: 'Haliya waits by the balangay.' };

@@ -1,11 +1,21 @@
-import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { syncMusic } from '../audio';
 import { HEROES } from '../game/data';
 import { updateSave, useSave } from '../save';
-import { CoverImage, PixelButton, PixelText, Sprite, useTicker } from '../ui';
+import { COLORS, CoverImage, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
-export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: () => void; onStory: () => void; onCodex: () => void }) {
+export default function TitleScreen({
+  onStart,
+  onStory,
+  onCodex,
+  onOfferings,
+}: {
+  onStart: () => void;
+  onStory: () => void;
+  onCodex: () => void;
+  onOfferings: () => void;
+}) {
   const { width, height } = useWindowDimensions();
   const t = useTicker(120);
   const logoW = Math.min(width * 0.52, 470);
@@ -27,6 +37,7 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
       <View style={styles.menu}>
         <PixelButton label="STORY" onPress={onStory} color="#5a4a78" size={8} />
         <PixelButton label="KWENTO" onPress={onCodex} color="#5a4a78" size={8} />
+        <PixelButton label={`ALAY  ${save.barya}`} onPress={onOfferings} color={COLORS.border} size={8} />
       </View>
       <View style={styles.settings}>
         <PixelButton
@@ -39,6 +50,9 @@ export default function TitleScreen({ onStart, onStory, onCodex }: { onStart: ()
           size={7}
         />
         <PixelButton label={save.sfx ? 'SOUND ON' : 'SOUND OFF'} onPress={() => updateSave({ sfx: !save.sfx })} color={save.sfx ? '#5a4a78' : '#3a3050'} size={7} />
+        {Platform.OS !== 'web' && (
+          <PixelButton label={save.haptics ? 'VIBRATE ON' : 'VIBRATE OFF'} onPress={() => updateSave({ haptics: !save.haptics })} color={save.haptics ? '#5a4a78' : '#3a3050'} size={7} />
+        )}
       </View>
       {/* heroes marching across the bottom */}
       <View style={[styles.parade, { bottom: height * 0.11 }]}>

@@ -6,7 +6,9 @@ import { BackHandler, StyleSheet, View } from 'react-native';
 import { initAudio, playSfx, setMusic } from './src/audio';
 import { HeroId } from './src/game/data';
 import { ENDING, EPILOGUE, INTRO } from './src/game/story';
-import { loadSave, recordRun, updateSave, useSave } from './src/save';
+import { getSave, loadSave, recordRun, updateSave, useSave } from './src/save';
+import OfferingsScreen from './src/screens/OfferingsScreen';
+import { RunOptions } from './src/game/engine';
 import CodexScreen from './src/screens/CodexScreen';
 import GameScreen from './src/screens/GameScreen';
 import ResultScreen, { RunStats } from './src/screens/ResultScreen';
@@ -17,7 +19,8 @@ import TitleScreen from './src/screens/TitleScreen';
 type Screen =
   | { name: 'title' }
   | { name: 'select' }
-  | { name: 'game'; hero: HeroId; run: number }
+  | { name: 'game'; hero: HeroId; run: number; options: RunOptions }
+  | { name: 'offerings' }
   | { name: 'result'; stats: RunStats }
   | { name: 'intro'; then: 'select' | 'title' }
   | { name: 'ending'; stats: RunStats }
@@ -71,14 +74,23 @@ export default function App() {
   }, [screen]);
 
   const finish = (stats: RunStats) => {
-    const newBest = recordRun({ hero: stats.hero, victory: stats.victory, reached: stats.reached, stage: stats.stage, kills: stats.kills, time: stats.time });
+    // Pulang Buwan pays half again in barya
+    const coins = Math.round(stats.coins * (stats.hard ? 1.5 : 1));
+    const newBest = recordRun({ hero: stats.hero, victory: stats.victory, reached: stats.reached, stage: stats.stage, kills: stats.kills, time: stats.time, coins, hard: stats.hard });
     const s = { ...stats, newBest };
     setScreen(s.victory ? { name: 'ending', stats: s } : { name: 'result', stats: s });
   };
 
   const start = (hero: HeroId) => {
+    const sv = getSave();
+    const options: RunOptions = {
+      hard: sv.hard && sv.wins > 0,
+      skin: sv.wearing.includes(hero),
+      unlocked: sv.unlockedBoons,
+      tutorial: !sv.tutorialDone,
+    };
     setRun((r) => r + 1);
-    setScreen({ name: 'game', hero, run: run + 1 });
+    setScreen({ name: 'game', hero, run: run + 1, options });
   };
 
   let content: React.ReactNode = null;
@@ -93,6 +105,7 @@ export default function App() {
             }}
             onStory={() => setScreen({ name: 'intro', then: 'title' })}
             onCodex={() => setScreen({ name: 'codex', back: { name: 'title' } })}
+            onOfferings={() => setScreen({ name: 'offerings' })}
           />
         );
         break;
@@ -114,6 +127,9 @@ export default function App() {
         content = <StoryScreen panels={panels} doneLabel="SEE THE WATCH" onDone={() => setScreen({ name: 'result', stats })} />;
         break;
       }
+      case 'offerings':
+        content = <OfferingsScreen onBack={() => setScreen({ name: 'title' })} />;
+        break;
       case 'codex':
         content = <CodexScreen initial={screen.entry} onBack={() => setScreen(screen.back)} />;
         break;
@@ -131,6 +147,7 @@ export default function App() {
           <GameScreen
             key={screen.run}
             heroId={screen.hero}
+            options={screen.options}
             onEnd={finish}
             onQuit={() => setScreen({ name: 'title' })}
           />

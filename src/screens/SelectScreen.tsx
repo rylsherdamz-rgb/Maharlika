@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { IMG, ImgKey } from '../assets';
 import { HEROES, HeroId, WEAPONS } from '../game/data';
-import { useSave } from '../save';
+import { updateSave, useSave } from '../save';
 import { COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite, useTicker } from '../ui';
 
 function StatRow({ icon, value, color }: { icon: ImgKey; value: number; color: string }) {
@@ -29,7 +29,8 @@ export default function SelectScreen({
   const [sel, setSel] = useState<HeroId>('kidlat');
   const t = useTicker(180);
   const hero = HEROES.find((h) => h.id === sel)!;
-  const rec = useSave().heroes[sel];
+  const save = useSave();
+  const rec = save.heroes[sel];
   const cardW = Math.min(130, (width * 0.55) / 4);
   const spriteSize = Math.min(cardW - 16, height * 0.2);
 
@@ -49,7 +50,7 @@ export default function SelectScreen({
                   color={active ? h.color : COLORS.edge}
                   style={[styles.card, { width: cardW }, active && { transform: [{ translateY: -6 }] }]}
                 >
-                  <Sprite name={`heroes_${h.id}_${active ? t % 2 : 0}` as ImgKey} size={spriteSize} />
+                  <Sprite name={`heroes_${h.id}${save.wearing.includes(h.id) ? '_alt' : ''}_${active ? t % 2 : 0}` as ImgKey} size={spriteSize} />
                   <PixelText size={8} color={active ? h.color : COLORS.dim} style={{ marginTop: 4 }}>
                     {h.name.toUpperCase()}
                   </PixelText>
@@ -109,6 +110,15 @@ export default function SelectScreen({
         </Panel>
       </View>
       <View style={styles.footer}>
+        {save.wins > 0 && (
+          <PixelButton
+            label={save.hard ? 'PULANG BUWAN: ON' : 'PULANG BUWAN: OFF'}
+            onPress={() => updateSave({ hard: !save.hard })}
+            color={save.hard ? COLORS.red : '#5a4a78'}
+            size={8}
+            style={{ marginRight: 16 }}
+          />
+        )}
         <PixelButton label="BACK" onPress={onBack} color="#5a4a78" size={10} />
         <PixelButton label={`${hero.name.toUpperCase()}'S STORY`} onPress={() => onStory(sel)} color="#5a4a78" size={10} style={{ marginLeft: 16 }} />
         <PixelButton label="SET SAIL" onPress={() => onPick(sel)} color={hero.color} style={{ marginLeft: 16 }} />

@@ -295,6 +295,124 @@ KAPRE = [
 ]
 
 
+# Sigbin: Visayan night creature like a hornless goat or hound, huge ears, walks with its head
+# low between its legs and hunts by shadows.
+SIGBIN = [
+    "", "", "",
+    "..D..........D..",
+    "..DD........DD..",
+    "...DD......DkD..",
+    "....DkkkkkkDXkD.",
+    "D...DkkkkkkkkkkD",
+    ".D.DkkkkkkkkkkD.",
+    "..DkkkkkkkkkkD..",
+    "...DkksssskkD...",
+    "...Dkk....kkD...",
+    "...DD......DD...",
+    "...kk......kk...",
+]
+SIGBIN_B = [
+    "", "", "",
+    "..D..........D..",
+    "..DD........DD..",
+    "...DD......DkD..",
+    "....DkkkkkkDXkD.",
+    "....DkkkkkkkkkkD",
+    "D..DkkkkkkkkkkD.",
+    ".DDkkkkkkkkkkD..",
+    "...DkksssskkD...",
+    "....Dkk..kkD....",
+    "....DD....DD....",
+    "....kk....kk....",
+]
+
+# Tiyanak: a forest spirit that cries like an abandoned baby, then shows its true form.
+TIYANAK_BUNDLE = [
+    "", "", "", "",
+    ".....wwwwww.....",
+    "....wwWWWWww....",
+    "...wwWFFFFWww...",
+    "...wWFEFFEFWw...",
+    "...wWFFffFFWw...",
+    "...wwWFFFFWww...",
+    "...wwwWWWWwww...",
+    "....wwwwwwww....",
+    "....wwwwwwww....",
+    ".....wwwwww.....",
+]
+TIYANAK = [
+    "", "", "", "",
+    ".....gggggg.....",
+    "....gGGGGGGg....",
+    "...gGXGGGGXGg...",
+    "...gGGGGGGGGg...",
+    "...gGGWrrWGGg...",
+    "....gGWWWWGg....",
+    "...ggGGGGGGgg...",
+    "..g.gGGGGGGg.g..",
+    ".....gG..Gg.....",
+    ".....gg..gg.....",
+]
+
+
+def aswang_frame(f):
+    """Aswang, the shapeshifter feared across the Visayas: a gaunt, long-haired night beast. 24x24."""
+    img = Image.new("RGBA", (24, 24), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    D, k, r, X, F, f2 = PAL["D"], PAL["k"], PAL["r"], PAL["X"], PAL["F"], PAL["f"]
+    sway = f
+    # long hair falling over a hunched back
+    d.polygon([(6, 3), (15, 2), (19, 6), (18, 17), (5, 18)], fill=D)
+    # gaunt body
+    d.ellipse([6, 9, 17, 19], fill=k)
+    d.rectangle([7, 12, 16, 17], fill=r)
+    # face
+    d.ellipse([12, 4, 19, 11], fill=f2)
+    d.rectangle([17, 7, 21, 9], fill=f2)              # snout-like jaw
+    d.point([(15, 6), (17, 6)], fill=X)               # eyes
+    d.line([(17, 10), (21, 9)], fill=PAL["W"])        # fangs
+    d.point((19, 11), fill=PAL["R"])                  # long tongue
+    d.point((19, 12), fill=PAL["R"])
+    # clawed arms
+    d.line([(15, 13), (21, 15 + sway)], fill=F, width=2)
+    d.line([(21, 15 + sway), (23, 14 + sway)], fill=PAL["H"])
+    d.line([(8, 13), (3, 16 - sway)], fill=F, width=2)
+    # legs
+    d.line([(9, 19), (8 - sway, 23)], fill=k, width=2)
+    d.line([(14, 19), (15 + sway, 23)], fill=k, width=2)
+    add_outline(img)
+    return img
+
+
+def rabot_frame(f):
+    """Rabot, the half-man half-beast of the Ibalong epic who turned people to stone. 24x24."""
+    img = Image.new("RGBA", (24, 24), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    S, s2, n, N, X = PAL["S"], PAL["s"], PAL["n"], PAL["N"], PAL["X"]
+    step = f
+    # stony shoulders and hide
+    d.ellipse([3, 7, 20, 20], fill=s2)
+    d.ellipse([5, 8, 18, 18], fill=S)
+    # beast head with tusks
+    d.ellipse([12, 2, 21, 11], fill=N)
+    d.rectangle([18, 6, 23, 9], fill=N)
+    d.point([(16, 5), (19, 5)], fill=X)
+    d.line([(21, 9), (22, 11)], fill=PAL["H"])
+    d.line([(18, 9), (18, 11)], fill=PAL["H"])
+    d.line([(13, 3), (11, 0)], fill=n)                # horn
+    # cracks of stone and a glowing gaze-stone on the chest
+    d.line([(7, 11), (10, 14), (8, 17)], fill=s2)
+    d.ellipse([10, 12, 13, 15], fill=PAL["C"])
+    # arms
+    d.line([(17, 13), (22, 17 + step)], fill=N, width=3)
+    d.line([(6, 13), (2, 17 - step)], fill=N, width=3)
+    # legs
+    d.rectangle([6 - step, 19, 9 - step, 23], fill=n)
+    d.rectangle([14 + step, 19, 17 + step, 23], fill=n)
+    add_outline(img)
+    return img
+
+
 def with_legs(rows, legs):
     r = list(rows) + [""] * 16
     r[14] = legs
@@ -308,6 +426,10 @@ ENEMIES = {
     # kapre fur is dark bark brown so it reads on the night ground
     "kapre": [[r.translate(str.maketrans("Dn", "nN")) for r in rows]
               for rows in (KAPRE, with_legs(KAPRE, "....nnn.nnn....."))],
+    # sigbin hide is ash grey so it reads on the night ground
+    "sigbin": [[r.translate(str.maketrans("ks", "sS")) for r in rows] for rows in (SIGBIN, SIGBIN_B)],
+    "tiyanak": [TIYANAK, shift_up(TIYANAK, 1)],
+    "tiyanak_bundle": [TIYANAK_BUNDLE, shift_up(TIYANAK_BUNDLE, 1)],
 }
 
 
@@ -978,6 +1100,61 @@ BOONS = {
         ".QqQ.QqQ.QqQ.QqQ",
         ".qqq.qqq.qqq.qqq",
     ],
+    # Bathala, the supreme god and creator
+    "bathala": [
+        "",
+        ".......Y........",
+        "......YWY.......",
+        ".....YYYYY......",
+        "..A.YYAAAYY.A...",
+        "...YYA...AYY....",
+        "..YYA..W..AYY...",
+        "...YYA...AYY....",
+        "..A.YYAAAYY.A...",
+        ".....YYYYY......",
+        "......YWY.......",
+        ".......Y........",
+    ],
+    # Hanan, goddess of the morning
+    "hanan": [
+        "", "", "",
+        ".......A........",
+        "..A....A....A...",
+        "...A.......A....",
+        ".....OOOOO......",
+        "....OAAAAAO.....",
+        "...OAAYYYAAO....",
+        "BBBBBBBBBBBBBBBB",
+        "bbbbbbbbbbbbbbbb",
+        "..b...bb...b....",
+    ],
+    # Amanikable, god of the sea and of hunters
+    "amanikable": [
+        "",
+        ".......S........",
+        "......SHS.......",
+        ".......H........",
+        ".......N........",
+        "..T....N....T...",
+        ".TCT...N...TCT..",
+        "TC.CT..N..TC.CT.",
+        ".......N........",
+        "TTTTTTTNTTTTTTTT",
+        "tttttttttttttttt",
+    ],
+    # Idiyanale, goddess of labor and good deeds
+    "idiyanale": [
+        "", "",
+        "......QQQQ......",
+        ".....QqQQqQ.....",
+        "......QQQQ......",
+        ".......Nn.......",
+        "...A...Nn...A...",
+        "..AYA..Nn..AYA..",
+        "...A...Nn...A...",
+        ".......Nn.......",
+        "......NNnn......",
+    ],
 }
 
 BTN_ATTACK = [  # crossed blades
@@ -1430,6 +1607,21 @@ def render_island(g, seed, theme):
 def hero_frame(name, f):
     h = HEROES[name]
     return rows_to_img(h["body"] + [h["legs"][f]])
+
+
+# Alternate colors unlocked with barya: one character map per hero.
+HERO_SKINS = {
+    "kidlat": str.maketrans("RrQq", "BbHh"),     # indigo putong, bone-white vest
+    "liksi": str.maketrans("Gg", "Tt"),          # sea-teal cloak
+    "mayumi": str.maketrans("TtM", "RrY"),       # red dress, yellow flower
+    "amihan": str.maketrans("RrOw", "BbTH"),     # blue-and-teal tapis
+}
+
+
+def hero_skin_frame(name, f):
+    h = HEROES[name]
+    tr = HERO_SKINS[name]
+    return rows_to_img([r.translate(tr) for r in h["body"] + [h["legs"][f]]])
 
 
 def app_icon():
@@ -1934,11 +2126,14 @@ def main():
     for name in HEROES:
         for f in range(2):
             save(hero_frame(name, f), f"sprites/heroes/{name}_{f}.png")
+            save(hero_skin_frame(name, f), f"sprites/heroes/{name}_alt_{f}.png")
     for name, frames in ENEMIES.items():
         for f, rows in enumerate(frames):
             save(rows_to_img(rows), f"sprites/enemies/{name}_{f}.png")
     for f in range(2):
         save(bakunawa_frame(f), f"sprites/enemies/bakunawa_{f}.png")
+        save(aswang_frame(f), f"sprites/enemies/aswang_{f}.png")
+        save(rabot_frame(f), f"sprites/enemies/rabot_{f}.png")
     for name, rows in WEAPONS.items():
         save(rows_to_img(rows), f"sprites/weapons/{name}.png")
     for name, rows in PROJECTILES.items():

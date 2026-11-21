@@ -3,8 +3,8 @@ import { AppState, BackHandler, GestureResponderEvent, Image, Platform, Pressabl
 import { IMG, ImgKey } from '../assets';
 import { drainSfx, setMusic, syncMusic } from '../audio';
 import { updateSave, useSave } from '../save';
-import { BOONS, BOSS_NAME, ENEMIES, HeroId, LIGHT_MAX, WEAPONS } from '../game/data';
-import { advanceDialog, chooseBoon, Game, Input, newGame, ROOM_H, ROOM_W, stageLabel, update } from '../game/engine';
+import { BOONS, BOSSES, ENEMIES, HeroId, LIGHT_MAX, WEAPONS } from '../game/data';
+import { advanceDialog, chooseBoon, Game, Input, newGame, ROOM_H, ROOM_W, RunOptions, stageLabel, TutorialStep, update } from '../game/engine';
 import { BaybayinText, COLORS, Panel, PixelButton, PixelText, Sprite } from '../ui';
 import { RunStats } from './ResultScreen';
 
@@ -23,10 +23,35 @@ function Pips({ value, max, full, empty }: { value: number; max: number; full: I
   );
 }
 
-export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; onEnd: (s: RunStats) => void; onQuit: () => void }) {
+const TUTORIAL_TOUCH: Record<TutorialStep, string> = {
+  move: 'Drag on the left side of the screen to walk',
+  attack: 'Hold the crossed blades to strike the practice duwende',
+  dodge: 'Tap the wind to dodge roll through danger',
+  skill: 'Your lamp is full! Tap the sun to use your skill',
+  sail: 'Well done. Board the balangay to sail',
+};
+const TUTORIAL_KEYS: Record<TutorialStep, string> = {
+  move: 'Walk with W A S D or the arrow keys',
+  attack: 'Hold SPACE to strike the practice duwende',
+  dodge: 'Press SHIFT to dodge roll through danger',
+  skill: 'Your lamp is full! Press K to use your skill',
+  sail: 'Well done. Board the balangay to sail',
+};
+
+export default function GameScreen({
+  heroId,
+  options = {},
+  onEnd,
+  onQuit,
+}: {
+  heroId: HeroId;
+  options?: RunOptions;
+  onEnd: (s: RunStats) => void;
+  onQuit: () => void;
+}) {
   const { width: W, height: H } = useWindowDimensions();
   const gameRef = useRef<Game>(null as unknown as Game);
-  if (!gameRef.current) gameRef.current = newGame(heroId);
+  if (!gameRef.current) gameRef.current = newGame(heroId, options);
   const input = useRef<Input>({ mx: 0, my: 0, attack: false, skill: false, dodge: false }).current;
   const keys = useRef({ mx: 0, my: 0, attack: false }).current;
   const touches = useRef(new Map<number, Control>()).current;
@@ -85,6 +110,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
                 coins: g.coins,
                 time: g.time,
                 boons: [...g.boons],
+                hard: g.hard,
               }),
             g.result === 'victory' ? 1200 : 900,
           );
@@ -253,7 +279,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
     const wy = h.y + 3 + Math.sin(h.aim) * reach;
     const nodes: React.ReactNode[] = [
       shadow(h.x, h.y + 8, 10, 'hs'),
-      sprite(`heroes_${h.def.id}_${frame}`, h.x, h.y, 16, { transform: [{ scaleX: h.facing }], opacity: blink ? 0.35 : h.dash > 0 ? 0.55 : 1 }, 'hero'),
+      sprite(`heroes_${h.def.id}${g.skin ? '_alt' : ''}_${frame}`, h.x, h.y, 16, { transform: [{ scaleX: h.facing }], opacity: blink ? 0.35 : h.dash > 0 ? 0.55 : 1, tintColor: h.slow > 0 ? '#9ca29c' : undefined }, 'hero'),
       sprite(`weapons_${weapon.id}`, wx, wy, 14, { transform: [{ rotate: `${deg}deg` }, { scaleY: h.facing }] }, 'weapon'),
     ];
     if (h.swing > 0) {
@@ -271,14 +297,20 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
   for (const e of g.enemies) {
     const def = ENEMIES[e.type];
     const spawning = e.spawn > 0;
-    const tint = e.flash > 0 ? '#ffffff' : e.poison > 0 && Math.floor(g.time * 6) % 2 === 0 ? '#9be36d' : undefined;
+    // the warning before a lunge or a charge blinks red
+    const winding = (e.type === 'sigbin' || e.type === 'aswang') && e.mode === 1 && Math.floor(g.time * 16) % 2 === 0;
+    const tint = e.flash > 0 ? '#ffffff' : winding ? '#ff4a3a' : e.poison > 0 && Math.floor(g.time * 6) % 2 === 0 ? '#9be36d' : undefined;
+    const key = e.type === 'tiyanak' && e.mode === 0 ? `enemies_tiyanak_bundle_${anim}` : `enemies_${e.type}_${anim}`;
+    // the sigbin is half-seen while it stalks
+    const near = Math.hypot(e.x - h.x, e.y - h.y);
+    const stalk = e.type === 'sigbin' && e.mode === 0 && e.flash <= 0 ? (near < 50 ? 0.7 : 0.3) : 1;
     layers.push({
       y: e.y,
       node: [
         shadow(e.x, e.y + def.size / 2, def.size * 0.6, `es${e.id}`),
-        sprite(`enemies_${e.type}_${anim}`, e.x, e.y, def.size, {
+        sprite(key, e.x, e.y, def.size, {
           transform: [{ scaleX: -e.facing }, { scale: spawning ? 1 - e.spawn * 0.6 : 1 }],
-          opacity: spawning ? 0.4 + 0.4 * Math.sin(g.time * 30) : 1,
+          opacity: spawning ? 0.4 + 0.4 * Math.sin(g.time * 30) : stalk,
           tintColor: tint,
         }, `e${e.id}`),
       ],
@@ -315,7 +347,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
   }
   layers.sort((a, b) => a.y - b.y);
 
-  const boss = g.enemies.find((e) => e.type === 'bakunawa');
+  const boss = g.enemies.find((e) => BOSSES.includes(e.type) && e.spawn <= 0);
   const lightFrac = h.light / LIGHT_MAX;
   const ready = h.light >= LIGHT_MAX;
 
@@ -329,7 +361,8 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
         {g.bullets.map((b) => {
           const rot = b.sprite === 'shot_arrow' || b.sprite === 'shot_dart';
           const deg = (Math.atan2(b.vy, b.vx) * 180) / Math.PI;
-          return sprite(`projectiles_${b.sprite}`, b.x, b.y, b.r > 3 ? 10 : rot ? 9 : 7, rot ? { transform: [{ rotate: `${deg}deg` }] } : undefined, `b${b.id}`);
+          const extra = rot ? { transform: [{ rotate: `${deg}deg` }] } : b.slow ? { tintColor: '#b8beb8' } : undefined;
+          return sprite(`projectiles_${b.sprite}`, b.x, b.y, b.r > 3 ? 10 : rot ? 9 : 7, extra, `b${b.id}`);
         })}
         {g.texts.map((t) => (
           <PixelText
@@ -343,6 +376,8 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
         ))}
       </View>
 
+      {g.dark > 0.01 && <View pointerEvents="none" style={[styles.fill, { backgroundColor: `rgba(40,0,8,${0.35 * g.dark})` }]} />}
+      {g.flash && <View pointerEvents="none" style={[styles.fill, { backgroundColor: g.flash.color, opacity: 0.45 * (g.flash.t / g.flash.max) }]} />}
       {g.banner && (
         <View pointerEvents="none" style={[styles.banner, { top: H * 0.26 }]}>
           {g.banner.baybayin && <BaybayinText size={18} color={COLORS.light}>{g.banner.baybayin}</BaybayinText>}
@@ -406,7 +441,7 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
       {boss && (
         <View pointerEvents="none" style={[styles.bossBar, { left: W * 0.3, width: W * 0.4 }]}>
           <PixelText size={8} color="#ff8a7a">
-            {BOSS_NAME}
+            {ENEMIES[boss.type].name.toUpperCase()}
           </PixelText>
           <View style={styles.bossTrack}>
             <View style={[styles.lampFill, { width: `${(boss.hp / boss.maxHp) * 100}%`, backgroundColor: COLORS.red }]} />
@@ -428,6 +463,31 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
       {button('ui_btn_attack', attackBtn, input.attack ? 0.75 : 1)}
       {button('ui_btn_dodge', dodgeBtn, h.dodgeCd > 0 ? 0.45 : 1)}
       {button('ui_btn_skill', skillBtn, ready ? 1 : 0.4, ready ? 1 + 0.06 * Math.sin(g.time * 8) : 1)}
+      {g.tutorial && !paused && (() => {
+        const target = g.tutorial === 'attack' ? attackBtn : g.tutorial === 'dodge' ? dodgeBtn : g.tutorial === 'skill' ? skillBtn : null;
+        const pulse = 1 + 0.12 * Math.sin(g.time * 7);
+        const web = Platform.OS === 'web';
+        return (
+          <>
+            {target && !web && (
+              <View
+                pointerEvents="none"
+                style={[styles.abs, { left: target.x - target.r - 8, top: target.y - target.r - 8, width: (target.r + 8) * 2, height: (target.r + 8) * 2, borderRadius: target.r + 8, borderWidth: 3, borderColor: COLORS.gold, transform: [{ scale: pulse }] }]}
+              />
+            )}
+            {g.tutorial === 'move' && !web && (
+              <View pointerEvents="none" style={[styles.abs, { left: 40, bottom: 30, width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: COLORS.gold, transform: [{ scale: pulse }] }]} />
+            )}
+            <View pointerEvents="none" style={[styles.tutorial, { top: H * 0.16 }]}>
+              <Panel style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                <PixelText size={9} color={COLORS.gold} style={{ textAlign: 'center' }}>
+                  {(web ? TUTORIAL_KEYS : TUTORIAL_TOUCH)[g.tutorial]}
+                </PixelText>
+              </Panel>
+            </View>
+          </>
+        );
+      })()}
       {!ready && (
         <View pointerEvents="none" style={[styles.abs, { left: skillBtn.x - 24, top: skillBtn.y - 8, width: 48, alignItems: 'center' }]}>
           <PixelText size={9}>{`${Math.floor(lightFrac * 100)}%`}</PixelText>
@@ -545,6 +605,8 @@ export default function GameScreen({ heroId, onEnd, onQuit }: { heroId: HeroId; 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: SEA },
   abs: { position: 'absolute' },
+  fill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  tutorial: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   banner: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   hud: { position: 'absolute', left: 8, top: 8, flexDirection: 'row', alignItems: 'flex-start' },
   medal: { width: 56, height: 56 },
