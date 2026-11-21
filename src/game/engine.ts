@@ -1,8 +1,10 @@
 import type { SfxId } from '../sounds';
 import roomData from './rooms.json';
 import {
+  BASE_BOONS,
   BoonId,
   BOONS,
+  BOSSES,
   BulletSprite,
   ENEMIES,
   EnemyType,
@@ -35,6 +37,10 @@ export interface Mods {
   dodgeCd: number;
   herbs: number; // extra herb drop chance
   harvest: boolean;
+  dawn: boolean; // Hanan
+  crit: number; // Amanikable
+  thrift: boolean; // Idiyanale
+  revive: boolean; // Bathala
 }
 
 export interface Hero {
@@ -61,6 +67,12 @@ export interface Hero {
   dashDx: number;
   dashDy: number;
   walk: number;
+  /** >0 while turned half to stone by the Rabot's gaze (moves at half speed). */
+  slow: number;
+  /** Bathala's blessing has been spent. */
+  revived: boolean;
+  dodges: number;
+  skills: number;
   mods: Mods;
 }
 
@@ -78,6 +90,16 @@ export interface Enemy {
   facing: 1 | -1;
   poison: number;
   poisonTick: number;
+  /** Behavior state; meaning depends on the creature. */
+  mode: number;
+  timer: number;
+  count: number;
+  dx: number;
+  dy: number;
+  /** A practice target on the Tondo dock: never moves or hurts. */
+  dummy?: boolean;
+  /** Bakunawa has entered its last phase. */
+  phase3?: boolean;
 }
 
 export interface Bullet {
@@ -94,6 +116,8 @@ export interface Bullet {
   pierce: boolean;
   poison?: number;
   hit?: Set<number>;
+  /** The Rabot's stone gaze: slows instead of only hurting. */
+  slow?: boolean;
 }
 
 export type PickupKind = 'coin' | 'energy_orb' | 'potion_health';
@@ -150,6 +174,26 @@ export interface Game {
   nextId: number;
   /** Sounds raised this frame; the screen plays and clears them. */
   sfx: SfxId[];
+  /** Pulang Buwan (red moon) hard mode. */
+  hard: boolean;
+  skin: boolean;
+  /** Blessings this run can offer. */
+  allowed: BoonId[];
+  tutorial: TutorialStep | null;
+  /** Full-screen color flash for big moments. */
+  flash: { color: string; t: number; max: number } | null;
+  /** 0..1, the sky darkening during the Bakunawa's last phase. */
+  dark: number;
+}
+
+export type TutorialStep = 'move' | 'attack' | 'dodge' | 'skill' | 'sail';
+
+export interface RunOptions {
+  hard?: boolean;
+  skin?: boolean;
+  /** Extra blessings unlocked with barya. */
+  unlocked?: BoonId[];
+  tutorial?: boolean;
 }
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -158,6 +202,9 @@ const pick = <T>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 const sound = (g: Game, id: SfxId) => {
   g.sfx.push(id);
 };
+const flash = (g: Game, color: string, t: number) => {
+  g.flash = { color, t, max: t };
+};
 
 export function stageLabel(g: Game) {
   if (g.room === 'port') return 'TONDO';
@@ -165,7 +212,7 @@ export function stageLabel(g: Game) {
   return STAGES[g.stage - 1].title;
 }
 
-export function newGame(heroId: HeroId): Game {
+export function newGame(heroId: HeroId, opts: RunOptions = {}): Game {
   const def = HEROES.find((h) => h.id === heroId)!;
   const route: RoomName[] = ['port'];
   for (let i = 1; i <= STAGES.length; i++) route.push(pick([`pulo${i}_a`, `pulo${i}_b`]) as RoomName);
@@ -195,7 +242,11 @@ export function newGame(heroId: HeroId): Game {
       dashDx: 0,
       dashDy: 0,
       walk: 0,
-      mods: { dmg: 1, rate: 1, speed: 1, pierce: false, reach: 1, regen: 1, dodgeCd: 1, herbs: 0, harvest: false },
+      slow: 0,
+      revived: false,
+      dodges: 0,
+      skills: 0,
+      mods: { dmg: 1, rate: 1, speed: 1, pierce: false, reach: 1, regen: 1, dodgeCd: 1, herbs: 0, harvest: false, dawn: false, crit: 0, thrift: false, revive: false },
     },
     enemies: [],
     bullets: [],
@@ -221,6 +272,12 @@ export function newGame(heroId: HeroId): Game {
     result: null,
     nextId: 1,
     sfx: [],
+    hard: !!opts.hard,
+    skin: !!opts.skin,
+    allowed: [...BASE_BOONS, ...(opts.unlocked ?? [])],
+    tutorial: opts.tutorial ? 'move' : null,
+    flash: null,
+    dark: 0,
   };
   enterRoom(g, 0);
   return g;
@@ -240,7 +297,9 @@ function enterRoom(g: Game, stage: number) {
   h.x = ENTRY.x;
   h.y = ENTRY.y;
   h.spin = h.swing = h.dash = 0;
+  h.slow = 0;
   g.wave = 0;
+  if (h.mods.dawn && stage > 0) h.light = Math.max(h.light, LIGHT_MAX / 2);
   if (stage > 0) sound(g, 'sail');
   if (h.mods.harvest && stage > 0) {
     h.hp = Math.min(h.maxHp, h.hp + 1);
@@ -251,6 +310,7 @@ function enterRoom(g: Game, stage: number) {
     g.boat = { ...DOCK };
     g.banner = { text: PORT.title, baybayin: PORT.baybayin, sub: PORT.line, t: 3 };
     g.npc = { x: 5.5 * TILE, y: 6.2 * TILE, talking: false, line: HALIYA_LINES[0] };
+    if (g.tutorial) g.banner = null;
   } else if (g.room === 'shore') {
     g.waves = 1;
     g.banner = { text: SHORE.title, baybayin: SHORE.baybayin, sub: SHORE.line, t: 3 };
@@ -259,8 +319,8 @@ function enterRoom(g: Game, stage: number) {
     sound(g, 'roar');
     g.wave = 1;
   } else {
-    g.waves = 2;
     const info = STAGES[stage - 1];
+    g.waves = info.waves;
     g.banner = { text: info.title, baybayin: info.baybayin, sub: info.line, t: 3.2 };
     spawnWave(g);
   }
@@ -324,8 +384,8 @@ function randomFloor(g: Game, minDistFromHero: number) {
 // ---------------------------------------------------------------- spawning
 function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
   const def = ENEMIES[type];
-  const scale = 1 + (g.stage - 1) * 0.15;
-  const hp = type === 'bakunawa' ? def.hp : Math.round(def.hp * scale);
+  const scale = BOSSES.includes(type) ? 1 : 1 + (g.stage - 1) * 0.15;
+  const hp = Math.round(def.hp * scale * (g.hard ? 1.35 : 1));
   g.enemies.push({
     id: g.nextId++,
     type,
@@ -335,24 +395,44 @@ function spawnEnemy(g: Game, type: EnemyType, x: number, y: number) {
     maxHp: hp,
     cd: rand(0.8, 2),
     t: Math.random() * 10,
-    spawn: type === 'bakunawa' ? 1.2 : 0.7,
+    spawn: BOSSES.includes(type) ? 1.2 : 0.7,
     flash: 0,
     facing: -1,
     poison: 0,
     poisonTick: 0,
+    mode: 0,
+    timer: rand(0.5, 1.5),
+    count: 0,
+    dx: 0,
+    dy: 0,
   });
+  return g.enemies[g.enemies.length - 1];
 }
 
 function spawnWave(g: Game) {
   g.wave++;
-  if (g.wave > 1) sound(g, 'wave');
-  const pool = STAGES[Math.min(g.stage, STAGES.length) - 1].pool;
-  const n = 3 + g.stage + (g.wave - 1);
+  const info = STAGES[Math.min(g.stage, STAGES.length) - 1];
+  const pool = info.pool;
+  let n = 3 + g.stage + (g.wave - 1);
+  if (info.miniboss && g.wave === g.waves) {
+    const def = ENEMIES[info.miniboss];
+    spawnEnemy(g, info.miniboss, CENTER.x + TILE * 4, CENTER.y);
+    g.banner = { text: def.name.toUpperCase(), sub: MINIBOSS_LINES[info.miniboss] ?? '', t: 2.4 };
+    sound(g, 'roar');
+    flash(g, '#7e1e22', 0.35);
+    n = 2;
+  } else if (g.wave > 1) sound(g, 'wave');
+  if (g.hard) n += 2;
   for (let i = 0; i < n; i++) {
     const p = randomFloor(g, 90);
     spawnEnemy(g, pick(pool), p.x, p.y);
   }
 }
+
+const MINIBOSS_LINES: Partial<Record<EnemyType, string>> = {
+  aswang: 'By day a neighbor. By night, the beast.',
+  rabot: 'Do not meet its eyes. The Ibalong remembers.',
+};
 
 function addText(g: Game, x: number, y: number, text: string, color: string) {
   g.texts.push({ id: g.nextId++, x, y, text, color, t: 0.8 });
@@ -363,7 +443,10 @@ function dropPickup(g: Game, kind: PickupKind, x: number, y: number) {
 }
 
 function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg: number, fromHero: boolean, sprite: BulletSprite, r = 2.5, pierce = false, poison?: number) {
-  if (!fromHero) sound(g, 'enemy_shot');
+  if (!fromHero) {
+    sound(g, 'enemy_shot');
+    if (g.hard) speed *= 1.15;
+  }
   g.bullets.push({
     id: g.nextId++,
     x,
@@ -379,6 +462,7 @@ function shoot(g: Game, x: number, y: number, angle: number, speed: number, dmg:
     poison,
     hit: pierce ? new Set() : undefined,
   });
+  return g.bullets[g.bullets.length - 1];
 }
 
 function hurtHero(g: Game, dmg: number) {
@@ -394,6 +478,16 @@ function hurtHero(g: Game, dmg: number) {
   g.shake = 0.25;
   addText(g, h.x, h.y - 10, `-${dmg}`, left > 0 ? '#ff5a5a' : '#82eed6');
   sound(g, left > 0 ? 'hurt' : 'block');
+  if (left > 0) flash(g, '#ff2a2a', 0.18);
+  if (h.hp <= 0 && h.mods.revive && !h.revived) {
+    h.revived = true;
+    h.hp = 2;
+    h.invuln = 2;
+    g.banner = { text: 'BATHALA', sub: 'Not yet, maharlika. Breathe.', t: 2 };
+    flash(g, '#ffe882', 0.6);
+    sound(g, 'heal');
+    return;
+  }
   if (h.hp <= 0) {
     h.hp = 0;
     g.result = 'dead';
@@ -403,28 +497,35 @@ function hurtHero(g: Game, dmg: number) {
 
 function damageEnemy(g: Game, e: Enemy, dmg: number) {
   if (e.hp <= 0) return;
-  const d = Math.round(dmg * g.hero.mods.dmg * 10) / 10;
+  const crit = Math.random() < g.hero.mods.crit;
+  const d = Math.round(dmg * g.hero.mods.dmg * (crit ? 2 : 1) * 10) / 10;
   e.hp -= d;
   e.flash = 0.1;
+  if (e.type === 'tiyanak' && e.mode === 0) revealTiyanak(g, e);
   g.hero.light = Math.min(LIGHT_MAX, g.hero.light + d * 1.3);
-  addText(g, e.x, e.y - 10, `${Math.round(d)}`, '#ffffff');
+  addText(g, e.x, e.y - 10, crit ? `${Math.round(d)}!` : `${Math.round(d)}`, crit ? '#ffe882' : '#ffffff');
   if (e.hp <= 0) killEnemy(g, e);
   else sound(g, 'hit');
 }
 
 function killEnemy(g: Game, e: Enemy) {
   g.kills++;
-  sound(g, e.type === 'bakunawa' ? 'roar' : 'kill');
+  sound(g, BOSSES.includes(e.type) ? 'roar' : 'kill');
+  if (e.dummy) return;
+  if (BOSSES.includes(e.type)) {
+    flash(g, '#ffffff', 0.3);
+    g.shake = 0.4;
+  }
   const def = ENEMIES[e.type];
   for (let i = 0; i < def.coins; i++) dropPickup(g, 'coin', e.x, e.y);
-  const orbs = e.type === 'bakunawa' ? 10 : 1 + Math.floor(Math.random() * 2);
+  const orbs = BOSSES.includes(e.type) ? 10 : 1 + Math.floor(Math.random() * 2);
   for (let i = 0; i < orbs; i++) dropPickup(g, 'energy_orb', e.x, e.y);
   if (Math.random() < 0.06 + g.hero.mods.herbs) dropPickup(g, 'potion_health', e.x, e.y);
 }
 
 // ---------------------------------------------------------------- blessings
 function boonOptions(g: Game): BoonId[] {
-  const left = (Object.keys(BOONS) as BoonId[]).filter((b) => !g.boons.includes(b));
+  const left = g.allowed.filter((b) => !g.boons.includes(b));
   const out: BoonId[] = [];
   while (out.length < 3 && left.length) out.push(left.splice(Math.floor(Math.random() * left.length), 1)[0]);
   return out;
@@ -466,6 +567,19 @@ export function chooseBoon(g: Game, id: BoonId) {
     case 'lakan_bakod':
       m.regen *= 2;
       break;
+    case 'bathala':
+      m.revive = true;
+      break;
+    case 'hanan':
+      m.dawn = true;
+      h.light = Math.max(h.light, LIGHT_MAX / 2);
+      break;
+    case 'amanikable':
+      m.crit = 0.15;
+      break;
+    case 'idiyanale':
+      m.thrift = true;
+      break;
   }
   addText(g, h.x, h.y - 14, BOONS[id].deity.toUpperCase(), '#ffe882');
   sound(g, 'boon');
@@ -488,6 +602,12 @@ export function update(g: Game, input: Input, dt: number) {
   }
   g.time += dt;
   g.shake = Math.max(0, g.shake - dt);
+  if (g.flash) {
+    g.flash.t -= dt;
+    if (g.flash.t <= 0) g.flash = null;
+  }
+  const boss = g.enemies.find((e) => e.phase3);
+  g.dark += ((boss ? 1 : 0) - g.dark) * Math.min(1, dt * 2);
   if (g.banner) {
     g.banner.t -= dt;
     if (g.banner.t <= 0) g.banner = null;
@@ -525,8 +645,45 @@ export function update(g: Game, input: Input, dt: number) {
     const opts = boonOptions(g);
     if (opts.length) g.choice = opts;
   }
-  if (g.boat && dist(g.hero.x, g.hero.y, g.boat.x, g.boat.y) < 10) {
+  if (g.tutorial) updateTutorial(g);
+  if (g.boat && dist(g.hero.x, g.hero.y, g.boat.x, g.boat.y) < 10 && (!g.tutorial || g.tutorial === 'sail')) {
+    g.tutorial = null;
     enterRoom(g, g.stage + 1);
+  }
+}
+
+// ---------------------------------------------------------------- tutorial (first run, Tondo dock)
+function updateTutorial(g: Game) {
+  const h = g.hero;
+  switch (g.tutorial) {
+    case 'move':
+      if (dist(h.x, h.y, ENTRY.x, ENTRY.y) > 40) {
+        g.tutorial = 'attack';
+        const e = spawnEnemy(g, 'duwende', h.x + 48, h.y);
+        e.dummy = true;
+        e.hp = e.maxHp = 6;
+        sound(g, 'boon');
+      }
+      break;
+    case 'attack':
+      if (!g.enemies.some((e) => e.dummy)) {
+        g.tutorial = 'dodge';
+        sound(g, 'boon');
+      }
+      break;
+    case 'dodge':
+      if (h.dodges > 0) {
+        g.tutorial = 'skill';
+        h.light = LIGHT_MAX;
+        sound(g, 'boon');
+      }
+      break;
+    case 'skill':
+      if (h.skills > 0) {
+        g.tutorial = 'sail';
+        sound(g, 'island_clear');
+      }
+      break;
   }
 }
 
@@ -606,6 +763,7 @@ function updateHero(g: Game, input: Input, dt: number) {
       h.dash = 0.2;
       h.invuln = Math.max(h.invuln, 0.3);
       h.dodgeCd = 0.9 * m.dodgeCd;
+      h.dodges++;
       sound(g, 'dodge');
     }
   }
@@ -613,8 +771,10 @@ function updateHero(g: Game, input: Input, dt: number) {
     h.dash -= dt;
     moveBody(g, h, h.dashDx * 240 * dt, h.dashDy * 240 * dt, 5);
   } else {
-    moveBody(g, h, mx * h.def.speed * m.speed * dt, my * h.def.speed * m.speed * dt, 5);
+    const slow = h.slow > 0 ? 0.5 : 1;
+    moveBody(g, h, mx * h.def.speed * m.speed * slow * dt, my * h.def.speed * m.speed * slow * dt, 5);
   }
+  h.slow = Math.max(0, h.slow - dt);
   h.moving = mag > 0.15 || h.dash > 0;
   if (h.moving) h.walk += dt;
 
@@ -627,7 +787,9 @@ function updateHero(g: Game, input: Input, dt: number) {
     input.skill = false;
     if (h.light >= LIGHT_MAX) {
       useSkill(g, mx, my);
+      h.skills++;
       sound(g, 'skill');
+      flash(g, '#ffe882', 0.25);
     }
   }
 
@@ -748,7 +910,7 @@ function updateEnemies(g: Game, dt: number) {
         damageEnemy(g, e, 1);
       }
     }
-    if (e.hp <= 0) continue;
+    if (e.hp <= 0 || e.dummy) continue;
     e.t += dt;
     e.cd -= dt;
     const def = ENEMIES[e.type];
@@ -790,18 +952,171 @@ function updateEnemies(g: Game, dt: number) {
         }
         break;
       }
+      case 'sigbin': {
+        // 0: stalk, half-seen in the dark; 1: freeze and glare; 2: lunge
+        e.timer -= dt;
+        if (e.mode === 0) {
+          moveBody(g, e, ux * def.speed * dt, uy * def.speed * dt, hw);
+          if (d < 72 && e.timer <= 0 && lineOfSight(g, e.x, e.y, h.x, h.y)) {
+            e.mode = 1;
+            e.timer = 0.45;
+          }
+        } else if (e.mode === 1) {
+          if (e.timer <= 0) {
+            e.mode = 2;
+            e.timer = 0.38;
+            e.dx = dx / d;
+            e.dy = dy / d;
+          }
+        } else {
+          moveBody(g, e, e.dx * 175 * dt, e.dy * 175 * dt, hw);
+          if (e.timer <= 0) {
+            e.mode = 0;
+            e.timer = rand(1.4, 2);
+          }
+        }
+        break;
+      }
+      case 'tiyanak': {
+        // 0: a crying bundle; 1: revealed, hopping fast
+        if (e.mode === 0) {
+          if (d < 46) revealTiyanak(g, e);
+          break;
+        }
+        const hop = Math.max(0, Math.sin(e.t * 9));
+        moveBody(g, e, ux * def.speed * 1.6 * hop * dt, uy * def.speed * 1.6 * hop * dt, hw);
+        break;
+      }
+      case 'aswang':
+        updateAswang(g, e, ux, uy, dx, dy, d, aim, dt);
+        break;
+      case 'rabot':
+        updateRabot(g, e, ux, uy, d, aim, dt);
+        break;
       case 'bakunawa':
         updateBoss(g, e, ux, uy, d, aim, dt);
         break;
     }
-    if (d < def.radius + 5) hurtHero(g, def.contact);
+    const harmless = e.type === 'tiyanak' && e.mode === 0;
+    if (d < def.radius + 5 && !harmless) hurtHero(g, def.contact);
   }
   g.enemies = g.enemies.filter((e) => e.hp > 0);
+}
+
+function revealTiyanak(g: Game, e: Enemy) {
+  e.mode = 1;
+  e.flash = 0.2;
+  addText(g, e.x, e.y - 12, 'TIYANAK!', '#ff8a7a');
+  sound(g, 'hurt');
+}
+
+/** Aswang: stalks and throws curses as a person, then turns beast and charges three times. */
+function updateAswang(g: Game, e: Enemy, ux: number, uy: number, dx: number, dy: number, d: number, aim: number, dt: number) {
+  const def = ENEMIES.aswang;
+  const enraged = e.hp < e.maxHp / 2;
+  e.timer -= dt;
+  if (e.mode === 0) {
+    // human form: keep a distance and throw a fan of curses
+    const want = d > 100 ? 1 : d < 70 ? -1 : 0;
+    const side = Math.sin(e.t * 1.1);
+    moveBody(g, e, (ux * want - uy * side * 0.7) * def.speed * dt, (uy * want + ux * side * 0.7) * def.speed * dt, 8);
+    if (e.cd <= 0) {
+      const n = enraged ? 5 : 3;
+      for (let i = 0; i < n; i++) shoot(g, e.x, e.y, aim + (i - (n - 1) / 2) * 0.22, 85, 1, false, 'shot_enemy', 3);
+      e.cd = enraged ? 1.1 : 1.5;
+    }
+    if (e.timer <= 0) {
+      e.mode = 1;
+      e.count = enraged ? 3 : 2;
+      e.timer = 0.7;
+      addText(g, e.x, e.y - 16, 'ASWANG!', '#ff5a5a');
+      sound(g, 'roar');
+    }
+  } else if (e.mode === 1) {
+    // beast form: crouch and glare (the warning), then charge
+    if (e.timer <= 0) {
+      e.mode = 2;
+      e.timer = 0.42;
+      e.dx = dx / d;
+      e.dy = dy / d;
+      sound(g, 'dodge');
+    }
+  } else {
+    moveBody(g, e, e.dx * (enraged ? 200 : 170) * dt, e.dy * (enraged ? 200 : 170) * dt, 8);
+    if (e.timer <= 0) {
+      e.count--;
+      if (e.count > 0) {
+        e.mode = 1;
+        e.timer = enraged ? 0.5 : 0.6;
+      } else {
+        e.mode = 0;
+        e.timer = enraged ? 4 : 5.5;
+        e.cd = 0.8;
+      }
+    }
+  }
+}
+
+/** Rabot: slow and heavy; its gaze sends out rings of stone that slow you. */
+function updateRabot(g: Game, e: Enemy, ux: number, uy: number, d: number, aim: number, dt: number) {
+  const def = ENEMIES.rabot;
+  const enraged = e.hp < e.maxHp / 2;
+  const want = d > 70 ? 1 : d < 40 ? -0.5 : 0;
+  moveBody(g, e, ux * want * def.speed * dt, uy * want * def.speed * dt, 9);
+  if (e.cd > 0) return;
+  e.count++;
+  if (e.count % 3 === 0) {
+    for (let i = 0; i < 2; i++) {
+      const p = randomFloor(g, 50);
+      spawnEnemy(g, 'duwende', p.x, p.y);
+    }
+    addText(g, e.x, e.y - 16, 'TABI-TABI PO!', '#ffba48');
+    e.cd = 1.6;
+    return;
+  }
+  const n = enraged ? 14 : 10;
+  const off = Math.random() * Math.PI;
+  for (let i = 0; i < n; i++) {
+    const b = shoot(g, e.x, e.y, off + (i / n) * Math.PI * 2, 60, 1, false, 'shot_enemy', 3.5);
+    b.slow = true;
+  }
+  if (enraged) for (const o of [-0.15, 0, 0.15]) shoot(g, e.x, e.y, aim + o, 115, 1, false, 'shot_enemy', 3);
+  e.cd = enraged ? 1.7 : 2.3;
 }
 
 function updateBoss(g: Game, e: Enemy, ux: number, uy: number, d: number, aim: number, dt: number) {
   const def = ENEMIES.bakunawa;
   const enraged = e.hp < e.maxHp / 2;
+  if (!e.phase3 && e.hp < e.maxHp / 4) {
+    // Lamon: the serpent opens its jaws for the last moon
+    e.phase3 = true;
+    e.cd = 1.2;
+    g.banner = { text: 'LAMON', sub: 'The serpent opens its jaws for the moon. Hold!', t: 2.4 };
+    flash(g, '#c0202a', 0.6);
+    g.shake = 0.6;
+    sound(g, 'roar');
+    for (let i = 0; i < 4; i++) {
+      const p = randomFloor(g, 60);
+      spawnEnemy(g, 'manananggal', p.x, p.y);
+    }
+  }
+  if (e.phase3) {
+    const want = d > 80 ? 1 : d < 50 ? -0.6 : 0.3;
+    const side = Math.sin(e.t * 1.2);
+    moveBody(g, e, (ux * want - uy * side) * def.speed * 1.3 * dt, (uy * want + ux * side) * def.speed * 1.3 * dt, 10);
+    if (e.cd > 0) return;
+    if (Math.floor(e.t / 3) % 2 === 0) {
+      // spiral of two arms
+      const a = e.t * 2.4;
+      shoot(g, e.x, e.y, a, 80, 1, false, 'shot_enemy', 3);
+      shoot(g, e.x, e.y, a + Math.PI, 80, 1, false, 'shot_enemy', 3);
+      e.cd = 0.11;
+    } else {
+      for (let i = -3; i <= 3; i++) shoot(g, e.x, e.y, aim + i * 0.15, 110, 1, false, 'shot_enemy', 3);
+      e.cd = 0.75;
+    }
+    return;
+  }
   const want = d > 90 ? 1 : d < 50 ? -0.6 : 0.2;
   const side = Math.sin(e.t * 0.8);
   moveBody(g, e, (ux * want - uy * side) * def.speed * dt, (uy * want + ux * side) * def.speed * dt, 10);
@@ -856,6 +1171,7 @@ function updateBullets(g: Game, dt: number) {
       }
     } else if (dist(b.x, b.y, h.x, h.y + 2) < b.r + 4) {
       b.life = 0;
+      if (b.slow && h.dash <= 0) h.slow = 1.6;
       hurtHero(g, b.dmg);
     }
   }
@@ -875,7 +1191,7 @@ function updatePickups(g: Game, dt: number) {
     }
     if (d < 8) {
       if (p.kind === 'coin') {
-        g.coins++;
+        g.coins += h.mods.thrift && Math.random() < 0.5 ? 2 : 1;
         sound(g, 'coin');
       } else if (p.kind === 'energy_orb') {
         h.light = Math.min(LIGHT_MAX, h.light + 6);

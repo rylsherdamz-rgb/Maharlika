@@ -2,6 +2,7 @@ import { playSfx } from '../audio';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { StoryPanel } from '../game/story';
+import { tr, useLang } from '../i18n';
 import { COLORS, CoverImage, PixelText } from '../ui';
 
 const CHARS_PER_SEC = 55;
@@ -18,8 +19,10 @@ export default function StoryScreen({
 }) {
   const [i, setI] = useState(0);
   const [shown, setShown] = useState(0);
+  const lang = useLang();
   const panel = panels[i];
-  const full = panel.text.length;
+  const body = tr(panel.text, undefined, lang);
+  const full = body.length;
 
   useEffect(() => {
     setShown(0);
@@ -51,7 +54,7 @@ export default function StoryScreen({
           </PixelText>
         )}
         <PixelText size={9} shadow={false} style={{ minHeight: 48 }}>
-          {panel.text.slice(0, shown)}
+          {shown >= full ? body : body.slice(0, shown)}
         </PixelText>
         <View style={styles.footer}>
           <View style={styles.dots}>
@@ -60,7 +63,7 @@ export default function StoryScreen({
             ))}
           </View>
           <PixelText size={8} color={COLORS.dim}>
-            {shown < full ? 'TAP' : last ? `TAP TO ${doneLabel}` : 'TAP TO CONTINUE'}
+            {shown < full ? 'TAP' : last ? tr('TAP TO {x}', { x: tr(doneLabel, undefined, lang) }, lang) : 'TAP TO CONTINUE'}
           </PixelText>
         </View>
       </View>

@@ -32,10 +32,16 @@ noise.
 | Haliya, masked goddess of moonlight, enemy of the Bakunawa, guardian of Bulan | **Folklore** | Bicolano mythology. |
 | The Bakunawa loving the moons | **Folklore (a variant)** | Told in some versions; Mayumi's epilogue draws on it. |
 | Apolaki, Mayari, Tala, Anitun Tabu, Dumakulem, Lakapati, Aman Sinaya, Lakan Bakod | **Folklore** | Deities of the Tagalog pantheon; each blessing matches the deity's domain. |
+| Bathala (supreme god), Hanan (morning), Amanikable (hunters; later the sea), Idiyanale (labor and good deeds) | **Folklore** | Tagalog deities, unlocked at the Alay. Amanikable was first recorded (1613) as an idol of hunters; the ill-tempered sea god comes from F. Landa Jocano's later telling. |
+| Pulang Buwan (red moon) mode, Alay offerings, barya as currency | **Invented** | Game systems. |
 | Duwende in punso; "tabi-tabi po" | **Folklore** | Pan-Philippine belief. |
 | Manananggal: severs at the waist and flies; salt or ash on the lower half | **Folklore** | Visayan and Tagalog. |
 | Tikbalang: horse-headed trickster, leads travelers astray; shirt inside out; taming by its mane hairs | **Folklore** | Tagalog. |
 | Kapre: cigar-smoking giant of big trees such as the balete | **Folklore** | Tagalog. |
+| Sigbin: hornless goat- or hound-like night creature with big ears, walks backward with its head between its legs, feeds on shadows | **Folklore** | Visayan. Its fade-and-lunge attack is a game mechanic. |
+| Tiyanak: forest creature disguised as a crying infant | **Folklore** | Tagalog and Visayan. |
+| Aswang: shapeshifter, a villager by day and a beast by night; warded off by garlic, salt, stingray tail | **Folklore** | Visayan, told across the islands. Guards Siquijor in the game (invented placement). |
+| Rabot: half-human, half-beast of the Ibalong that turned people to stone; slain alone by Bantong | **Folklore (epic)** | Ibalong, the Bicolano epic. Its slowing "stone gaze" is a game mechanic. |
 | Battle of Mactan, Lapulapu, Magellan's death (1521) | **History** | |
 | Balangay boats of Butuan (from about 320 CE); "barangay" from "balangay" | **History** | |
 | Maharlika as the Tagalog freeborn warrior class | **History** | Precolonial social class. |

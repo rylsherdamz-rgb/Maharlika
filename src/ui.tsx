@@ -1,4 +1,5 @@
 import { playSfx } from './audio';
+import { tr, useLang } from './i18n';
 import { useEffect, useState } from 'react';
 import { Image, ImageStyle, Pressable, StyleProp, StyleSheet, Text, TextStyle, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { IMG, ImgKey } from './assets';
@@ -41,6 +42,10 @@ export function PixelText({
   style?: StyleProp<TextStyle>;
   shadow?: boolean;
 }) {
+  const lang = useLang();
+  // never smaller than 7 (about 10px): the tiniest pixel text was hard to read on phones
+  size = Math.max(7, size);
+  const text = typeof children === 'string' ? tr(children, undefined, lang) : Array.isArray(children) ? children.map((c) => (typeof c === 'string' ? tr(c, undefined, lang) : c)) : children;
   return (
     <Text
       style={[
@@ -54,7 +59,7 @@ export function PixelText({
         style,
       ]}
     >
-      {children}
+      {text}
     </Text>
   );
 }

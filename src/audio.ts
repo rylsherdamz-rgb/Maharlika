@@ -1,4 +1,5 @@
 import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import * as Haptics from 'expo-haptics';
 import { AppState, Platform } from 'react-native';
 import { getSave } from './save';
 import { MUSIC, MusicId, SFX, SfxId } from './sounds';
@@ -21,6 +22,8 @@ let music: AudioPlayer | null = null;
 let musicId: MusicId | null = null;
 let wantMusic: MusicId | null = null;
 let backgrounded = false;
+// browsers block audio until the first tap or key press
+let webUnlocked = Platform.OS !== 'web';
 
 export function initAudio() {
   if (ready) return;
@@ -36,6 +39,16 @@ export function initAudio() {
     }
     pools.set(id, { players, next: 0, last: 0 });
   }
+  if (!webUnlocked && typeof window !== 'undefined') {
+    const unlock = () => {
+      webUnlocked = true;
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+      syncMusic();
+    };
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
+  }
   AppState.addEventListener('change', (s) => {
     backgrounded = s !== 'active';
     if (backgrounded) music?.pause();
@@ -44,7 +57,7 @@ export function initAudio() {
 }
 
 export function playSfx(id: SfxId) {
-  if (!ready || !getSave().sfx || backgrounded) return;
+  if (!ready || !getSave().sfx || backgrounded || !webUnlocked) return;
   const pool = pools.get(id);
   if (!pool) return;
   const now = Date.now();
@@ -58,8 +71,27 @@ export function playSfx(id: SfxId) {
   } catch {
     // a missing audio device should never take the game down
   }
-  // browsers only allow audio after a user gesture; the first tap also starts the music
-  if (Platform.OS === 'web') syncMusic();
+}
+
+// game moments you can feel (phones only)
+const BUZZ: Partial<Record<SfxId, () => Promise<void>>> = {
+  hurt: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
+  block: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+  skill: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+  roar: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+  death: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error),
+  victory: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+  boon: () => Haptics.selectionAsync(),
+};
+let lastBuzz = 0;
+
+export function buzz(id: SfxId) {
+  if (Platform.OS === 'web' || !getSave().haptics || backgrounded) return;
+  const fn = BUZZ[id];
+  const now = Date.now();
+  if (!fn || now - lastBuzz < 80) return;
+  lastBuzz = now;
+  fn().catch(() => {});
 }
 
 /** Plays every sound the engine raised this frame, then clears the queue. */
@@ -70,6 +102,7 @@ export function drainSfx(queue: SfxId[]) {
     if (seen.has(id)) continue;
     seen.add(id);
     playSfx(id);
+    buzz(id);
   }
   queue.length = 0;
 }
@@ -83,7 +116,7 @@ export function setMusic(id: MusicId | null) {
 /** Applies the current settings (call after toggling music on or off). */
 export function syncMusic() {
   if (!ready) return;
-  const on = getSave().music && !backgrounded && wantMusic !== null;
+  const on = getSave().music && !backgrounded && webUnlocked && wantMusic !== null;
   if (!on) {
     music?.pause();
     return;

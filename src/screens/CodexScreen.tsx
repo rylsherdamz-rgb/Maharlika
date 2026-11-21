@@ -3,6 +3,7 @@ import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { IMG } from '../assets';
 import { BOONS, HEROES } from '../game/data';
 import { Bio, CREATURE_BIOS, DEITY_SOURCE, GUARDIAN_BIOS, HALIYA_BIO, WORLD_BIOS } from '../game/story';
+import { tr } from '../i18n';
 import { BaybayinText, COLORS, CoverImage, Panel, PixelButton, PixelText, Sprite } from '../ui';
 
 const BAYBAYIN = /[\u1700-\u171f]/;
@@ -15,7 +16,7 @@ const DEITY_BIOS: Bio[] = Object.values(BOONS).map((b) => ({
   epithet: b.domain,
   sprite: `ui_boon_${b.id}` as Bio['sprite'],
   facts: [['Blessing', b.name], ['Effect', b.desc]],
-  story: [`${b.deity}: ${b.domain.toLowerCase()} in the Tagalog pantheon. At a dambana you may receive the blessing ${b.name}.`],
+  story: ['{deity}: {domain} in the Tagalog pantheon. At a dambana you may receive the blessing {name}.'],
   source: DEITY_SOURCE,
 }));
 
@@ -25,6 +26,8 @@ const TABS: { id: Tab; label: string; entries: Bio[] }[] = [
   { id: 'gods', label: 'THE GODS', entries: DEITY_BIOS },
   { id: 'world', label: 'THE WORLD', entries: WORLD_BIOS },
 ];
+
+const DEITY_IDS = new Set(DEITY_BIOS.map((d) => d.id));
 
 export function codexTabFor(id: string): Tab {
   return TABS.find((t) => t.entries.some((e) => e.id === id))?.id ?? 'guardians';
@@ -119,12 +122,12 @@ export default function CodexScreen({ initial, onBack }: { initial?: string; onB
             </View>
             {bio.story.map((p, k) => (
               <PixelText key={k} size={8} shadow={false} style={styles.para}>
-                {p}
+                {DEITY_IDS.has(bio.id) ? tr(p, { deity: bio.name, domain: tr(bio.epithet).toLowerCase(), name: bio.facts[0][1] }) : p}
               </PixelText>
             ))}
             {bio.source && (
               <PixelText size={7} color={COLORS.armor} shadow={false} style={{ marginTop: 8 }}>
-                {`From: ${bio.source}`}
+                {tr('From: {source}', { source: tr(bio.source) })}
               </PixelText>
             )}
             {bio.quote && (

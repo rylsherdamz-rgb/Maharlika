@@ -14,6 +14,8 @@ export interface RunStats {
   boons: BoonId[];
   /** Stage index reached (0 = Tondo). */
   reached: number;
+  /** Played on Pulang Buwan. */
+  hard?: boolean;
   /** Set by the app once the run is recorded. */
   newBest?: boolean;
 }
